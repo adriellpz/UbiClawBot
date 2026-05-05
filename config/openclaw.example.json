@@ -1,0 +1,235 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "/home/node/.openclaw/workspace",
+      "skipBootstrap": true,
+      "experimental": {
+        "localModelLean": true
+      },
+      "model": {
+        "primary": "openai-codex/gpt-5.5"
+      },
+      "models": {
+        "ollama/llama3.1:8b": {
+          "streaming": true
+        },
+        "openai-codex/gpt-5.5": {}
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "tools": {
+          "alsoAllow": [
+            "browser",
+            "canvas",
+            "message",
+            "heartbeat_respond",
+            "gateway",
+            "nodes",
+            "agents_list",
+            "tts",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write"
+          ]
+        }
+      },
+      {
+        "id": "scheduler",
+        "name": "Cheryl Scheduling Assistant",
+        "workspace": "/home/node/.openclaw/workspace-scheduler",
+        "thinkingDefault": "medium",
+        "tools": {
+          "alsoAllow": [
+            "exec",
+            "read",
+            "write",
+            "edit",
+            "memory_search",
+            "memory_get"
+          ]
+        }
+      }
+    ]
+  },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "REPLACE_ME_LONG_HEX_GATEWAY_TOKEN"
+    },
+    "port": 18789,
+    "bind": "loopback",
+    "trustedProxies": [
+      "127.0.0.1",
+      "::1",
+      "172.17.0.1",
+      "172.18.0.1"
+    ],
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    },
+    "controlUi": {
+      "allowInsecureAuth": false,
+      "dangerouslyDisableDeviceAuth": false,
+      "allowedOrigins": [
+        "http://localhost:18789",
+        "http://127.0.0.1:18789",
+        "https://your-domain.example"
+      ]
+    }
+  },
+  "channels": {
+    "whatsapp": {
+      "dmPolicy": "pairing",
+      "groupPolicy": "disabled",
+      "enabled": false
+    },
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      }
+    }
+  },
+  "session": {
+    "dmScope": "main"
+  },
+  "tools": {
+    "profile": "coding",
+    "web": {
+      "search": {
+        "provider": "brave",
+        "enabled": true
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "openai": {
+        "baseUrl": "https://api.openai.com/v1",
+        "api": "openai-responses",
+        "auth": "api-key",
+        "models": [
+          {
+            "id": "gpt-4o-mini",
+            "name": "GPT-4o mini"
+          }
+        ]
+      },
+      "ollama": {
+        "baseUrl": "http://host.docker.internal:11434/v1",
+        "api": "openai-completions",
+        "auth": "api-key",
+        "apiKey": "ollama",
+        "models": [
+          {
+            "id": "llama3.1:8b",
+            "name": "Llama 3.1 8B (local Ollama)",
+            "contextWindow": 32768
+          }
+        ]
+      }
+    }
+  },
+  "wizard": {
+    "lastRunAt": "",
+    "lastRunVersion": "",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+  "meta": {
+    "lastTouchedVersion": "",
+    "lastTouchedAt": ""
+  },
+  "plugins": {
+    "entries": {
+      "ollama": {
+        "enabled": true
+      },
+      "openai": {
+        "enabled": true
+      },
+      "whatsapp": {
+        "enabled": true
+      },
+      "telegram": {
+        "enabled": true
+      },
+      "duckduckgo": {
+        "enabled": true
+      },
+      "brave": {
+        "enabled": true
+      },
+      "browser": {
+        "enabled": true
+      }
+    }
+  },
+  "auth": {
+    "profiles": {}
+  },
+  "commands": {
+    "ownerAllowFrom": [
+      "telegram:YOUR_TELEGRAM_USER_ID"
+    ]
+  },
+  "browser": {
+    "enabled": true,
+    "ssrfPolicy": {
+      "allowedHostnames": [
+        "host.docker.internal"
+      ],
+      "dangerouslyAllowPrivateNetwork": false
+    },
+    "executablePath": "/home/node/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome",
+    "noSandbox": true,
+    "headless": true
+  },
+  "hooks": {
+    "enabled": true,
+    "path": "/hooks",
+    "token": "REPLACE_ME_HOOKS_SHARED_SECRET",
+    "allowRequestSessionKey": true,
+    "defaultSessionKey": "hook:ingress",
+    "allowedAgentIds": [
+      "main",
+      "scheduler"
+    ],
+    "allowedSessionKeyPrefixes": [
+      "hook:",
+      "hook:gmail:"
+    ],
+    "presets": [
+      "gmail"
+    ],
+    "gmail": {
+      "account": "you@gmail.com",
+      "label": "INBOX",
+      "topic": "projects/YOUR_GCP_PROJECT/topics/YOUR_TOPIC",
+      "subscription": "your-subscription-name",
+      "pushToken": "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN",
+      "hookUrl": "http://127.0.0.1:18789/hooks/gmail",
+      "includeBody": true,
+      "maxBytes": 20000,
+      "renewEveryMinutes": 720,
+      "serve": {
+        "bind": "0.0.0.0",
+        "port": 8788,
+        "path": "/"
+      },
+      "tailscale": {
+        "mode": "off",
+        "path": "/gmail-pubsub"
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+# Copy to /etc/wsl.conf inside your dedicated WSL distro, then run from Windows:
+#   wsl --shutdown
+# Disables automatic mounting of Windows drives under /mnt/c, /mnt/d, ...
+# so Linux tooling cannot read your host profile without explicit sharing.
+
+[automount]
+enabled = false

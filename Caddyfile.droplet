@@ -1,0 +1,25 @@
+# OpenClaw gateway: TLS terminates here, HTTP to Docker-published port.
+# Gmail Pub/Sub push -> gog watch serve (127.0.0.1:8788, path /); public URL is /gmail-pubsub
+#
+# WebSockets must NOT go through `encode` — compression breaks the Upgrade handshake (browser sees WS close 1006).
+ai.sonofwolf.org {
+	handle_path /gmail-pubsub* {
+		reverse_proxy 127.0.0.1:8788
+	}
+
+	route {
+		@websockets {
+			header Connection *Upgrade*
+			header Upgrade websocket
+		}
+		handle @websockets {
+			reverse_proxy 127.0.0.1:18789 {
+				flush_interval -1
+			}
+		}
+		handle {
+			encode zstd gzip
+			reverse_proxy 127.0.0.1:18789
+		}
+	}
+}

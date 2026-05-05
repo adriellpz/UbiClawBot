@@ -1,0 +1,29 @@
+# --- Secrets & local env (never commit) ---
+.env
+.env.*
+!.env.example
+.env.cf
+.env.droplet
+*.local
+
+# --- Upstream OpenClaw source (install separately or use container image only) ---
+openclaw-repo/
+
+# --- Config: real runtime config stays local; template is tracked ---
+config/**
+!config/.gitkeep
+!config/openclaw.example.json
+
+# --- Workspace: agent/workspace content stays local; only deploy artifacts tracked ---
+workspace/**
+!workspace/Dockerfile.gog
+!workspace/docker-compose.droplet.yml
+
+# --- Bundles & binaries ---
+do-droplet-bundle/
+openclaw-droplet-bundle.zip
+bin/
+
+# --- OS / tooling ---
+.DS_Store
+Thumbs.db
