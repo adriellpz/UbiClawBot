@@ -156,27 +156,23 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
   const dedupeKey = `${pr.number}:${payload.action}:${cardResult.mode}:${githubDeliveryId || "none"}`;
   if (!shouldWake(dedupeKey)) return { skipped: "deduped_recently" };
 
+  const message = [
+    "github_pr_review_requested",
+    `action: ${payload.action}`,
+    `pr: #${pr.number} ${pr.title}`,
+    `url: ${pr.html_url}`,
+    `author: ${pr.user?.login || "unknown"}`,
+    `branches: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
+    `trello: ${cardResult.mode} ${cardResult.cardUrl}`,
+    "",
+    "Please review this PR and leave a GitHub review. Adriel is final merge gate.",
+  ].join("\n");
+
+  // /hooks/agent expects a message body; keep the payload shape compatible.
   const body = {
-    event: "github_pr_review_requested",
-    source: "github-pr-bridge",
-    action: payload.action,
-    pr: {
-      number: pr.number,
-      url: pr.html_url,
-      title: pr.title,
-      author: pr.user?.login || "unknown",
-      head: pr.head?.ref || "?",
-      base: pr.base?.ref || "?",
-      draft: Boolean(pr.draft),
-    },
-    trello: {
-      mode: cardResult.mode,
-      cardId: cardResult.cardId,
-      cardUrl: cardResult.cardUrl,
-    },
-    // Keep OpenClaw session key deterministic by PR for conversational continuity.
-    sessionKey: `${OPENCLAW_HOOK_SESSION_PREFIX}${pr.number}`,
+    message,
     agentId: OPENCLAW_HOOK_AGENT_ID,
+    sessionKey: `${OPENCLAW_HOOK_SESSION_PREFIX}${pr.number}`,
   };
 
   const res = await fetch(OPENCLAW_HOOK_URL, {
