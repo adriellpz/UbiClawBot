@@ -33,7 +33,7 @@ services:
       TZ: ${OPENCLAW_TZ:-UTC}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # gog (gogcli): file keyring + password so OAuth tokens survive container recreates
-      # Set GOG_KEYRING_PASSWORD in /root/openclaw/.env (same value as used for `gog auth add --manual`)
+      # Set GOG_KEYRING_PASSWORD in /home/deploy/openclaw/.env (same value as used for `gog auth add --manual`)
       GOG_KEYRING_BACKEND: ${GOG_KEYRING_BACKEND:-file}
       GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-}
       GOG_ACCOUNT: ${GOG_ACCOUNT:-}
