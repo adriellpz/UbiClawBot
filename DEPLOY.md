@@ -11,6 +11,7 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 | `workspace/Dockerfile.gog` | Extends upstream image (browser deps + `gog`). |
 | `workspace/docker-compose.droplet.yml` | Compose definition; uses `OPENCLAW_IMAGE` from `.env`. |
 | `Caddyfile.droplet` | Reverse proxy / TLS (example for your VPS). |
+| `github-pr-bridge/` | GitHub `pull_request` webhook intake sidecar (HMAC verify + Trello card dedupe/update). |
 
 ## What is intentionally not tracked
 
@@ -56,13 +57,14 @@ It copies these files to the droplet and restarts services:
 - `workspace/Dockerfile.gog` -> `/home/deploy/openclaw/Dockerfile.gog`
 - `workspace/docker-compose.droplet.yml` -> `/home/deploy/openclaw/docker-compose.yml`
 - `Caddyfile.droplet` -> `/home/deploy/openclaw/Caddyfile.droplet`
+- `github-pr-bridge/*` -> `/home/deploy/openclaw/github-pr-bridge/*`
 
 Then it runs:
 
 ```bash
 cd /home/deploy/openclaw
 docker compose build openclaw-gateway
-docker compose up -d --force-recreate openclaw-gateway openclaw-cli
+docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge
 docker compose ps
 ```
 
@@ -78,6 +80,7 @@ Set these in **GitHub -> Settings -> Secrets and variables -> Actions**:
 Notes:
 - Keep runtime secrets (`/home/deploy/openclaw/.env`) only on the droplet.
 - This workflow does not overwrite `/home/deploy/openclaw/.env` or `/home/deploy/openclaw/data/*`.
+- GitHub PR webhook setup details: [GITHUB-PR-WEBHOOK.md](./GITHUB-PR-WEBHOOK.md).
 
 ## Optional: fork upstream for patches
 
