@@ -30,7 +30,6 @@ jobs:
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
           source: "workspace/Dockerfile.gog,workspace/docker-compose.droplet.yml,Caddyfile.droplet"
           target: "/root/openclaw/.deploy-tmp"
-          strip_components: 1
 
       - name: Apply files, rebuild, and restart services
         uses: appleboy/ssh-action@v1.0.3
@@ -43,8 +42,8 @@ jobs:
           script: |
             set -eu
             mkdir -p /root/openclaw
-            cp /root/openclaw/.deploy-tmp/Dockerfile.gog /root/openclaw/Dockerfile.gog
-            cp /root/openclaw/.deploy-tmp/docker-compose.droplet.yml /root/openclaw/docker-compose.yml
+            cp /root/openclaw/.deploy-tmp/workspace/Dockerfile.gog /root/openclaw/Dockerfile.gog
+            cp /root/openclaw/.deploy-tmp/workspace/docker-compose.droplet.yml /root/openclaw/docker-compose.yml
             cp /root/openclaw/.deploy-tmp/Caddyfile.droplet /root/openclaw/Caddyfile.droplet
             cd /root/openclaw
             docker compose build openclaw-gateway
