@@ -30,6 +30,11 @@ Set these in `/home/deploy/openclaw/.env` (server-side only):
 - `TRELLO_BOARD_ID` (recommended, example `sKapJDvB`)
 - `TRELLO_INTAKE_LIST_ID` (optional but recommended; if missing, first open list on the board is used)
 - `GITHUB_PR_BRIDGE_PORT` (optional, default `19091`)
+- `GITHUB_PR_MAX_BODY_BYTES` (optional, default `1048576`)
+- `OPENCLAW_HOOK_URL` (recommended, example `https://ai.sonofwolf.org/hooks/github-pr`)
+- `OPENCLAW_HOOK_TOKEN` (recommended, OpenClaw external hooks bearer token)
+- `OPENCLAW_HOOK_AGENT_ID` (optional, default `main`)
+- `OPENCLAW_HOOK_SESSION_PREFIX` (optional, default `hook:github-pr:`)
 
 No secret values are committed in git.
 
@@ -54,6 +59,15 @@ Other actions are acknowledged and ignored.
 - Card description includes PR URL/title/action/branches/author and review gate reminder
 - Dedupe: if an open card already references `/pull/<number>`, the bridge adds a comment update instead of creating a duplicate
 - Does not move cards into/out of any specific list beyond initial intake placement
+
+## OpenClaw wake behavior
+
+After Trello create/update, the bridge can POST a sanitized `github_pr_review_requested` event to OpenClaw external hooks so Ubi is woken immediately:
+
+- destination: `OPENCLAW_HOOK_URL`
+- auth: `Authorization: Bearer <OPENCLAW_HOOK_TOKEN>`
+- payload includes PR metadata + Trello card URL and deterministic `sessionKey` (`hook:github-pr:<pr-number>` by default)
+- wake dedupe: same PR/action/mode/delivery combination is rate-limited in-memory for 5 minutes to reduce redelivery spam
 
 ## Manual test / redelivery
 

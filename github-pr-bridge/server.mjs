@@ -7,6 +7,11 @@ const TRELLO_KEY = process.env.TRELLO_API_KEY || "";
 const TRELLO_TOKEN = process.env.TRELLO_API_TOKEN || "";
 const TRELLO_BOARD_ID = process.env.TRELLO_BOARD_ID || "";
 const TRELLO_INTAKE_LIST_ID = process.env.TRELLO_INTAKE_LIST_ID || "";
+const OPENCLAW_HOOK_URL = process.env.OPENCLAW_HOOK_URL || "";
+const OPENCLAW_HOOK_TOKEN = process.env.OPENCLAW_HOOK_TOKEN || "";
+const OPENCLAW_HOOK_AGENT_ID = process.env.OPENCLAW_HOOK_AGENT_ID || "main";
+const OPENCLAW_HOOK_SESSION_PREFIX = process.env.OPENCLAW_HOOK_SESSION_PREFIX || "hook:github-pr:";
+const MAX_BODY_BYTES = Number(process.env.GITHUB_PR_MAX_BODY_BYTES || 1024 * 1024);
 
 const RELEVANT_ACTIONS = new Set([
   "opened",
@@ -15,6 +20,7 @@ const RELEVANT_ACTIONS = new Set([
   "ready_for_review",
   "review_requested",
 ]);
+const wakeDeduper = new Map();
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
@@ -30,6 +36,22 @@ function safeHmacCompare(a, b) {
   const bb = Buffer.from(b, "utf8");
   if (aa.length !== bb.length) return false;
   return timingSafeEqual(aa, bb);
+}
+
+function shouldWake(dedupeKey) {
+  const now = Date.now();
+  const previous = wakeDeduper.get(dedupeKey) || 0;
+  const dedupeWindowMs = 5 * 60 * 1000;
+  if (now - previous < dedupeWindowMs) return false;
+  wakeDeduper.set(dedupeKey, now);
+  if (wakeDeduper.size > 500) {
+    // Trim old entries on growth to avoid unbounded memory.
+    for (const [key, ts] of wakeDeduper) {
+      if (now - ts > dedupeWindowMs) wakeDeduper.delete(key);
+      if (wakeDeduper.size <= 300) break;
+    }
+  }
+  return true;
 }
 
 function priorityForEvent(action, pullRequest) {
@@ -128,6 +150,50 @@ async function upsertReviewCard(payload) {
   return { mode: "created", cardId: created.id, cardUrl: created.url };
 }
 
+async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
+  if (!OPENCLAW_HOOK_URL || !OPENCLAW_HOOK_TOKEN) return { skipped: "openclaw_hook_not_configured" };
+  const pr = payload.pull_request;
+  const dedupeKey = `${pr.number}:${payload.action}:${cardResult.mode}:${githubDeliveryId || "none"}`;
+  if (!shouldWake(dedupeKey)) return { skipped: "deduped_recently" };
+
+  const body = {
+    event: "github_pr_review_requested",
+    source: "github-pr-bridge",
+    action: payload.action,
+    pr: {
+      number: pr.number,
+      url: pr.html_url,
+      title: pr.title,
+      author: pr.user?.login || "unknown",
+      head: pr.head?.ref || "?",
+      base: pr.base?.ref || "?",
+      draft: Boolean(pr.draft),
+    },
+    trello: {
+      mode: cardResult.mode,
+      cardId: cardResult.cardId,
+      cardUrl: cardResult.cardUrl,
+    },
+    // Keep OpenClaw session key deterministic by PR for conversational continuity.
+    sessionKey: `${OPENCLAW_HOOK_SESSION_PREFIX}${pr.number}`,
+    agentId: OPENCLAW_HOOK_AGENT_ID,
+  };
+
+  const res = await fetch(OPENCLAW_HOOK_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${OPENCLAW_HOOK_TOKEN}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenClaw hook ${res.status}: ${text}`);
+  }
+  return { ok: true };
+}
+
 function basicConfigCheck() {
   const missing = [];
   if (!WEBHOOK_SECRET) missing.push("GITHUB_PR_WEBHOOK_SECRET");
@@ -151,7 +217,14 @@ const server = http.createServer(async (req, res) => {
   }
 
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  let totalBytes = 0;
+  for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > MAX_BODY_BYTES) {
+      return sendJson(res, 413, { error: "payload_too_large", maxBytes: MAX_BODY_BYTES });
+    }
+    chunks.push(chunk);
+  }
   const rawBody = Buffer.concat(chunks);
 
   const signature = req.headers["x-hub-signature-256"];
@@ -181,9 +254,10 @@ const server = http.createServer(async (req, res) => {
 
   try {
     const result = await upsertReviewCard(payload);
-    return sendJson(res, 200, { ok: true, ...result });
+    const wake = await wakeOpenClaw(payload, result, req.headers["x-github-delivery"]);
+    return sendJson(res, 200, { ok: true, ...result, wake });
   } catch (error) {
-    return sendJson(res, 500, { error: "trello_upsert_failed", message: String(error?.message || error) });
+    return sendJson(res, 500, { error: "processing_failed", message: String(error?.message || error) });
   }
 });
 

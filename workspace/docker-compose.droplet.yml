@@ -174,7 +174,7 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
-      - ../github-pr-bridge:/opt/github-pr-bridge:ro
+      - ./github-pr-bridge:/opt/github-pr-bridge:ro
     working_dir: /opt/github-pr-bridge
     command: ["node", "server.mjs"]
     init: true

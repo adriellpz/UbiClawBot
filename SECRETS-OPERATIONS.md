@@ -77,3 +77,8 @@ docker compose up -d --force-recreate github-pr-bridge openclaw-gateway
 
 See `GITHUB-PR-WEBHOOK.md` for webhook URL/events/manual setup.
 
+For immediate Ubi wake-up (recommended), also set:
+
+- `OPENCLAW_HOOK_URL` (for example `https://ai.sonofwolf.org/hooks/github-pr`)
+- `OPENCLAW_HOOK_TOKEN` (OpenClaw external hooks bearer token)
+
