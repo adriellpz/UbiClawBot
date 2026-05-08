@@ -12,6 +12,10 @@ const OPENCLAW_HOOK_TOKEN = process.env.OPENCLAW_HOOK_TOKEN || "";
 const OPENCLAW_HOOK_AGENT_ID = process.env.OPENCLAW_HOOK_AGENT_ID || "main";
 const OPENCLAW_HOOK_SESSION_PREFIX = process.env.OPENCLAW_HOOK_SESSION_PREFIX || "hook:github-pr:";
 const MAX_BODY_BYTES = Number(process.env.GITHUB_PR_MAX_BODY_BYTES || 1024 * 1024);
+const DONE_LIST_NAMES = (process.env.TRELLO_DONE_LIST_NAMES || "Done")
+  .split(",")
+  .map((name) => name.trim().toLowerCase())
+  .filter(Boolean);
 
 const RELEVANT_ACTIONS = new Set([
   "opened",
@@ -21,6 +25,7 @@ const RELEVANT_ACTIONS = new Set([
   "review_requested",
 ]);
 const wakeDeduper = new Map();
+let listNameByIdCache = null;
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
@@ -93,6 +98,14 @@ async function trelloFetch(path, init = {}) {
   return res.json();
 }
 
+async function getBoardListNameById() {
+  if (!TRELLO_BOARD_ID) return new Map();
+  if (listNameByIdCache) return listNameByIdCache;
+  const lists = await trelloFetch(`/boards/${encodeURIComponent(TRELLO_BOARD_ID)}/lists?filter=all&fields=id,name,closed`);
+  listNameByIdCache = new Map((Array.isArray(lists) ? lists : []).map((list) => [list.id, list.name || ""]));
+  return listNameByIdCache;
+}
+
 async function getIntakeListId() {
   if (TRELLO_INTAKE_LIST_ID) return TRELLO_INTAKE_LIST_ID;
   if (!TRELLO_BOARD_ID) throw new Error("TRELLO_BOARD_ID is required when TRELLO_INTAKE_LIST_ID is not set");
@@ -101,12 +114,28 @@ async function getIntakeListId() {
   return lists[0].id;
 }
 
-async function findExistingOpenCard(prNumber) {
+function cardExactlyMatchesPr(card, prNumber, prUrl) {
+  const name = String(card?.name || "");
+  const desc = String(card?.desc || "");
+  const hasExactPrName = new RegExp(`\\bPR\\s*#?${prNumber}\\b`, "i").test(name);
+  const hasExactPrReference = desc.includes(prUrl) || desc.includes(`/pull/${prNumber}`);
+  return hasExactPrName || hasExactPrReference;
+}
+
+async function findExistingOpenCard(pullRequest) {
   if (!TRELLO_BOARD_ID) return null;
+  const prNumber = pullRequest.number;
+  const prUrl = pullRequest.html_url;
   const query = `/pull/${prNumber} board:${TRELLO_BOARD_ID}`;
   const data = await trelloFetch(`/search?modelTypes=cards&cards_limit=20&cards_page=0&card_fields=id,name,desc,closed,idList,url&query=${encodeURIComponent(query)}`);
   const cards = Array.isArray(data.cards) ? data.cards : [];
-  return cards.find((card) => !card.closed) || null;
+  const listNameById = await getBoardListNameById();
+  return cards.find((card) => {
+    if (card.closed) return false;
+    const listName = String(listNameById.get(card.idList) || "").trim().toLowerCase();
+    if (DONE_LIST_NAMES.includes(listName)) return false;
+    return cardExactlyMatchesPr(card, prNumber, prUrl);
+  }) || null;
 }
 
 async function addCardComment(cardId, text) {
@@ -123,7 +152,7 @@ async function upsertReviewCard(payload) {
   const priority = priorityForEvent(payload.action, pr);
   const cardTitle = buildCardTitle(priority, prNumber);
   const description = buildCardDescription(payload);
-  const existing = await findExistingOpenCard(prNumber);
+  const existing = await findExistingOpenCard(pr);
 
   if (existing) {
     const comment = [

@@ -29,6 +29,7 @@ Set these in `/home/deploy/openclaw/.env` (server-side only):
 - `TRELLO_API_TOKEN` (required)
 - `TRELLO_BOARD_ID` (recommended, example `sKapJDvB`)
 - `TRELLO_INTAKE_LIST_ID` (optional but recommended; if missing, first open list on the board is used)
+- `TRELLO_DONE_LIST_NAMES` (optional comma-separated list names ignored during dedupe, default `Done`)
 - `GITHUB_PR_BRIDGE_PORT` (optional, default `19091`)
 - `GITHUB_PR_MAX_BODY_BYTES` (optional, default `1048576`)
 - `OPENCLAW_HOOK_URL` (recommended, example `https://ai.sonofwolf.org/hooks/agent`)
@@ -57,7 +58,8 @@ Other actions are acknowledged and ignored.
 - Creates card title as `P2 - Review PR <number>` by default
 - Escalates to `P1 - Review PR <number>` for `review_requested` or urgent/P1 labels
 - Card description includes PR URL/title/action/branches/author and review gate reminder
-- Dedupe: if an open card already references `/pull/<number>`, the bridge adds a comment update instead of creating a duplicate
+- Dedupe: Trello search results are treated as candidates only; the bridge exact-matches the PR number in the card name or the PR URL/`/pull/<number>` in the description before updating an existing card
+- Historical cards in closed/archive state or configured done list names are ignored during dedupe, so old review cards do not absorb new PR updates
 - Does not move cards into/out of any specific list beyond initial intake placement
 
 ## OpenClaw wake behavior
