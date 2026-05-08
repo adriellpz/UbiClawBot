@@ -118,7 +118,8 @@ function cardExactlyMatchesPr(card, prNumber, prUrl) {
   const name = String(card?.name || "");
   const desc = String(card?.desc || "");
   const hasExactPrName = new RegExp(`\\bPR\\s*#?${prNumber}\\b`, "i").test(name);
-  const hasExactPrReference = desc.includes(prUrl) || desc.includes(`/pull/${prNumber}`);
+  const hasExactPrReference =
+    desc.includes(prUrl) || new RegExp(`(^|[^0-9])/pull/${prNumber}([^0-9]|$)`).test(desc);
   return hasExactPrName || hasExactPrReference;
 }
 
