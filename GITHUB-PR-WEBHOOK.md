@@ -31,7 +31,7 @@ Set these in `/home/deploy/openclaw/.env` (server-side only):
 - `TRELLO_INTAKE_LIST_ID` (optional but recommended; if missing, first open list on the board is used)
 - `GITHUB_PR_BRIDGE_PORT` (optional, default `19091`)
 - `GITHUB_PR_MAX_BODY_BYTES` (optional, default `1048576`)
-- `OPENCLAW_HOOK_URL` (recommended, example `https://ai.sonofwolf.org/hooks/github-pr`)
+- `OPENCLAW_HOOK_URL` (recommended, example `https://ai.sonofwolf.org/hooks/agent`)
 - `OPENCLAW_HOOK_TOKEN` (recommended, OpenClaw external hooks bearer token)
 - `OPENCLAW_HOOK_AGENT_ID` (optional, default `main`)
 - `OPENCLAW_HOOK_SESSION_PREFIX` (optional, default `hook:github-pr:`)
@@ -64,10 +64,12 @@ Other actions are acknowledged and ignored.
 
 After Trello create/update, the bridge can POST a sanitized `github_pr_review_requested` event to OpenClaw external hooks so Ubi is woken immediately:
 
-- destination: `OPENCLAW_HOOK_URL`
+- destination: `OPENCLAW_HOOK_URL` (recommended: `https://ai.sonofwolf.org/hooks/agent`)
 - auth: `Authorization: Bearer <OPENCLAW_HOOK_TOKEN>`
 - payload includes PR metadata + Trello card URL and deterministic `sessionKey` (`hook:github-pr:<pr-number>` by default)
 - wake dedupe: same PR/action/mode/delivery combination is rate-limited in-memory for 5 minutes to reduce redelivery spam
+
+If you choose a custom mapped hook path instead of `/hooks/agent`, ensure that mapping exists in OpenClaw config before enabling this bridge.
 
 ## Manual test / redelivery
 
