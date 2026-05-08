@@ -1,0 +1,16 @@
+{
+  "name": "ubiclawbot-deploy-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static validation gate for the UbiClawBot deployment/config repository.",
+  "scripts": {
+    "test": "node scripts/test-gate.mjs"
+  },
+  "devDependencies": {
+    "yaml": "^2.8.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
