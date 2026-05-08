@@ -53,14 +53,14 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 This repo includes `.github/workflows/deploy-droplet.yml` that deploys on pushes to `main` (and manual `workflow_dispatch`).
 
 It copies these files to the droplet and restarts services:
-- `workspace/Dockerfile.gog` -> `/root/openclaw/Dockerfile.gog`
-- `workspace/docker-compose.droplet.yml` -> `/root/openclaw/docker-compose.yml`
-- `Caddyfile.droplet` -> `/root/openclaw/Caddyfile.droplet`
+- `workspace/Dockerfile.gog` -> `/home/deploy/openclaw/Dockerfile.gog`
+- `workspace/docker-compose.droplet.yml` -> `/home/deploy/openclaw/docker-compose.yml`
+- `Caddyfile.droplet` -> `/home/deploy/openclaw/Caddyfile.droplet`
 
 Then it runs:
 
 ```bash
-cd /root/openclaw
+cd /home/deploy/openclaw
 docker compose build openclaw-gateway
 docker compose up -d --force-recreate openclaw-gateway openclaw-cli
 docker compose ps
@@ -71,13 +71,13 @@ docker compose ps
 Set these in **GitHub -> Settings -> Secrets and variables -> Actions**:
 
 - `DROPLET_HOST` (example: `134.209.38.222`)
-- `DROPLET_USER` (example: `root`)
+- `DROPLET_USER` (example: `deploy`)
 - `DROPLET_SSH_KEY` (private key content used by Actions runner)
 - `DROPLET_SSH_PORT` (optional, defaults to `22`)
 
 Notes:
-- Keep runtime secrets (`/root/openclaw/.env`) only on the droplet.
-- This workflow does not overwrite `/root/openclaw/.env` or `/root/openclaw/data/*`.
+- Keep runtime secrets (`/home/deploy/openclaw/.env`) only on the droplet.
+- This workflow does not overwrite `/home/deploy/openclaw/.env` or `/home/deploy/openclaw/data/*`.
 
 ## Optional: fork upstream for patches
 

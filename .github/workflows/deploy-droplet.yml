@@ -29,7 +29,8 @@ jobs:
           key: ${{ secrets.DROPLET_SSH_KEY }}
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
           source: "workspace/Dockerfile.gog,workspace/docker-compose.droplet.yml,Caddyfile.droplet"
-          target: "/root/openclaw/.deploy-tmp"
+          target: "/home/deploy/openclaw/.deploy-tmp"
+          strip_components: 1
 
       - name: Apply files, rebuild, and restart services
         uses: appleboy/ssh-action@v1.0.3
@@ -41,11 +42,11 @@ jobs:
           script_stop: true
           script: |
             set -eu
-            mkdir -p /root/openclaw
-            cp /root/openclaw/.deploy-tmp/workspace/Dockerfile.gog /root/openclaw/Dockerfile.gog
-            cp /root/openclaw/.deploy-tmp/workspace/docker-compose.droplet.yml /root/openclaw/docker-compose.yml
-            cp /root/openclaw/.deploy-tmp/Caddyfile.droplet /root/openclaw/Caddyfile.droplet
-            cd /root/openclaw
+            mkdir -p /home/deploy/openclaw
+            cp /home/deploy/openclaw/.deploy-tmp/Dockerfile.gog /home/deploy/openclaw/Dockerfile.gog
+            cp /home/deploy/openclaw/.deploy-tmp/docker-compose.droplet.yml /home/deploy/openclaw/docker-compose.yml
+            cp /home/deploy/openclaw/.deploy-tmp/Caddyfile.droplet /home/deploy/openclaw/Caddyfile.droplet
+            cd /home/deploy/openclaw
             docker compose build openclaw-gateway
             docker compose up -d --force-recreate openclaw-gateway openclaw-cli
             docker compose ps
