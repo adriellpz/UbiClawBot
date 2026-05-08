@@ -184,15 +184,25 @@
   },
   "browser": {
     "enabled": true,
+    "defaultProfile": "openclaw",
+    "remoteCdpTimeoutMs": 3000,
+    "remoteCdpHandshakeTimeoutMs": 5000,
     "ssrfPolicy": {
       "allowedHostnames": [
-        "host.docker.internal"
+        "host.docker.internal",
+        "connect.browserbase.com"
       ],
       "dangerouslyAllowPrivateNetwork": false
     },
     "executablePath": "/home/node/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome",
     "noSandbox": true,
-    "headless": true
+    "headless": true,
+    "profiles": {
+      "browserbase": {
+        "cdpUrl": "wss://connect.browserbase.com?apiKey=REPLACE_ME_BROWSERBASE_API_KEY&projectId=REPLACE_ME_BROWSERBASE_PROJECT_ID",
+        "color": "#F97316"
+      }
+    }
   },
   "hooks": {
     "enabled": true,

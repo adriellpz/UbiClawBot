@@ -48,6 +48,37 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 
 4. Read upstream release notes for **config migrations**; merge changes into `config/openclaw.json` manually (keep `openclaw.example.json` updated when you adopt new options worth documenting).
 
+## Auto-deploy from GitHub (push to `main`)
+
+This repo includes `.github/workflows/deploy-droplet.yml` that deploys on pushes to `main` (and manual `workflow_dispatch`).
+
+It copies these files to the droplet and restarts services:
+- `workspace/Dockerfile.gog` -> `/root/openclaw/Dockerfile.gog`
+- `workspace/docker-compose.droplet.yml` -> `/root/openclaw/docker-compose.yml`
+- `Caddyfile.droplet` -> `/root/openclaw/Caddyfile.droplet`
+
+Then it runs:
+
+```bash
+cd /root/openclaw
+docker compose build openclaw-gateway
+docker compose up -d --force-recreate openclaw-gateway openclaw-cli
+docker compose ps
+```
+
+### Required GitHub repo secrets
+
+Set these in **GitHub -> Settings -> Secrets and variables -> Actions**:
+
+- `DROPLET_HOST` (example: `134.209.38.222`)
+- `DROPLET_USER` (example: `root`)
+- `DROPLET_SSH_KEY` (private key content used by Actions runner)
+- `DROPLET_SSH_PORT` (optional, defaults to `22`)
+
+Notes:
+- Keep runtime secrets (`/root/openclaw/.env`) only on the droplet.
+- This workflow does not overwrite `/root/openclaw/.env` or `/root/openclaw/data/*`.
+
 ## Optional: fork upstream for patches
 
 If you need to change OpenClaw’s source, fork **openclaw/openclaw** on GitHub, clone that fork elsewhere, add **`upstream`** = `https://github.com/openclaw/openclaw.git`, and merge/rebase when you want updates. This deploy repo still only needs the **image tag** unless you build your own images from the fork.
