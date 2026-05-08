@@ -4,6 +4,12 @@ ARG BASE_IMAGE=ghcr.io/openclaw/openclaw:2026.4.23
 FROM ${BASE_IMAGE}
 # Pin release — asset names are gogcli_<ver>_linux_amd64.tar.gz (not .../latest/download/gogcli_linux_amd64.tar.gz).
 ARG GOGCLI_VERSION=0.14.0
+# Renamed assets under openclaw/goplaces — pin version (latest/.../goplaces_linux_amd64.tar.gz no longer exists).
+ARG GOPLACES_VERSION=0.4.0
+# GitHub CLI — used inside the container (OpenClaw exec / skills). Host `gh` does not apply here.
+# https://docs.github.com/en/github-cli/github-cli
+# Pin a real release asset (see https://github.com/cli/cli/releases).
+ARG GH_VERSION=2.92.0
 
 USER root
 RUN apt-get update \
@@ -40,11 +46,20 @@ RUN apt-get update \
     libxfixes3 \
     libxkbcommon0 \
     libxrandr2 \
+    tmux \
     xfonts-scalable \
     xvfb \
   && rm -rf /var/lib/apt/lists/* \
-  && curl -fsSL "https://github.com/steipete/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_amd64.tar.gz" \
+  && curl -fsSL "https://github.com/openclaw/gogcli/releases/download/v${GOGCLI_VERSION}/gogcli_${GOGCLI_VERSION}_linux_amd64.tar.gz" \
     | tar -xzO gog > /usr/local/bin/gog \
-  && chmod +x /usr/local/bin/gog
+  && chmod +x /usr/local/bin/gog \
+  && curl -fsSL "https://github.com/openclaw/goplaces/releases/download/v${GOPLACES_VERSION}/goplaces_${GOPLACES_VERSION}_linux_amd64.tar.gz" \
+    | tar -xzO goplaces > /usr/local/bin/goplaces \
+  && chmod +x /usr/local/bin/goplaces \
+  && curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -o /tmp/gh.tgz \
+  && tar -xzf /tmp/gh.tgz -C /tmp \
+  && mv "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
+  && chmod +x /usr/local/bin/gh \
+  && rm -rf /tmp/gh.tgz "/tmp/gh_${GH_VERSION}_linux_amd64"
 
 USER node

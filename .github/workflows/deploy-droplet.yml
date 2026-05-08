@@ -1,0 +1,62 @@
+name: Deploy to Droplet
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workspace/Dockerfile.gog"
+      - "workspace/docker-compose.droplet.yml"
+      - "Caddyfile.droplet"
+      - ".github/workflows/deploy-droplet.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-droplet-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy workspace deployment files to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "workspace/Dockerfile.gog,workspace/docker-compose.droplet.yml"
+          target: "/home/deploy/openclaw/.deploy-tmp"
+          strip_components: 1
+
+      - name: Copy Caddyfile to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "Caddyfile.droplet"
+          target: "/home/deploy/openclaw/.deploy-tmp-root"
+
+      - name: Apply files, rebuild, and restart services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -eu
+            mkdir -p /home/deploy/openclaw
+            cp /home/deploy/openclaw/.deploy-tmp/Dockerfile.gog /home/deploy/openclaw/Dockerfile.gog
+            cp /home/deploy/openclaw/.deploy-tmp/docker-compose.droplet.yml /home/deploy/openclaw/docker-compose.yml
+            cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet /home/deploy/openclaw/Caddyfile.droplet
+            cd /home/deploy/openclaw
+            docker compose build openclaw-gateway
+            docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge
+            docker compose ps
