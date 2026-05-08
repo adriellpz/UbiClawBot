@@ -69,9 +69,9 @@ jobs:
             cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet /home/deploy/openclaw/Caddyfile.droplet
             mkdir -p /home/deploy/openclaw/github-pr-bridge
             cp /home/deploy/openclaw/.deploy-tmp-github-pr-bridge/github-pr-bridge/* /home/deploy/openclaw/github-pr-bridge/
-            # Apply Caddy config atomically: validate first, then reload.
-            sudo cp /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile
-            sudo caddy validate --config /etc/caddy/Caddyfile
+            # Validate candidate first; install + reload only after a successful validation.
+            sudo caddy validate --config /home/deploy/openclaw/Caddyfile.droplet
+            sudo install -m 0644 /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile
             sudo systemctl reload caddy
             cd /home/deploy/openclaw
             docker compose build openclaw-gateway
