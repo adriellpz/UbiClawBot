@@ -9,6 +9,9 @@ ai.sonofwolf.org {
 	handle /trello* {
 		reverse_proxy 127.0.0.1:18990
 	}
+	handle /github-pr* {
+		reverse_proxy 127.0.0.1:19091
+	}
 
 	route {
 		@websockets {

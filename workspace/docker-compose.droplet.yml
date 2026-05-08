@@ -44,6 +44,11 @@ services:
       GIT_TERMINAL_PROMPT: "0"
       # Netlify: personal access token for Netlify CLI / MCP.
       NETLIFY_AUTH_TOKEN: ${NETLIFY_AUTH_TOKEN:-}
+      # GitHub PR webhook intake sidecar
+      GITHUB_PR_WEBHOOK_SECRET: ${GITHUB_PR_WEBHOOK_SECRET:-}
+      GITHUB_PR_BRIDGE_PORT: ${GITHUB_PR_BRIDGE_PORT:-19091}
+      TRELLO_BOARD_ID: ${TRELLO_BOARD_ID:-}
+      TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
@@ -53,6 +58,7 @@ services:
       - "127.0.0.1:${OPENCLAW_GATEWAY_PORT:-18789}:18789"
       - "127.0.0.1:${OPENCLAW_BRIDGE_PORT:-18790}:18790"
       - "127.0.0.1:${TRELLO_BRIDGE_PORT:-18990}:18990"
+      - "127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}:${GITHUB_PR_BRIDGE_PORT:-19091}"
       # gog gmail watch serve (hooks.gmail) — Caddy on host proxies /gmail-pubsub here
       - "127.0.0.1:${OPENCLAW_GMAIL_WATCH_PORT:-8788}:8788"
     init: true
@@ -111,6 +117,10 @@ services:
       GH_TOKEN: ${GH_TOKEN:-}
       GIT_TERMINAL_PROMPT: "0"
       NETLIFY_AUTH_TOKEN: ${NETLIFY_AUTH_TOKEN:-}
+      GITHUB_PR_WEBHOOK_SECRET: ${GITHUB_PR_WEBHOOK_SECRET:-}
+      GITHUB_PR_BRIDGE_PORT: ${GITHUB_PR_BRIDGE_PORT:-19091}
+      TRELLO_BOARD_ID: ${TRELLO_BOARD_ID:-}
+      TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
@@ -138,6 +148,40 @@ services:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
     working_dir: /home/node/.openclaw/workspace/trello_bridge
+    command: ["node", "server.mjs"]
+    init: true
+    restart: unless-stopped
+    depends_on:
+      - openclaw-gateway
+
+  github-pr-bridge:
+    image: openclaw-with-gog:local
+    network_mode: "service:openclaw-gateway"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+      GITHUB_PR_BRIDGE_PORT: ${GITHUB_PR_BRIDGE_PORT:-19091}
+      GITHUB_PR_MAX_BODY_BYTES: ${GITHUB_PR_MAX_BODY_BYTES:-1048576}
+      GITHUB_PR_WEBHOOK_SECRET: ${GITHUB_PR_WEBHOOK_SECRET:-}
+      TRELLO_API_KEY: ${TRELLO_API_KEY:-}
+      TRELLO_API_TOKEN: ${TRELLO_API_TOKEN:-}
+      TRELLO_BOARD_ID: ${TRELLO_BOARD_ID:-}
+      TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
+      TRELLO_DONE_LIST_NAMES: ${TRELLO_DONE_LIST_NAMES:-Done}
+      OPENCLAW_HOOK_URL: ${OPENCLAW_HOOK_URL:-}
+      OPENCLAW_HOOK_TOKEN: ${OPENCLAW_HOOK_TOKEN:-}
+      OPENCLAW_HOOK_AGENT_ID: ${OPENCLAW_HOOK_AGENT_ID:-main}
+      OPENCLAW_HOOK_SESSION_PREFIX: ${OPENCLAW_HOOK_SESSION_PREFIX:-hook:github-pr:}
+      XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-/home/node/.openclaw}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
+      - ./github-pr-bridge:/opt/github-pr-bridge:ro
+    working_dir: /opt/github-pr-bridge
     command: ["node", "server.mjs"]
     init: true
     restart: unless-stopped

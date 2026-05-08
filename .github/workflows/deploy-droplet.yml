@@ -6,10 +6,11 @@ on:
     paths:
       - "workspace/Dockerfile.gog"
       - "workspace/docker-compose.droplet.yml"
+      - "github-pr-bridge/**"
       - "Caddyfile.droplet"
       - ".github/workflows/deploy-droplet.yml"
   schedule:
-    # Nightly at 08:00 UTC (~2:00 AM America/Chicago during CST).
+    # Nightly at 08:00 UTC.
     - cron: "0 8 * * *"
   workflow_dispatch:
 
@@ -45,6 +46,16 @@ jobs:
           source: "Caddyfile.droplet"
           target: "/home/deploy/openclaw/.deploy-tmp-root"
 
+      - name: Copy GitHub PR bridge to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "github-pr-bridge/*"
+          target: "/home/deploy/openclaw/.deploy-tmp-github-pr-bridge"
+
       - name: Apply files, rebuild, and restart services
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -59,7 +70,13 @@ jobs:
             cp /home/deploy/openclaw/.deploy-tmp/Dockerfile.gog /home/deploy/openclaw/Dockerfile.gog
             cp /home/deploy/openclaw/.deploy-tmp/docker-compose.droplet.yml /home/deploy/openclaw/docker-compose.yml
             cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet /home/deploy/openclaw/Caddyfile.droplet
+            mkdir -p /home/deploy/openclaw/github-pr-bridge
+            cp /home/deploy/openclaw/.deploy-tmp-github-pr-bridge/github-pr-bridge/* /home/deploy/openclaw/github-pr-bridge/
+            # Validate candidate first; install + reload only after a successful validation.
+            sudo caddy validate --config /home/deploy/openclaw/Caddyfile.droplet
+            sudo install -m 0644 /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile
+            sudo systemctl reload caddy
             cd /home/deploy/openclaw
             docker compose build openclaw-gateway
-            docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge
+            docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge
             docker compose ps
