@@ -13,6 +13,8 @@ openclaw-repo/
 config/**
 !config/.gitkeep
 !config/openclaw.example.json
+!config/radicale/
+!config/radicale/config.example
 
 # --- Workspace: agent/workspace content stays local; only deploy artifacts tracked ---
 workspace/**

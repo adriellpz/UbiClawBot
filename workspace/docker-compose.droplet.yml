@@ -74,6 +74,29 @@ services:
       # Gateway answers HTTP after plugins load; channel/sidecar bootstrap can block the loop for minutes — avoid marking unhealthy during that window.
       start_period: 240s
 
+
+  radicale:
+    image: ghcr.io/kozea/radicale:3.7.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${RADICALE_PORT:-5232}:5232"
+    volumes:
+      - ${RADICALE_CONFIG_DIR:-../config/radicale}:/etc/radicale:ro
+      - ${RADICALE_DATA_DIR:-../radicale-data}:/var/lib/radicale
+    init: true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5232/', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
   openclaw-cli:
     image: openclaw-with-gog:local
     network_mode: "service:openclaw-gateway"

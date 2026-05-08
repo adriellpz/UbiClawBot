@@ -1,0 +1,22 @@
+# Radicale config for cal.sonofwolf.org.
+# Copy this file to config/radicale/config on the host and create config/radicale/users with htpasswd/bcrypt credentials.
+
+[server]
+hosts = 0.0.0.0:5232
+
+[auth]
+type = htpasswd
+htpasswd_filename = /etc/radicale/users
+htpasswd_encryption = bcrypt
+
+[rights]
+type = owner_only
+
+[storage]
+filesystem_folder = /var/lib/radicale/collections
+
+[web]
+type = internal
+
+[logging]
+level = info
