@@ -105,7 +105,6 @@ async function getBoardListNameById() {
   listNameByIdCache = new Map((Array.isArray(lists) ? lists : []).map((list) => [list.id, list.name || ""]));
   return listNameByIdCache;
 }
-
 async function getIntakeListId() {
   if (TRELLO_INTAKE_LIST_ID) return TRELLO_INTAKE_LIST_ID;
   if (!TRELLO_BOARD_ID) throw new Error("TRELLO_BOARD_ID is required when TRELLO_INTAKE_LIST_ID is not set");
