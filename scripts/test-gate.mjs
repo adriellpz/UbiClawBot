@@ -388,6 +388,15 @@ function validateExampleConfig() {
   pass("config/openclaw.example.json: template safety checks completed");
 }
 
+function validateGithubPrBridge() {
+  const serverPath = "github-pr-bridge/server.mjs";
+  const source = readText(serverPath);
+  assert(source.includes('"closed"'), `${serverPath}: pull_request.closed should be treated as a relevant action`);
+  assert(source.includes('"github_pr_closed"'), `${serverPath}: closed PR hooks should wake OpenClaw with a close-specific event kind`);
+  assert(source.includes("do not reopen unless Adriel explicitly asks"), `${serverPath}: closed PR hook instructions should not ask Ubi to reopen PRs by default`);
+  pass(`${serverPath}: closed PR handling checks completed`);
+}
+
 function optionalToolChecks() {
   const docker = spawnSync("docker", ["compose", "version"], { encoding: "utf8" });
   if (docker.status === 0) {
@@ -421,6 +430,7 @@ validateTrelloPipelineDir();
 validateCaddyfile();
 validateDockerfile();
 validateExampleConfig();
+validateGithubPrBridge();
 optionalToolChecks();
 
 console.log("\nTest gate results");
