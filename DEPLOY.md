@@ -37,6 +37,8 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 
 ## Updating OpenClaw later
 
+For host Node runtime patches, use the approval-gated [Node runtime update plan](./NODE-UPDATE-PLAN.md).
+
 1. Check [OpenClaw releases](https://github.com/openclaw/openclaw/releases) (or your registry tags).
 2. Bump **`OPENCLAW_IMAGE`** in `.env` to the new tag (same tag in `workspace/Dockerfile.gog` **ARG `BASE_IMAGE`** default if you rely on it).
 3. Rebuild the derived image and restart:
