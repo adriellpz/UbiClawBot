@@ -4,7 +4,7 @@
 
 ### Overview
 
-This is a **deployment/configuration repository** for [OpenClaw](https://github.com/openclaw/openclaw), an AI agent gateway platform. OpenClaw runs as a **pinned container image** (`ghcr.io/openclaw/openclaw:2026.4.23`); the upstream source is not in this repo. See `DEPLOY.md` for full setup docs.
+This is a **deployment/configuration repository** for [OpenClaw](https://github.com/openclaw/openclaw), an AI agent gateway platform. OpenClaw runs as a **pinned container image** (`ghcr.io/openclaw/openclaw:2026.5.7`); the upstream source is not in this repo. See `DEPLOY.md` for full setup docs.
 
 ### Architecture
 

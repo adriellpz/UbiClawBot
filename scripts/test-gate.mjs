@@ -92,6 +92,9 @@ function validateJsonFiles() {
       fail(`${file}: JSON parse failed: ${error.message}`);
     }
   }
+
+  const packageJson = JSON.parse(readText("package.json"));
+  assert(packageJson.engines?.node === ">=24.15.0", "package.json: Node engine should require the approved runtime patch level");
 }
 
 function validateYamlFiles() {
@@ -196,7 +199,7 @@ function validateDockerfile() {
   const dockerfilePath = "workspace/Dockerfile.gog";
   const source = readText(dockerfilePath);
   for (const expected of [
-    "ARG BASE_IMAGE=ghcr.io/openclaw/openclaw:",
+    "ARG BASE_IMAGE=ghcr.io/openclaw/openclaw:2026.5.7",
     "ARG GOGCLI_VERSION=",
     "ARG GOPLACES_VERSION=",
     "ARG GH_VERSION=",

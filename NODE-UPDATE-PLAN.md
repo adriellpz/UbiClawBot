@@ -60,3 +60,12 @@ If validation or service health fails:
 ## PR intent
 
 This PR intentionally adds planning documentation only. It creates a reviewable artifact for the Node patch plan without performing the irreversible runtime update.
+
+## Implemented image/runtime bump
+
+This PR now pins the deployment to `ghcr.io/openclaw/openclaw:2026.5.7` in:
+
+- `.env.example`
+- `workspace/Dockerfile.gog` (`ARG BASE_IMAGE` default)
+- `workspace/docker-compose.droplet.yml` (`OPENCLAW_IMAGE` fallback)
+That means deployments that use the tracked defaults rebuild `openclaw-with-gog:local` from the new OpenClaw base image and recreate the gateway/CLI/bridge services on that image. If the droplet has an older persisted `.env` override for `OPENCLAW_IMAGE`, update that value to `ghcr.io/openclaw/openclaw:2026.5.7` before rebuilding. The deploy still ends with `docker compose ps`; after deployment, verify with `docker compose exec openclaw-gateway node --version` and `openclaw gateway status`.

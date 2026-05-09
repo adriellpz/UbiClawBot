@@ -1,6 +1,6 @@
 # Extend upstream OpenClaw image with gog (gogcli) for Gmail / Google Workspace CLI inside the container.
 # Keep default in sync with `OPENCLAW_IMAGE` in repo root `.env` (see `.env.example`). Compose passes build args from .env.
-ARG BASE_IMAGE=ghcr.io/openclaw/openclaw:2026.4.23
+ARG BASE_IMAGE=ghcr.io/openclaw/openclaw:2026.5.7
 FROM ${BASE_IMAGE}
 # Pin release — asset names are gogcli_<ver>_linux_amd64.tar.gz (not .../latest/download/gogcli_linux_amd64.tar.gz).
 ARG GOGCLI_VERSION=0.14.0
