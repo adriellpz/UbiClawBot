@@ -35,9 +35,24 @@ function listFiles(dir, predicate) {
   if (!existsSync(absolute)) return [];
   const result = [];
   const walk = (current) => {
-    for (const entry of readdirSync(current)) {
+    let entries;
+    try {
+      entries = readdirSync(current);
+    } catch (error) {
+      skip(`${path.relative(repoRoot, current)}: skipped unreadable directory: ${error.code ?? error.message}`);
+      return;
+    }
+
+    for (const entry of entries) {
       const full = path.join(current, entry);
-      const stat = statSync(full);
+      let stat;
+      try {
+        stat = statSync(full);
+      } catch (error) {
+        skip(`${path.relative(repoRoot, full)}: skipped unreadable path: ${error.code ?? error.message}`);
+        continue;
+      }
+
       if (stat.isDirectory()) walk(full);
       else if (predicate(full)) result.push(path.relative(repoRoot, full));
     }
@@ -127,7 +142,7 @@ function validateCompose(workflows) {
   if (!compose) return;
 
   const services = compose.services ?? {};
-  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge"]) {
+  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge"]) {
     assert(services[service], `${composePath}: expected service ${service}`);
   }
 
@@ -149,6 +164,11 @@ function validateCompose(workflows) {
   const trelloBridge = services["trello-bridge"] ?? {};
   assert(trelloBridge.network_mode === "service:openclaw-gateway", `${composePath}: trello-bridge should share gateway network namespace`);
   assert(trelloBridge.working_dir === "/home/node/.openclaw/workspace/trello_bridge", `${composePath}: trello-bridge working_dir should stay explicit`);
+
+  const githubPrBridge = services["github-pr-bridge"] ?? {};
+  assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);
+  assert(githubPrBridge.working_dir === "/opt/github-pr-bridge", `${composePath}: github-pr-bridge working_dir should stay explicit`);
+  assert(githubPrBridge.command?.includes("server.mjs"), `${composePath}: github-pr-bridge should run server.mjs`);
 }
 
 function validateCaddyfile() {
@@ -161,7 +181,7 @@ function validateCaddyfile() {
     if (depth < 0) fail(`${caddyPath}: closing brace appears before an opening brace`);
   }
   assert(depth === 0, `${caddyPath}: braces should be balanced`);
-  for (const expected of ["ai.sonofwolf.org", "handle_path /gmail-pubsub*", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
+  for (const expected of ["ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
     assert(source.includes(expected), `${caddyPath}: expected ${expected}`);
   }
   pass(`${caddyPath}: static Caddyfile checks completed`);
