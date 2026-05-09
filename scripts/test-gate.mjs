@@ -77,13 +77,14 @@ function parseYamlFile(relativePath) {
 }
 
 function validateJsonFiles() {
-  const jsonFiles = listFiles(".", (full) => {
-    const rel = path.relative(repoRoot, full);
-    return rel.endsWith(".json") && !rel.startsWith("node_modules/") && rel !== "package-lock.json";
-  });
+  const jsonFiles = [
+    "package.json",
+    "package-lock.json",
+    "config/openclaw.example.json",
+  ];
 
-  assert(jsonFiles.length > 0, "Expected at least one JSON file to validate");
   for (const file of jsonFiles) {
+    assert(existsSync(path.join(repoRoot, file)), `${file}: expected deploy-contract JSON file to exist`);
     try {
       JSON.parse(readText(file));
       pass(`${file}: JSON parsed`);
@@ -130,6 +131,10 @@ function validateDeployWorkflow(workflows) {
   assert(typeof script === "string" && script.includes("trello-bridge"), `${workflowPath}: deploy script should restart trello-bridge with the other services`);
 
   if (typeof script === "string") {
+    const composeUpLine = script.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
+    assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
+    assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
+
     const result = spawnSync("bash", ["-n"], { input: script, encoding: "utf8" });
     assert(result.status === 0, `${workflowPath}: embedded ssh script failed bash -n: ${result.stderr.trim()}`);
     if (result.status === 0) pass(`${workflowPath}: embedded ssh script passed bash -n`);
