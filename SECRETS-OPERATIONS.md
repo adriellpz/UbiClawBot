@@ -61,3 +61,24 @@ Verify (token value must not print):
 docker compose exec openclaw-gateway gh auth status
 ```
 
+## GitHub PR webhook intake secret
+
+`github-pr-bridge` verifies `X-Hub-Signature-256` for `pull_request` webhooks using:
+
+- `GITHUB_PR_WEBHOOK_SECRET` in `/home/deploy/openclaw/.env`
+
+Add or rotate safely:
+
+```bash
+vi /home/deploy/openclaw/.env   # set GITHUB_PR_WEBHOOK_SECRET=...
+cd /home/deploy/openclaw
+docker compose up -d --force-recreate github-pr-bridge openclaw-gateway
+```
+
+See `GITHUB-PR-WEBHOOK.md` for webhook URL/events/manual setup.
+
+For immediate Ubi wake-up (recommended), also set:
+
+- `OPENCLAW_HOOK_URL` (for example `https://ai.sonofwolf.org/hooks/agent`)
+- `OPENCLAW_HOOK_TOKEN` (OpenClaw external hooks bearer token)
+
