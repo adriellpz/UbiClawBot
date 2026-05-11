@@ -124,10 +124,46 @@ Verification before gateway restart:
   - `MARCOS_REVERSE_FIXED_OK`
 - `node --check /app/dist/openclaw-tools-QGieR8bq.js` passed.
 
-Verification still needed after gateway restart:
+Verification after gateway restart:
 
-- Cheryl/Marcos → `main` alias should reroute to Ubi’s concrete inbox.
+- Cheryl → `main` alias landed in Ubi’s concrete inbox: `CHERYL_REVERSE_ALIAS_MAIN_OK`.
+- Marcos → `main` alias landed in Ubi’s concrete inbox: `MARCOS_REVERSE_ALIAS_MAIN_OK`.
 - No new `Agent-to-agent announce step.` should appear for fire-and-forget reverse sends.
+
+### 4. `sessions_send` late-reply fallback after gateway wait close/timeout
+
+Patched files:
+
+```text
+/app/dist/run-wait-1pE_J14t.js
+/app/dist/openclaw-tools-QGieR8bq.js
+```
+
+Backups:
+
+```text
+/app/dist/run-wait-1pE_J14t.js.bak-20260511-read-reply-after-wait-timeout
+/app/dist/openclaw-tools-QGieR8bq.js.bak-20260511-sessions-send-late-reply-fallback
+```
+
+Observed bug shape:
+
+- A waited `sessions_send(... timeoutSeconds > 0)` can report `gateway closed (1000 normal closure)` or timeout even though the target session received the message and wrote a new assistant reply almost immediately.
+- Evidence: Marcos/Cheryl histories contained the exact requested replies while the caller saw a gateway close/timeout error.
+- The fragile point is the wait/reporting path, not delivery.
+
+Patch behavior:
+
+- `run-wait`: after `agent.wait`, read target session history against the pre-send baseline; if a new assistant reply exists, return `ok` even if `agent.wait` reported timeout/error.
+- `sessions_send`: added a direct late-reply fallback around timeout/error handling that polls target history briefly before returning an error.
+
+Verification after gateway restart:
+
+- Marcos waited send returned `status: ok`, reply `MARCOS_WAIT_DIRECT_OK`.
+- Cheryl waited send returned `status: ok`, reply `CHERYL_WAIT_SOLO_OK`.
+- Parallel waited sends returned `status: ok` for both:
+  - `MARCOS_PARALLEL_WAIT_OK`
+  - `CHERYL_PARALLEL_WAIT_OK`
 
 ## Operational warning
 
