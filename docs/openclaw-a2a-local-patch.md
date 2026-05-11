@@ -11,10 +11,11 @@ This repository does not vendor OpenClaw. These notes document local runtime pat
 
 ## Symptoms
 
-Two related A2A issues were observed:
+Three related A2A issues were observed:
 
 1. `sessions_send(..., timeoutSeconds > 0)` could return a gateway timeout or `gateway closed (1000 normal closure)` even though the target agent received the message and answered.
 2. After a waited `sessions_send` successfully returned the target reply inline, OpenClaw still injected a second `Agent-to-agent announce step.` turn into the target session, causing duplicate/noisy replies.
+3. Reverse worker → coordinator sends (`scheduler`/`marcos` → `main`) failed when workers targeted `main` / `agent:main:main`, because that resolves to the active main lane instead of a safe coordinator inbox. Direct delivery to Ubi’s Adriel-facing inbox (`agent:main:telegram:default:direct:8045915111`) worked.
 
 Representative errors:
 
@@ -89,9 +90,44 @@ Verification after gateway restart:
 - Ubi → Marcos returned `status: ok`, reply `NO_ANNOUNCE_OK_MARCOS`, `delivery.status: skipped`.
 - Target histories showed no new `Agent-to-agent announce step.` after the patch.
 
-## Remaining caveat
+### 3. Reverse A2A main-inbox routing + announce suppression
 
-Reverse A2A (`scheduler`/`marcos` → `main`) still needs separate treatment. Initial reverse tests using waited sends toward `agent:main:main` timed out at the gateway wait layer, and `label: main` did not resolve. That appears to be a distinct routing/wait/inbox issue from the forward wait-path and duplicate-announce bugs fixed above.
+Patched file:
+
+```text
+/app/dist/openclaw-tools-QGieR8bq.js
+```
+
+Backup:
+
+```text
+/app/dist/openclaw-tools-QGieR8bq.js.bak-20260511-reverse-a2a-main-inbox
+```
+
+Observed bug shape:
+
+- Worker instructions naturally target Ubi as `main` or `agent:main:main`.
+- In this deployment, `agent:main:main` is the active coordinator lane and may already be running the turn that requested the worker action.
+- Sending reverse A2A into that active lane can timeout or wedge, even with `timeoutSeconds: 0`.
+- Sending to Ubi’s concrete Adriel-facing inbox key works: `agent:main:telegram:default:direct:8045915111`.
+
+Patch behavior:
+
+- In `sessions_send`, when a non-`main` requester targets `main` / `agent:main:main`, look up a concrete main-agent direct inbox from `sessions.list` and reroute the send there.
+- Prefer the Telegram direct Ubi inbox when present.
+- Also skip the A2A announce/ping-pong flow for all `sessions_send` calls, including fire-and-forget sends, to prevent `Agent-to-agent announce step.` debris.
+
+Verification before gateway restart:
+
+- Direct worker → Ubi inbox tests succeeded from both Cheryl and Marcos:
+  - `CHERYL_REVERSE_FIXED_OK`
+  - `MARCOS_REVERSE_FIXED_OK`
+- `node --check /app/dist/openclaw-tools-QGieR8bq.js` passed.
+
+Verification still needed after gateway restart:
+
+- Cheryl/Marcos → `main` alias should reroute to Ubi’s concrete inbox.
+- No new `Agent-to-agent announce step.` should appear for fire-and-forget reverse sends.
 
 ## Operational warning
 
