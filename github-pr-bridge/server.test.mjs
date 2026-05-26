@@ -198,6 +198,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
   assert.match(gatewayCalls[0].params.query, /\/pull\/14/);
   assert.match(gatewayCalls[0].params.query, /board:board123/);
   const createCardCall = gatewayCalls.find((call) => call.operation === "create_card");
+  assert.equal("cardId" in createCardCall, false);
   assert.equal(createCardCall?.params.listName, "Review");
   assert.equal(createCardCall?.params.name, "P2 - Review PR 14");
   assert.match(createCardCall?.params.desc, /Wake Ubi through gateway/);
