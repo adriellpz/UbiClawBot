@@ -102,19 +102,20 @@ async function trelloFetch(path, init = {}) {
   return res.json();
 }
 
-async function trelloGatewayRequest(operation, { cardId = "board", params = {} } = {}) {
+async function trelloGatewayRequest(operation, { cardId, params = {} } = {}) {
+  const body = {
+    agentId: TRELLO_GATEWAY_AGENT_ID,
+    operation,
+    params,
+  };
+  if (cardId) body.cardId = cardId;
   const res = await fetch(TRELLO_GATEWAY_URL, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${TRELLO_GATEWAY_KEY}`,
     },
-    body: JSON.stringify({
-      agentId: TRELLO_GATEWAY_AGENT_ID,
-      operation,
-      cardId,
-      params,
-    }),
+    body: JSON.stringify(body),
   });
 
   const text = await res.text();
