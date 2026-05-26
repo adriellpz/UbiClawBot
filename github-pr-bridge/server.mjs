@@ -3,6 +3,9 @@ import http from "node:http";
 
 const PORT = Number(process.env.GITHUB_PR_BRIDGE_PORT || 19091);
 const WEBHOOK_SECRET = process.env.GITHUB_PR_WEBHOOK_SECRET || "";
+const TRELLO_GATEWAY_URL = process.env.TRELLO_GATEWAY_URL || "";
+const TRELLO_GATEWAY_KEY = process.env.TRELLO_GATEWAY_KEY || "";
+const TRELLO_GATEWAY_AGENT_ID = process.env.TRELLO_GATEWAY_AGENT_ID || "main";
 const TRELLO_KEY = process.env.TRELLO_API_KEY || "";
 const TRELLO_TOKEN = process.env.TRELLO_API_TOKEN || "";
 const TRELLO_BOARD_ID = process.env.TRELLO_BOARD_ID || "";
@@ -26,6 +29,7 @@ const RELEVANT_ACTIONS = new Set([
 ]);
 const wakeDeduper = new Map();
 let listNameByIdCache = null;
+const HAS_TRELLO_GATEWAY = Boolean(TRELLO_GATEWAY_URL && TRELLO_GATEWAY_KEY);
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" });
@@ -98,19 +102,64 @@ async function trelloFetch(path, init = {}) {
   return res.json();
 }
 
+async function trelloGatewayRequest(operation, { cardId = "board", params = {} } = {}) {
+  const res = await fetch(TRELLO_GATEWAY_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${TRELLO_GATEWAY_KEY}`,
+    },
+    body: JSON.stringify({
+      agentId: TRELLO_GATEWAY_AGENT_ID,
+      operation,
+      cardId,
+      params,
+    }),
+  });
+
+  const text = await res.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`Trello gateway ${operation} returned invalid JSON: ${text.slice(0, 200)}`);
+    }
+  }
+
+  if (!res.ok) {
+    const detail = data?.details || data?.error || text || "unknown error";
+    throw new Error(`Trello gateway ${operation} ${res.status}: ${detail}`);
+  }
+
+  return data;
+}
+
+async function getBoardLists({ includeClosed = false } = {}) {
+  if (HAS_TRELLO_GATEWAY) {
+    const data = await trelloGatewayRequest("board_lists");
+    return Array.isArray(data.lists) ? data.lists : [];
+  }
+  if (!TRELLO_BOARD_ID) return [];
+  const filter = includeClosed ? "all" : "open";
+  return trelloFetch(`/boards/${encodeURIComponent(TRELLO_BOARD_ID)}/lists?filter=${filter}&fields=id,name,closed`);
+}
+
 async function getBoardListNameById() {
-  if (!TRELLO_BOARD_ID) return new Map();
+  if (!HAS_TRELLO_GATEWAY && !TRELLO_BOARD_ID) return new Map();
   if (listNameByIdCache) return listNameByIdCache;
-  const lists = await trelloFetch(`/boards/${encodeURIComponent(TRELLO_BOARD_ID)}/lists?filter=all&fields=id,name,closed`);
+  const lists = await getBoardLists({ includeClosed: true });
   listNameByIdCache = new Map((Array.isArray(lists) ? lists : []).map((list) => [list.id, list.name || ""]));
   return listNameByIdCache;
 }
-async function getIntakeListId() {
-  if (TRELLO_INTAKE_LIST_ID) return TRELLO_INTAKE_LIST_ID;
-  if (!TRELLO_BOARD_ID) throw new Error("TRELLO_BOARD_ID is required when TRELLO_INTAKE_LIST_ID is not set");
-  const lists = await trelloFetch(`/boards/${encodeURIComponent(TRELLO_BOARD_ID)}/lists?filter=open&fields=id,name`);
+
+async function getIntakeList() {
+  const lists = await getBoardLists();
   if (!Array.isArray(lists) || lists.length === 0) throw new Error("No open Trello lists found on target board");
-  return lists[0].id;
+  if (!TRELLO_INTAKE_LIST_ID) return lists[0];
+  const intakeList = lists.find((list) => list.id === TRELLO_INTAKE_LIST_ID);
+  if (!intakeList) throw new Error(`TRELLO_INTAKE_LIST_ID ${TRELLO_INTAKE_LIST_ID} was not found on the target board`);
+  return intakeList;
 }
 
 function escapeRegExp(value) {
@@ -127,13 +176,26 @@ function cardExactlyMatchesPr(card, prNumber, prUrl) {
   return hasExactPrName || hasExactPrReference;
 }
 
+function buildCardSearchQuery(prNumber) {
+  return TRELLO_BOARD_ID ? `/pull/${prNumber} board:${TRELLO_BOARD_ID}` : `/pull/${prNumber}`;
+}
+
+function cardUrl(shortUrl) {
+  if (!shortUrl) return undefined;
+  return String(shortUrl).startsWith("http") ? shortUrl : `https://trello.com/c/${shortUrl}`;
+}
+
 async function findExistingOpenCard(pullRequest) {
-  if (!TRELLO_BOARD_ID) return null;
   const prNumber = pullRequest.number;
   const prUrl = pullRequest.html_url;
-  const query = `/pull/${prNumber} board:${TRELLO_BOARD_ID}`;
-  const data = await trelloFetch(`/search?modelTypes=cards&cards_limit=20&cards_page=0&card_fields=id,name,desc,closed,idList,url&query=${encodeURIComponent(query)}`);
-  const cards = Array.isArray(data.cards) ? data.cards : [];
+  const query = buildCardSearchQuery(prNumber);
+  const data = HAS_TRELLO_GATEWAY
+    ? await trelloGatewayRequest("search", { params: { query } })
+    : await trelloFetch(`/search?modelTypes=cards&cards_limit=20&cards_page=0&card_fields=id,name,desc,closed,idList,url,shortUrl&query=${encodeURIComponent(query)}`);
+  const cards = (Array.isArray(data.cards) ? data.cards : []).map((card) => ({
+    ...card,
+    url: card.url || cardUrl(card.shortUrl),
+  }));
   const listNameById = await getBoardListNameById();
   return cards.find((card) => {
     if (card.closed) return false;
@@ -144,6 +206,14 @@ async function findExistingOpenCard(pullRequest) {
 }
 
 async function addCardComment(cardId, text) {
+  if (HAS_TRELLO_GATEWAY) {
+    await trelloGatewayRequest("comment", {
+      cardId,
+      params: { text },
+    });
+    return;
+  }
+
   await trelloFetch(`/cards/${encodeURIComponent(cardId)}/actions/comments`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -170,12 +240,28 @@ async function upsertReviewCard(payload) {
     return { mode: "updated", cardId: existing.id, cardUrl: existing.url };
   }
 
-  const listId = await getIntakeListId();
+  const intakeList = await getIntakeList();
+  if (HAS_TRELLO_GATEWAY) {
+    const created = await trelloGatewayRequest("create_card", {
+      params: {
+        listName: intakeList.name,
+        name: cardTitle,
+        desc: description,
+        pos: "top",
+      },
+    });
+    return {
+      mode: "created",
+      cardId: created.cardId || created.id,
+      cardUrl: created.url || cardUrl(created.shortUrl),
+    };
+  }
+
   const created = await trelloFetch("/cards", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      idList: listId,
+      idList: intakeList.id,
       name: cardTitle,
       desc: description,
       pos: "top",
@@ -227,8 +313,24 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
 function basicConfigCheck() {
   const missing = [];
   if (!WEBHOOK_SECRET) missing.push("GITHUB_PR_WEBHOOK_SECRET");
-  if (!TRELLO_KEY) missing.push("TRELLO_API_KEY");
-  if (!TRELLO_TOKEN) missing.push("TRELLO_API_TOKEN");
+  const hasGateway = Boolean(TRELLO_GATEWAY_URL && TRELLO_GATEWAY_KEY);
+  const hasDirect = Boolean(TRELLO_KEY && TRELLO_TOKEN);
+  if (!hasGateway && !hasDirect) {
+    if (TRELLO_GATEWAY_URL || TRELLO_GATEWAY_KEY) {
+      if (!TRELLO_GATEWAY_URL) missing.push("TRELLO_GATEWAY_URL");
+      if (!TRELLO_GATEWAY_KEY) missing.push("TRELLO_GATEWAY_KEY");
+    }
+    if (TRELLO_KEY || TRELLO_TOKEN) {
+      if (!TRELLO_KEY) missing.push("TRELLO_API_KEY");
+      if (!TRELLO_TOKEN) missing.push("TRELLO_API_TOKEN");
+    }
+    if (missing.length === 1 && missing[0] === "GITHUB_PR_WEBHOOK_SECRET") {
+      missing.push("TRELLO_GATEWAY_URL + TRELLO_GATEWAY_KEY or TRELLO_API_KEY + TRELLO_API_TOKEN");
+    }
+    if (missing.length === 0) {
+      missing.push("TRELLO_GATEWAY_URL + TRELLO_GATEWAY_KEY or TRELLO_API_KEY + TRELLO_API_TOKEN");
+    }
+  }
   if (!TRELLO_BOARD_ID && !TRELLO_INTAKE_LIST_ID) missing.push("TRELLO_BOARD_ID or TRELLO_INTAKE_LIST_ID");
   return missing;
 }

@@ -167,8 +167,9 @@ services:
       GITHUB_PR_BRIDGE_PORT: ${GITHUB_PR_BRIDGE_PORT:-19091}
       GITHUB_PR_MAX_BODY_BYTES: ${GITHUB_PR_MAX_BODY_BYTES:-1048576}
       GITHUB_PR_WEBHOOK_SECRET: ${GITHUB_PR_WEBHOOK_SECRET:-}
-      TRELLO_API_KEY: ${TRELLO_API_KEY:-}
-      TRELLO_API_TOKEN: ${TRELLO_API_TOKEN:-}
+      TRELLO_GATEWAY_URL: ${TRELLO_GATEWAY_URL:-http://trello-gateway:18792}
+      TRELLO_GATEWAY_KEY: ${TRELLO_GATEWAY_KEY:-}
+      TRELLO_GATEWAY_AGENT_ID: ${TRELLO_GATEWAY_AGENT_ID:-main}
       TRELLO_BOARD_ID: ${TRELLO_BOARD_ID:-}
       TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
       TRELLO_DONE_LIST_NAMES: ${TRELLO_DONE_LIST_NAMES:-Done}
@@ -186,7 +187,10 @@ services:
     init: true
     restart: unless-stopped
     depends_on:
-      - openclaw-gateway
+      openclaw-gateway:
+        condition: service_started
+      trello-gateway:
+        condition: service_healthy
 
   trello-gateway:
     build:

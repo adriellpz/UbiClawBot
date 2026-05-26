@@ -179,6 +179,13 @@ function validateCompose(workflows) {
   assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);
   assert(githubPrBridge.working_dir === "/opt/github-pr-bridge", `${composePath}: github-pr-bridge working_dir should stay explicit`);
   assert(githubPrBridge.command?.includes("server.mjs"), `${composePath}: github-pr-bridge should run server.mjs`);
+  const githubBridgeEnv = githubPrBridge.environment ?? {};
+  assert(githubBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: github-pr-bridge should use TRELLO_GATEWAY_URL`);
+  assert(githubBridgeEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: github-pr-bridge should use TRELLO_GATEWAY_KEY`);
+  assert(githubBridgeEnv.TRELLO_GATEWAY_AGENT_ID !== undefined, `${composePath}: github-pr-bridge should set TRELLO_GATEWAY_AGENT_ID`);
+  assert(githubBridgeEnv.TRELLO_API_KEY === undefined, `${composePath}: github-pr-bridge should not receive raw TRELLO_API_KEY`);
+  assert(githubBridgeEnv.TRELLO_API_TOKEN === undefined, `${composePath}: github-pr-bridge should not receive raw TRELLO_API_TOKEN`);
+  assert(githubPrBridge.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: github-pr-bridge should wait for trello-gateway health`);
 
   const trelloGateway = services["trello-gateway"] ?? {};
   assert(trelloGateway.build?.context === "./trello-gateway", `${composePath}: trello-gateway should build from ./trello-gateway`);
@@ -193,7 +200,7 @@ function validateCompose(workflows) {
   const workerHealth = JSON.stringify(trelloQueueWorker.healthcheck?.test ?? []);
   assert(!workerHealth.includes("18789"), `${composePath}: trello-queue-worker healthcheck must not probe openclaw-gateway port 18789`);
   assert(workerHealth.includes("queue_worker.pid"), `${composePath}: trello-queue-worker healthcheck should verify worker pid files`);
-  assert(workerHealth.includes("$${s}/$${f}"), `${composePath}: trello-queue-worker healthcheck must escape template dollars for Compose`);
+  assert(workerHealth.includes("$${s}/$${f}"), `${composePath}: trello-queue-worker healthcheck must escape shell template dollars for Compose`);
   assert(trelloQueueWorker.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: trello-queue-worker should wait for trello-gateway health`);
 }
 

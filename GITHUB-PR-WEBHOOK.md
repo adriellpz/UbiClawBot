@@ -25,8 +25,9 @@ In `adriellpz/UbiClawBot`:
 Set these in `/home/deploy/openclaw/.env` (server-side only):
 
 - `GITHUB_PR_WEBHOOK_SECRET` (required)
-- `TRELLO_API_KEY` (required)
-- `TRELLO_API_TOKEN` (required)
+- `TRELLO_GATEWAY_URL` (required, example `http://trello-gateway:18792`)
+- `TRELLO_GATEWAY_KEY` (required, must match `trello-gateway/.env`)
+- `TRELLO_GATEWAY_AGENT_ID` (optional, default `main`)
 - `TRELLO_BOARD_ID` (recommended, example `sKapJDvB`)
 - `TRELLO_INTAKE_LIST_ID` (optional but recommended; if missing, first open list on the board is used)
 - `TRELLO_DONE_LIST_NAMES` (optional comma-separated list names ignored during dedupe, default `Done`)
@@ -36,6 +37,8 @@ Set these in `/home/deploy/openclaw/.env` (server-side only):
 - `OPENCLAW_HOOK_TOKEN` (recommended, OpenClaw external hooks bearer token)
 - `OPENCLAW_HOOK_AGENT_ID` (optional, default `main`)
 - `OPENCLAW_HOOK_SESSION_PREFIX` (optional, default `hook:github-pr:`)
+
+Legacy fallback: the bridge can still use `TRELLO_API_KEY` + `TRELLO_API_TOKEN` for manual/local runs during transition, but production should keep raw Trello tokens only in `trello-gateway/.env`.
 
 No secret values are committed in git.
 
@@ -55,6 +58,7 @@ Other actions are acknowledged and ignored.
 
 ## Trello behavior
 
+- Calls the isolated Trello gateway over HTTP using `TRELLO_GATEWAY_URL` + `TRELLO_GATEWAY_KEY`; the bridge container no longer needs raw Trello API tokens in normal deployment
 - Creates card title as `P2 - Review PR <number>` by default
 - Escalates to `P1 - Review PR <number>` for `review_requested` or urgent/P1 labels
 - Card description includes PR URL/title/action/branches/author and review gate reminder
