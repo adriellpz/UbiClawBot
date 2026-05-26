@@ -94,6 +94,53 @@ function validateJsonFiles() {
   }
 }
 
+function validateDocsStructure() {
+  const requiredDocs = [
+    "docs/README.md",
+    "docs/deployment/README.md",
+    "docs/deployment/secrets.md",
+    "docs/services/trello-gateway.md",
+    "docs/services/trello-pipeline.md",
+    "docs/services/trello-routines.md",
+    "docs/integrations/github-pr-webhook.md",
+    "docs/architecture/README.md",
+    "docs/adr/0001-trello-pipeline-ownership.md",
+  ];
+  for (const file of requiredDocs) {
+    assert(existsSync(path.join(repoRoot, file)), `${file}: expected canonical docs page`);
+  }
+
+  for (const forbidden of [
+    "DEPLOY.md",
+    "SECRETS-OPERATIONS.md",
+    "GITHUB-PR-WEBHOOK.md",
+    "trello-gateway/README.md",
+    "trello-pipeline/README.md",
+    "trello-routines/README.md",
+  ]) {
+    assert(!existsSync(path.join(repoRoot, forbidden)), `${forbidden}: stale active doc should be removed after consolidation`);
+  }
+
+  const readme = readText("README.md");
+  assert(readme.includes("./docs/README.md"), "README.md: root entrypoint should send readers to docs/README.md");
+  assert(!readme.includes("DEPLOY.md"), "README.md: root entrypoint should not point to removed top-level runbooks");
+
+  const agents = readText("AGENTS.md");
+  assert(agents.includes("./docs/README.md"), "AGENTS.md: agent-facing guidance should point to docs/README.md");
+  assert(agents.includes("Keep this file thin") || agents.includes("keep this file thin"), "AGENTS.md: root guidance should explicitly stay thin");
+  assert(!agents.includes("### Running the gateway"), "AGENTS.md: root guidance should not duplicate operational runbooks");
+
+  pass("docs/: canonical docs structure checks completed");
+}
+
+function validateHelperScripts() {
+  for (const forbidden of ["Setup.ps1", "Stop-Gateway.ps1"]) {
+    assert(!existsSync(path.join(repoRoot, forbidden)), `${forbidden}: obsolete helper script should be removed`);
+  }
+
+  pass("helper scripts: stale setup helpers removed");
+}
+
 function validateYamlFiles() {
   const yamlFiles = [
     ...listFiles(".github", (full) => /\.(ya?ml)$/u.test(full)),
@@ -231,7 +278,7 @@ function validateCompose(workflows) {
 
 function validateTrelloGatewayDir() {
   const dir = "trello-gateway";
-  for (const file of ["Dockerfile", "deploy.sh", "trello_gateway.mjs", "trello_transition_matrix.csv", "README.md", ".env.example"]) {
+  for (const file of ["Dockerfile", "deploy.sh", "trello_gateway.mjs", "trello_transition_matrix.csv", ".env.example"]) {
     assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked gateway file`);
   }
 
@@ -247,16 +294,12 @@ function validateTrelloGatewayDir() {
   assert(gatewayScript.includes("new URL('./trello_transition_matrix.csv', import.meta.url)"), "trello-gateway/trello_gateway.mjs: should resolve the local transition matrix by default");
   assert(!gatewayScript.includes("/home/node/.openclaw/workspace/trello_bridge/state"), "trello-gateway/trello_gateway.mjs: should not use the old workspace-backed pipeline state path");
 
-  const gatewayReadme = readText(`${dir}/README.md`);
-  assert(!gatewayReadme.includes("canonical copy from MarcosAgent"), "trello-gateway/README.md: canonical ownership should live in this repo");
-  assert(!gatewayReadme.includes("Phase 2 will add automated sync"), "trello-gateway/README.md: stale phase-2 sync placeholder should be removed");
   pass("trello-gateway/: static directory checks completed");
 }
 
 function validateTrelloRoutinesDir() {
   const dir = "trello-routines";
   for (const file of [
-    "README.md",
     "ensure_routines.mjs",
     "ensure_routines_logic.mjs",
     "ensure_routines.test.mjs",
@@ -272,10 +315,6 @@ function validateTrelloRoutinesDir() {
     assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked routines file`);
   }
 
-  const readme = readText(`${dir}/README.md`);
-  assert(readme.includes("/opt/trello-routines"), "trello-routines/README.md: should document the repo-owned runtime path");
-  assert(readme.includes("TRELLO_GATEWAY_URL"), "trello-routines/README.md: should document gateway-based Trello access");
-
   const loopScript = readText(`${dir}/start_routines_loop.sh`);
   assert(loopScript.includes("ensure_routines.mjs"), "trello-routines/start_routines_loop.sh: should run ensure_routines.mjs");
   assert(loopScript.includes("last_run.json"), "trello-routines/start_routines_loop.sh: should write a heartbeat file");
@@ -285,7 +324,6 @@ function validateTrelloRoutinesDir() {
 function validateTrelloPipelineDir() {
   const dir = "trello-pipeline";
   for (const file of [
-    "README.md",
     "server.mjs",
     "server.test.mjs",
     "trello_queue_worker.mjs",
@@ -300,9 +338,6 @@ function validateTrelloPipelineDir() {
   ]) {
     assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked pipeline file`);
   }
-  const readme = readText(`${dir}/README.md`);
-  assert(readme.includes("/opt/trello-pipeline"), "trello-pipeline/README.md: should document the repo-owned runtime path");
-  assert(readme.includes("TRELLO_PIPELINE_STATE_DIR"), "trello-pipeline/README.md: should document the repo-owned state path");
   pass("trello-pipeline/: static directory checks completed");
 }
 
@@ -376,6 +411,8 @@ function optionalToolChecks() {
 }
 
 validateJsonFiles();
+validateDocsStructure();
+validateHelperScripts();
 const yamlFiles = validateYamlFiles();
 validateDeployWorkflow(yamlFiles);
 validateCompose(yamlFiles);

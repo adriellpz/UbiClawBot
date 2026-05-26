@@ -1,5 +1,7 @@
 # ADR-0001: UbiClawBot Owns The Trello Production Pipeline
 
+This ADR is historical context. For the active current-state summary, use `docs/architecture/README.md`.
+
 ## Status
 
 Accepted
