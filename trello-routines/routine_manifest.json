@@ -1,0 +1,52 @@
+{
+  "timezone": "America/Denver",
+  "routines": [
+    {
+      "id": "dog_walk",
+      "title_template": "R - Dog walk - {date}",
+      "trello_list": "Routine",
+      "duration_minutes": 30,
+      "recurrence": "daily",
+      "prefer_start": "10:00",
+      "prefer_end": "11:00"
+    },
+    {
+      "id": "sciatica_15",
+      "title_template": "R - Sciatica stretches - {date}",
+      "description_note": "Stretches only - 15 min",
+      "duration_minutes": 15,
+      "recurrence": "weekly",
+      "days": ["TUE", "THU", "SAT"],
+      "prefer_start": "12:00",
+      "prefer_end": "13:00"
+    },
+    {
+      "id": "sciatica_30",
+      "title_template": "R - Sciatica stretches + exercises - {date}",
+      "description_note": "Stretches + exercises - 30 min",
+      "duration_minutes": 30,
+      "recurrence": "weekly",
+      "days": ["MON", "WED", "FRI"],
+      "prefer_start": "12:00",
+      "prefer_end": "13:00"
+    },
+    {
+      "id": "workout",
+      "title_template": "R - Workout - {date}",
+      "duration_minutes": 60,
+      "recurrence": "weekly",
+      "days": ["WED", "SAT"],
+      "prefer_start": "16:15",
+      "prefer_end": "18:00"
+    },
+    {
+      "id": "submit_timesheet",
+      "title_template": "R - Submit timesheet - {date}",
+      "duration_minutes": 60,
+      "recurrence": "weekly",
+      "days": ["WED"],
+      "prefer_start": "08:00",
+      "prefer_end": "10:00"
+    }
+  ]
+}

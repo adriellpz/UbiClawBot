@@ -24,6 +24,7 @@ workspace/**
 do-droplet-bundle/
 openclaw-droplet-bundle.zip
 bin/
+node_modules/
 
 # --- OS / tooling ---
 .DS_Store

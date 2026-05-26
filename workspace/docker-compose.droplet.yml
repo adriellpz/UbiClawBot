@@ -144,15 +144,40 @@ services:
       # Must match the container-side port published by openclaw-gateway above.
       PORT: "18990"
       XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-/home/node/.openclaw}
+      TRELLO_GATEWAY_URL: ${TRELLO_GATEWAY_URL:-http://trello-gateway:18792}
+      TRELLO_GATEWAY_KEY: ${TRELLO_GATEWAY_KEY:-}
+      TRELLO_BRIDGE_TOKEN: ${TRELLO_BRIDGE_TOKEN:-}
+      TRELLO_APP_SECRET: ${TRELLO_APP_SECRET:-}
+      TRELLO_CALLBACK_URL: ${TRELLO_CALLBACK_URL:-}
+      TRELLO_BOARD_ID: ${TRELLO_BOARD_ID:-}
+      OPENCLAW_HOOK_URL: ${OPENCLAW_HOOK_URL:-}
+      OPENCLAW_HOOK_TOKEN: ${OPENCLAW_HOOK_TOKEN:-}
+      TRELLO_PIPELINE_STATE_DIR: ${TRELLO_PIPELINE_STATE_DIR:-/var/lib/trello-pipeline}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
-    working_dir: /home/node/.openclaw/workspace/trello_bridge
+      - ./trello-pipeline:/opt/trello-pipeline:ro
+      - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
+    working_dir: /opt/trello-pipeline
     command: ["node", "server.mjs"]
     init: true
     restart: unless-stopped
     depends_on:
-      - openclaw-gateway
+      openclaw-gateway:
+        condition: service_started
+      trello-gateway:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18990/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   github-pr-bridge:
     image: openclaw-with-gog:local
@@ -202,10 +227,11 @@ services:
         required: true
     environment:
       BIND: "0.0.0.0"
+      TRELLO_PIPELINE_STATE_DIR: ${TRELLO_PIPELINE_STATE_DIR:-/var/lib/trello-pipeline}
     volumes:
       - ./trello-gateway/trello_gateway.mjs:/app/trello_gateway.mjs:ro
       - ./trello-gateway/trello_transition_matrix.csv:/app/trello_transition_matrix.csv:ro
-      - ${OPENCLAW_WORKSPACE_DIR:-/root/openclaw/data/workspace}/trello_bridge/state:/home/node/.openclaw/workspace/trello_bridge/state
+      - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
     ports:
       - "127.0.0.1:18792:18792"
     init: true
@@ -240,10 +266,13 @@ services:
       GOG_KEYRING_BACKEND: ${GOG_KEYRING_BACKEND:-file}
       GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-}
       GOG_ACCOUNT: ${GOG_ACCOUNT:-}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-adriellpz@gmail.com}
+      TRELLO_PIPELINE_STATE_DIR: ${TRELLO_PIPELINE_STATE_DIR:-/var/lib/trello-pipeline}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
-    working_dir: /home/node/.openclaw/workspace/trello_bridge
+      - ./trello-pipeline:/opt/trello-pipeline:ro
+      - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
+    working_dir: /opt/trello-pipeline
     command: ["node", "start_queue_worker.mjs"]
     init: true
     restart: unless-stopped
@@ -258,9 +287,56 @@ services:
           "CMD",
           "node",
           "-e",
-          "const fs=require('node:fs');const s='/home/node/.openclaw/workspace/trello_bridge/state';function alive(p){try{process.kill(Number(fs.readFileSync(p,'utf8').trim()),0);return true}catch{return false}};for(const f of['start_queue_worker.pid','queue_worker.pid']){if(!alive(`$${s}/$${f}`))process.exit(1)}process.exit(0)",
+          "const fs=require('node:fs');const s=process.env.TRELLO_PIPELINE_STATE_DIR||'/var/lib/trello-pipeline';function alive(p){try{process.kill(Number(fs.readFileSync(p,'utf8').trim()),0);return true}catch{return false}};for(const f of['start_queue_worker.pid','queue_worker.pid']){if(!alive(`$${s}/$${f}`))process.exit(1)}process.exit(0)",
         ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  trello-routines:
+    image: openclaw-with-gog:local
+    network_mode: "service:openclaw-gateway"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+      XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-/home/node/.openclaw}
+      TRELLO_GATEWAY_URL: ${TRELLO_GATEWAY_URL:-http://trello-gateway:18792}
+      TRELLO_GATEWAY_KEY: ${TRELLO_GATEWAY_KEY:-}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-adriellpz@gmail.com}
+      GOG_KEYRING_BACKEND: ${GOG_KEYRING_BACKEND:-file}
+      GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-}
+      GOG_ACCOUNT: ${GOG_ACCOUNT:-}
+      TRELLO_ROUTINES_STATE_DIR: ${TRELLO_ROUTINES_STATE_DIR:-/var/lib/trello-routines}
+      TRELLO_ROUTINES_LOOKAHEAD_DAYS: ${TRELLO_ROUTINES_LOOKAHEAD_DAYS:-14}
+      TRELLO_ROUTINES_INTERVAL_SECONDS: ${TRELLO_ROUTINES_INTERVAL_SECONDS:-21600}
+      TRELLO_ROUTINES_HEALTH_MAX_AGE_SECONDS: ${TRELLO_ROUTINES_HEALTH_MAX_AGE_SECONDS:-90000}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
+      - ./trello-routines:/opt/trello-routines:ro
+      - ${TRELLO_ROUTINES_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-routines}:/var/lib/trello-routines
+    working_dir: /opt/trello-routines
+    command: ["sh", "/opt/trello-routines/start_routines_loop.sh"]
+    init: true
+    restart: unless-stopped
+    depends_on:
+      openclaw-gateway:
+        condition: service_started
+      trello-gateway:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "const fs=require('node:fs');const p=(process.env.TRELLO_ROUTINES_STATE_DIR||'/var/lib/trello-routines')+'/last_run.json';const maxAge=(Number(process.env.TRELLO_ROUTINES_HEALTH_MAX_AGE_SECONDS||'90000')||90000)*1000;try{const data=JSON.parse(fs.readFileSync(p,'utf8'));const ts=Date.parse(data.finishedAt||data.startedAt||0);if(!Number.isFinite(ts)||Date.now()-ts>maxAge)process.exit(1);process.exit(data.status==='ok'||data.status==='running'?0:1)}catch{process.exit(1)}",
+        ]
+      interval: 30m
+      timeout: 5s
+      retries: 3
+      start_period: 5m

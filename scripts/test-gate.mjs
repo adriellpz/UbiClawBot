@@ -129,6 +129,8 @@ function validateDeployWorkflow(workflows) {
   assert(sshStep?.with?.script_stop === true, `${workflowPath}: ssh deploy step should set script_stop: true`);
   assert(typeof script === "string" && script.includes("set -eu"), `${workflowPath}: ssh deploy script should use set -eu`);
   assert(typeof script === "string" && script.includes("trello-bridge"), `${workflowPath}: deploy script should restart trello-bridge with the other services`);
+  assert(typeof script === "string" && script.includes("trello-pipeline"), `${workflowPath}: deploy script should copy trello-pipeline`);
+  assert(typeof script === "string" && script.includes("trello-routines"), `${workflowPath}: deploy script should copy and restart trello-routines`);
   assert(typeof script === "string" && script.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
   assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
 
@@ -136,6 +138,7 @@ function validateDeployWorkflow(workflows) {
     const composeUpLine = script.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
     assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
     assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
+    assert(composeUpLine?.includes("trello-routines"), `${workflowPath}: docker compose up should restart trello-routines`);
     assert(composeUpLine?.includes("trello-gateway"), `${workflowPath}: docker compose up should restart trello-gateway`);
     assert(composeUpLine?.includes("trello-queue-worker"), `${workflowPath}: docker compose up should restart trello-queue-worker`);
     assert(!script.includes("trello-gateway/.env") || script.includes(".env.example"), `${workflowPath}: deploy script must not overwrite trello-gateway/.env`);
@@ -152,7 +155,7 @@ function validateCompose(workflows) {
   if (!compose) return;
 
   const services = compose.services ?? {};
-  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge", "trello-gateway", "trello-queue-worker"]) {
+  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge", "trello-gateway", "trello-queue-worker", "trello-routines"]) {
     assert(services[service], `${composePath}: expected service ${service}`);
   }
 
@@ -173,7 +176,13 @@ function validateCompose(workflows) {
 
   const trelloBridge = services["trello-bridge"] ?? {};
   assert(trelloBridge.network_mode === "service:openclaw-gateway", `${composePath}: trello-bridge should share gateway network namespace`);
-  assert(trelloBridge.working_dir === "/home/node/.openclaw/workspace/trello_bridge", `${composePath}: trello-bridge working_dir should stay explicit`);
+  assert(trelloBridge.working_dir === "/opt/trello-pipeline", `${composePath}: trello-bridge should run from the repo-owned runtime path`);
+  assert(Array.isArray(trelloBridge.volumes) && trelloBridge.volumes.some((volume) => String(volume).includes("./trello-pipeline:/opt/trello-pipeline:ro")), `${composePath}: trello-bridge should mount the tracked pipeline folder read-only`);
+  assert(trelloBridge.healthcheck?.test, `${composePath}: trello-bridge should keep a healthcheck`);
+  const trelloBridgeEnv = trelloBridge.environment ?? {};
+  assert(trelloBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: trello-bridge should use TRELLO_GATEWAY_URL`);
+  assert(trelloBridgeEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: trello-bridge should use TRELLO_GATEWAY_KEY`);
+  assert(trelloBridgeEnv.TRELLO_PIPELINE_STATE_DIR !== undefined, `${composePath}: trello-bridge should set TRELLO_PIPELINE_STATE_DIR`);
 
   const githubPrBridge = services["github-pr-bridge"] ?? {};
   assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);
@@ -192,16 +201,32 @@ function validateCompose(workflows) {
   assert(trelloGateway.image === "trello-gateway:local", `${composePath}: trello-gateway image tag should stay explicit`);
   assert(trelloGateway.healthcheck?.test, `${composePath}: trello-gateway should keep a healthcheck`);
   assert(String(trelloGateway.ports?.[0] ?? "").startsWith("127.0.0.1:18792"), `${composePath}: trello-gateway should bind 127.0.0.1:18792 on the host`);
+  assert((trelloGateway.environment ?? {}).TRELLO_PIPELINE_STATE_DIR !== undefined, `${composePath}: trello-gateway should share the repo-owned pipeline state path`);
 
   const trelloQueueWorker = services["trello-queue-worker"] ?? {};
-  assert(trelloQueueWorker.working_dir === "/home/node/.openclaw/workspace/trello_bridge", `${composePath}: trello-queue-worker working_dir should stay explicit`);
+  assert(trelloQueueWorker.working_dir === "/opt/trello-pipeline", `${composePath}: trello-queue-worker should run from the repo-owned runtime path`);
   assert(trelloQueueWorker.command?.includes("start_queue_worker.mjs"), `${composePath}: trello-queue-worker should run start_queue_worker.mjs`);
   assert(trelloQueueWorker.healthcheck?.test, `${composePath}: trello-queue-worker should keep a healthcheck`);
+  assert(Array.isArray(trelloQueueWorker.volumes) && trelloQueueWorker.volumes.some((volume) => String(volume).includes("./trello-pipeline:/opt/trello-pipeline:ro")), `${composePath}: trello-queue-worker should mount the tracked pipeline folder read-only`);
   const workerHealth = JSON.stringify(trelloQueueWorker.healthcheck?.test ?? []);
   assert(!workerHealth.includes("18789"), `${composePath}: trello-queue-worker healthcheck must not probe openclaw-gateway port 18789`);
   assert(workerHealth.includes("queue_worker.pid"), `${composePath}: trello-queue-worker healthcheck should verify worker pid files`);
   assert(workerHealth.includes("$${s}/$${f}"), `${composePath}: trello-queue-worker healthcheck must escape shell template dollars for Compose`);
+  assert(workerHealth.includes("TRELLO_PIPELINE_STATE_DIR"), `${composePath}: trello-queue-worker healthcheck should use the repo-owned state env`);
   assert(trelloQueueWorker.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: trello-queue-worker should wait for trello-gateway health`);
+
+  const trelloRoutines = services["trello-routines"] ?? {};
+  assert(trelloRoutines.network_mode === "service:openclaw-gateway", `${composePath}: trello-routines should share gateway network namespace`);
+  assert(trelloRoutines.working_dir === "/opt/trello-routines", `${composePath}: trello-routines should run from the repo-owned runtime path`);
+  assert(JSON.stringify(trelloRoutines.command ?? []).includes("start_routines_loop.sh"), `${composePath}: trello-routines should run the loop script`);
+  assert(Array.isArray(trelloRoutines.volumes) && trelloRoutines.volumes.some((volume) => String(volume).includes("./trello-routines:/opt/trello-routines:ro")), `${composePath}: trello-routines should mount the tracked repo folder read-only`);
+  const routinesEnv = trelloRoutines.environment ?? {};
+  assert(routinesEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: trello-routines should use TRELLO_GATEWAY_URL`);
+  assert(routinesEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: trello-routines should use TRELLO_GATEWAY_KEY`);
+  assert(routinesEnv.TRELLO_API_KEY === undefined, `${composePath}: trello-routines should not receive raw TRELLO_API_KEY`);
+  assert(routinesEnv.TRELLO_API_TOKEN === undefined, `${composePath}: trello-routines should not receive raw TRELLO_API_TOKEN`);
+  assert(trelloRoutines.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: trello-routines should wait for trello-gateway health`);
+  assert(trelloRoutines.healthcheck?.test, `${composePath}: trello-routines should keep a healthcheck`);
 }
 
 function validateTrelloGatewayDir() {
@@ -220,11 +245,65 @@ function validateTrelloGatewayDir() {
   const gatewayScript = readText(`${dir}/trello_gateway.mjs`);
   assert(!gatewayScript.includes("workspace-marcos/trello-refactor/trello_transition_matrix.csv"), "trello-gateway/trello_gateway.mjs: should not default to a MarcosAgent workspace path");
   assert(gatewayScript.includes("new URL('./trello_transition_matrix.csv', import.meta.url)"), "trello-gateway/trello_gateway.mjs: should resolve the local transition matrix by default");
+  assert(!gatewayScript.includes("/home/node/.openclaw/workspace/trello_bridge/state"), "trello-gateway/trello_gateway.mjs: should not use the old workspace-backed pipeline state path");
 
   const gatewayReadme = readText(`${dir}/README.md`);
   assert(!gatewayReadme.includes("canonical copy from MarcosAgent"), "trello-gateway/README.md: canonical ownership should live in this repo");
   assert(!gatewayReadme.includes("Phase 2 will add automated sync"), "trello-gateway/README.md: stale phase-2 sync placeholder should be removed");
   pass("trello-gateway/: static directory checks completed");
+}
+
+function validateTrelloRoutinesDir() {
+  const dir = "trello-routines";
+  for (const file of [
+    "README.md",
+    "ensure_routines.mjs",
+    "ensure_routines_logic.mjs",
+    "ensure_routines.test.mjs",
+    "ensure_routines_logic.test.mjs",
+    "routine_manifest.json",
+    "routine_manifest.test.mjs",
+    "routine_calendar_lookup.mjs",
+    "trello_card_calendar_desc.mjs",
+    "trello_gateway_module.mjs",
+    "trello_open_card_contract.mjs",
+    "start_routines_loop.sh",
+  ]) {
+    assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked routines file`);
+  }
+
+  const readme = readText(`${dir}/README.md`);
+  assert(readme.includes("/opt/trello-routines"), "trello-routines/README.md: should document the repo-owned runtime path");
+  assert(readme.includes("TRELLO_GATEWAY_URL"), "trello-routines/README.md: should document gateway-based Trello access");
+
+  const loopScript = readText(`${dir}/start_routines_loop.sh`);
+  assert(loopScript.includes("ensure_routines.mjs"), "trello-routines/start_routines_loop.sh: should run ensure_routines.mjs");
+  assert(loopScript.includes("last_run.json"), "trello-routines/start_routines_loop.sh: should write a heartbeat file");
+  pass("trello-routines/: static directory checks completed");
+}
+
+function validateTrelloPipelineDir() {
+  const dir = "trello-pipeline";
+  for (const file of [
+    "README.md",
+    "server.mjs",
+    "server.test.mjs",
+    "trello_queue_worker.mjs",
+    "queue_worker.test.mjs",
+    "smoke.test.mjs",
+    "start_queue_worker.mjs",
+    "handle_reschedule.mjs",
+    "trello_done_adjust_calendar.mjs",
+    "trello_missed_adjust_calendar.mjs",
+    "calendar_lookup.mjs",
+    "trello_card_calendar_desc.mjs",
+  ]) {
+    assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked pipeline file`);
+  }
+  const readme = readText(`${dir}/README.md`);
+  assert(readme.includes("/opt/trello-pipeline"), "trello-pipeline/README.md: should document the repo-owned runtime path");
+  assert(readme.includes("TRELLO_PIPELINE_STATE_DIR"), "trello-pipeline/README.md: should document the repo-owned state path");
+  pass("trello-pipeline/: static directory checks completed");
 }
 
 function validateCaddyfile() {
@@ -301,6 +380,8 @@ const yamlFiles = validateYamlFiles();
 validateDeployWorkflow(yamlFiles);
 validateCompose(yamlFiles);
 validateTrelloGatewayDir();
+validateTrelloRoutinesDir();
+validateTrelloPipelineDir();
 validateCaddyfile();
 validateDockerfile();
 validateExampleConfig();

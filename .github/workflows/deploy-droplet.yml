@@ -7,6 +7,8 @@ on:
       - "workspace/Dockerfile.gog"
       - "workspace/docker-compose.droplet.yml"
       - "github-pr-bridge/**"
+      - "trello-pipeline/**"
+      - "trello-routines/**"
       - "trello-gateway/**"
       - "Caddyfile.droplet"
       - ".github/workflows/deploy-droplet.yml"
@@ -57,6 +59,26 @@ jobs:
           source: "github-pr-bridge/*"
           target: "/home/deploy/openclaw/.deploy-tmp-github-pr-bridge"
 
+      - name: Copy trello-routines to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "trello-routines/*"
+          target: "/home/deploy/openclaw/.deploy-tmp-trello-routines"
+
+      - name: Copy trello-pipeline to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "trello-pipeline/*"
+          target: "/home/deploy/openclaw/.deploy-tmp-trello-pipeline"
+
       - name: Copy trello-gateway to droplet
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -83,6 +105,10 @@ jobs:
             cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet /home/deploy/openclaw/Caddyfile.droplet
             mkdir -p /home/deploy/openclaw/github-pr-bridge
             cp /home/deploy/openclaw/.deploy-tmp-github-pr-bridge/github-pr-bridge/* /home/deploy/openclaw/github-pr-bridge/
+            mkdir -p /home/deploy/openclaw/trello-routines
+            cp /home/deploy/openclaw/.deploy-tmp-trello-routines/trello-routines/* /home/deploy/openclaw/trello-routines/
+            mkdir -p /home/deploy/openclaw/trello-pipeline
+            cp /home/deploy/openclaw/.deploy-tmp-trello-pipeline/trello-pipeline/* /home/deploy/openclaw/trello-pipeline/
             mkdir -p /home/deploy/openclaw/trello-gateway
             for f in Dockerfile deploy.sh trello_gateway.mjs trello_transition_matrix.csv README.md .env.example; do
               cp "/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f" "/home/deploy/openclaw/trello-gateway/$f"
@@ -95,5 +121,5 @@ jobs:
             sudo systemctl reload caddy
             cd /home/deploy/openclaw
             docker compose build openclaw-gateway trello-gateway
-            docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker
+            docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
             docker compose ps
