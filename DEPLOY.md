@@ -12,7 +12,7 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 | `workspace/docker-compose.droplet.yml` | Compose definition; uses `OPENCLAW_IMAGE` from `.env`. |
 | `Caddyfile.droplet` | Reverse proxy / TLS (example for your VPS). |
 | `github-pr-bridge/` | GitHub `pull_request` webhook intake sidecar (HMAC verify + Trello card dedupe/update). |
-| `trello-gateway/` | Isolated Trello credential holder (`trello_gateway.mjs`, matrix CSV, Dockerfile). Secrets in `trello-gateway/.env` on the droplet only. |
+| `trello-gateway/` | Isolated Trello credential holder (`trello_gateway.mjs`, matrix CSV, Dockerfile). This repo is the canonical source for those deploy artifacts; secrets stay in `trello-gateway/.env` on the droplet only. |
 
 ## What is intentionally not tracked
 

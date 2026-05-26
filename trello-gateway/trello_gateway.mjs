@@ -11,25 +11,19 @@
  * - Gateway validates EVERY operation against transition matrix
  * - All operations logged with agent ID and validation result
  * 
- * Setup:
- *   sudo cp trello_gateway.mjs /usr/local/bin/
- *   sudo chown root:root /usr/local/bin/trello_gateway.mjs
- *   sudo chmod 700 /usr/local/bin/trello_gateway.mjs
- *   sudo mkdir -p /etc/trello-gateway
- *   sudo tee /etc/trello-gateway/env << 'EOF'
- *   TRELLO_API_KEY=xxx
- *   TRELLO_API_TOKEN=xxx
- *   TRELLO_BOARD_ID=69f96aafc342ad1c89f48e0c
- *   GATEWAY_KEY=change-me-to-random-string
- *   PORT=18792
- *   EOF
- *   sudo chmod 600 /etc/trello-gateway/env
- *   sudo /usr/local/bin/trello_gateway.mjs
+ * Canonical source:
+ *   - Git: UbiClawBot/trello-gateway/trello_gateway.mjs
+ *   - Droplet host: /home/deploy/openclaw/trello-gateway/trello_gateway.mjs
+ *   - Runtime: /app/trello_gateway.mjs
+ *
+ * Keep trello_transition_matrix.csv beside this file and restart the
+ * trello-gateway container after editing either artifact.
  */
 
 import http from 'node:http';
 import { readFileSync, appendFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ─── Config ──────────────────────────────────────────────────────────
 const ENV_FILE = process.env.GATEWAY_ENV_FILE || '/etc/trello-gateway/env';
@@ -67,7 +61,7 @@ if (!GATEWAY_KEY) throw new Error('GATEWAY_KEY required');
 if (!MOCK_MODE && (!TRELLO_KEY || !TRELLO_TOKEN)) throw new Error('Trello credentials required (or set MOCK_MODE=true)');
 
 // ─── Transition Matrix ───────────────────────────────────────────────
-const MATRIX_CSV = process.env.TRANSITION_MATRIX || resolve('/home/node/.openclaw/workspace-marcos/trello-refactor/trello_transition_matrix.csv');
+const MATRIX_CSV = process.env.TRANSITION_MATRIX || fileURLToPath(new URL('./trello_transition_matrix.csv', import.meta.url));
 
 function loadMatrix() {
   const lines = readFileSync(MATRIX_CSV, 'utf8').split(/\r?\n/).filter(Boolean);
