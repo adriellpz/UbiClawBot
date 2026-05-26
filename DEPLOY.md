@@ -12,7 +12,9 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 | `workspace/docker-compose.droplet.yml` | Compose definition; uses `OPENCLAW_IMAGE` from `.env`. |
 | `Caddyfile.droplet` | Reverse proxy / TLS (example for your VPS). |
 | `github-pr-bridge/` | GitHub `pull_request` webhook intake sidecar (HMAC verify + Trello card dedupe/update). |
+| `trello-pipeline/` | Repo-owned Trello webhook ingress, queue worker, and deterministic Trello/calendar handlers. |
 | `trello-gateway/` | Isolated Trello credential holder (`trello_gateway.mjs`, matrix CSV, Dockerfile). This repo is the canonical source for those deploy artifacts; secrets stay in `trello-gateway/.env` on the droplet only. |
+| `trello-routines/` | Repo-owned scheduled Trello/calendar routines job (`ensure_routines.mjs`, manifest, loop runner). |
 
 ## What is intentionally not tracked
 
@@ -59,6 +61,8 @@ It copies these files to the droplet and restarts services:
 - `workspace/docker-compose.droplet.yml` -> `/home/deploy/openclaw/docker-compose.yml`
 - `Caddyfile.droplet` -> `/home/deploy/openclaw/Caddyfile.droplet`
 - `github-pr-bridge/*` -> `/home/deploy/openclaw/github-pr-bridge/*`
+- `trello-pipeline/*` -> `/home/deploy/openclaw/trello-pipeline/*`
+- `trello-routines/*` -> `/home/deploy/openclaw/trello-routines/*`
 - `trello-gateway/*` (tracked files only) -> `/home/deploy/openclaw/trello-gateway/*`
 
 Then it runs:
@@ -66,7 +70,7 @@ Then it runs:
 ```bash
 cd /home/deploy/openclaw
 docker compose build openclaw-gateway trello-gateway
-docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker
+docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
 docker compose ps
 ```
 

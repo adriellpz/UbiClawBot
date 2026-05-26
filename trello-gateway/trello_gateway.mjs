@@ -418,6 +418,23 @@ async function handleRequest(req, res) {
         break;
       }
 
+      case 'board_open_cards': {
+        const lists = await trelloApi('GET', `/boards/${BOARD_ID}/lists`, { fields: 'name,closed' });
+        const listNameById = Object.fromEntries((lists || []).map((list) => [list.id, list.name]));
+        const cards = await trelloApi('GET', `/boards/${BOARD_ID}/cards`, {
+          filter: 'open',
+          fields: 'name,desc,idList,shortUrl,shortLink,closed',
+          customFieldItems: true,
+        });
+        result = {
+          cards: (cards || []).map((card) => ({
+            ...card,
+            listName: listNameById[card.idList] || '',
+          })),
+        };
+        break;
+      }
+
       case 'board_custom_fields': {
         const fields = await trelloApi('GET', `/boards/${BOARD_ID}/customFields`);
         result = { fields: fields || [] };
@@ -750,7 +767,7 @@ async function handleRequest(req, res) {
 
 // ─── Background Overdue Card Detection (deterministic, no AI) ────────
 
-const OVERDUE_STATE_DIR = join(resolve('/home/node/.openclaw/workspace/trello_bridge/state'));
+const OVERDUE_STATE_DIR = join(resolve(process.env.TRELLO_PIPELINE_STATE_DIR || '/var/lib/trello-pipeline'));
 const OVERDUE_TRACKED_FILE = join(OVERDUE_STATE_DIR, 'overdue_tracked.json');
 
 function readOverdueTracked() {
