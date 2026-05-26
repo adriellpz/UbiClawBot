@@ -193,6 +193,7 @@ function validateCompose(workflows) {
   const workerHealth = JSON.stringify(trelloQueueWorker.healthcheck?.test ?? []);
   assert(!workerHealth.includes("18789"), `${composePath}: trello-queue-worker healthcheck must not probe openclaw-gateway port 18789`);
   assert(workerHealth.includes("queue_worker.pid"), `${composePath}: trello-queue-worker healthcheck should verify worker pid files`);
+  assert(workerHealth.includes("$${s}/$${f}"), `${composePath}: trello-queue-worker healthcheck must escape template dollars for Compose`);
   assert(trelloQueueWorker.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: trello-queue-worker should wait for trello-gateway health`);
 }
 

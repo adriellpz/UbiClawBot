@@ -254,7 +254,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "const fs=require('node:fs');const s='/home/node/.openclaw/workspace/trello_bridge/state';function alive(p){try{process.kill(Number(fs.readFileSync(p,'utf8').trim()),0);return true}catch{return false}};for(const f of['start_queue_worker.pid','queue_worker.pid']){if(!alive(`${s}/${f}`))process.exit(1)}process.exit(0)",
+          "const fs=require('node:fs');const s='/home/node/.openclaw/workspace/trello_bridge/state';function alive(p){try{process.kill(Number(fs.readFileSync(p,'utf8').trim()),0);return true}catch{return false}};for(const f of['start_queue_worker.pid','queue_worker.pid']){if(!alive(`$${s}/$${f}`))process.exit(1)}process.exit(0)",
         ]
       interval: 30s
       timeout: 5s
