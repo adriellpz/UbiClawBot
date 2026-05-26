@@ -13,5 +13,5 @@ npm ci --include=dev
 npm test
 ```
 
-The gate validates JSON and YAML syntax, deploy workflow safety assumptions, compose/Caddy/Dockerfile static checks, and the example OpenClaw config placeholders. If Docker Compose or Caddy are installed locally, it also runs their native config validators.
+The gate validates JSON and YAML syntax, deploy workflow safety assumptions, compose/Caddy/Dockerfile static checks, trello-gateway directory layout, and the example OpenClaw config placeholders. If Docker Compose or Caddy are installed locally, it also runs their native config validators.
 
