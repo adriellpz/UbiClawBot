@@ -8,16 +8,21 @@ Long-term baseline for this deployment:
 ## Files
 
 - Host runtime env: `/home/deploy/openclaw/.env`
+- Trello gateway env (API keys): `/home/deploy/openclaw/trello-gateway/.env`
 - Host runtime config dir: `/home/deploy/openclaw/data/config`
 - Runtime OpenClaw config: `/home/deploy/openclaw/data/config/openclaw.json`
+
+Production data paths are often pointed at `/root/openclaw/data/...` via `OPENCLAW_CONFIG_DIR` / `OPENCLAW_WORKSPACE_DIR` in `.env` (see Phase 3 docs).
 
 ## First-time setup (droplet)
 
 ```bash
-mkdir -p /home/deploy/openclaw/data/config /home/deploy/openclaw/data/workspace
+mkdir -p /home/deploy/openclaw/data/config /home/deploy/openclaw/data/workspace /home/deploy/openclaw/trello-gateway
 touch /home/deploy/openclaw/.env
+cp /home/deploy/openclaw/trello-gateway/.env.example /home/deploy/openclaw/trello-gateway/.env
 chmod 700 /home/deploy/openclaw/data/config /home/deploy/openclaw/data/workspace
-chmod 600 /home/deploy/openclaw/.env /home/deploy/openclaw/data/config/openclaw.json
+chmod 600 /home/deploy/openclaw/.env /home/deploy/openclaw/trello-gateway/.env /home/deploy/openclaw/data/config/openclaw.json
+# Edit trello-gateway/.env with Trello API keys + GATEWAY_KEY; set matching TRELLO_GATEWAY_KEY in .env
 ```
 
 ## Deploy updated config from local machine

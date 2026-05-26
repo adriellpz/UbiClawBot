@@ -8,7 +8,10 @@ This is a **deployment/configuration repository** for [OpenClaw](https://github.
 
 ### Architecture
 
-- **Single required service**: `openclaw-gateway` Docker container (HTTP/WS on port 18789, bridge on 18790)
+- **Core service**: `openclaw-gateway` Docker container (HTTP/WS on port 18789, bridge on 18790)
+- **Sidecars (share gateway network namespace)**: `trello-bridge` (webhooks on 18990), `github-pr-bridge` (19091)
+- **Isolated Trello service**: `trello-gateway` on port 18792 — holds all Trello API credentials
+- **Background worker**: `trello-queue-worker` — monitors `trello_queue_worker.mjs` in the workspace
 - **Optional service**: `openclaw-cli` (interactive CLI sharing the gateway network)
 - **Caddy**: Only needed for production TLS termination, not local dev
 
@@ -36,4 +39,4 @@ This is a **deployment/configuration repository** for [OpenClaw](https://github.
 
 ### No lint/test/build
 
-This repo has no source code, package manager, linter, test suite, or build step — it is infrastructure glue around a pre-built container image. The "build" is `docker compose build` and the "run" is `docker compose up`.
+This repo has no application source beyond deployment glue and the trello-gateway sidecar. Run `npm test` for the static deploy gate before opening config PRs. The runtime "build" is `docker compose build` and the "run" is `docker compose up`.

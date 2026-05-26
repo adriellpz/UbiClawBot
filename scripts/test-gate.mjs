@@ -129,11 +129,16 @@ function validateDeployWorkflow(workflows) {
   assert(sshStep?.with?.script_stop === true, `${workflowPath}: ssh deploy step should set script_stop: true`);
   assert(typeof script === "string" && script.includes("set -eu"), `${workflowPath}: ssh deploy script should use set -eu`);
   assert(typeof script === "string" && script.includes("trello-bridge"), `${workflowPath}: deploy script should restart trello-bridge with the other services`);
+  assert(typeof script === "string" && script.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
+  assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
 
   if (typeof script === "string") {
     const composeUpLine = script.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
     assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
     assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
+    assert(composeUpLine?.includes("trello-gateway"), `${workflowPath}: docker compose up should restart trello-gateway`);
+    assert(composeUpLine?.includes("trello-queue-worker"), `${workflowPath}: docker compose up should restart trello-queue-worker`);
+    assert(!script.includes("trello-gateway/.env") || script.includes(".env.example"), `${workflowPath}: deploy script must not overwrite trello-gateway/.env`);
 
     const result = spawnSync("bash", ["-n"], { input: script, encoding: "utf8" });
     assert(result.status === 0, `${workflowPath}: embedded ssh script failed bash -n: ${result.stderr.trim()}`);
@@ -147,7 +152,7 @@ function validateCompose(workflows) {
   if (!compose) return;
 
   const services = compose.services ?? {};
-  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge"]) {
+  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge", "trello-gateway", "trello-queue-worker"]) {
     assert(services[service], `${composePath}: expected service ${service}`);
   }
 
@@ -174,6 +179,36 @@ function validateCompose(workflows) {
   assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);
   assert(githubPrBridge.working_dir === "/opt/github-pr-bridge", `${composePath}: github-pr-bridge working_dir should stay explicit`);
   assert(githubPrBridge.command?.includes("server.mjs"), `${composePath}: github-pr-bridge should run server.mjs`);
+
+  const trelloGateway = services["trello-gateway"] ?? {};
+  assert(trelloGateway.build?.context === "./trello-gateway", `${composePath}: trello-gateway should build from ./trello-gateway`);
+  assert(trelloGateway.image === "trello-gateway:local", `${composePath}: trello-gateway image tag should stay explicit`);
+  assert(trelloGateway.healthcheck?.test, `${composePath}: trello-gateway should keep a healthcheck`);
+  assert(String(trelloGateway.ports?.[0] ?? "").startsWith("127.0.0.1:18792"), `${composePath}: trello-gateway should bind 127.0.0.1:18792 on the host`);
+
+  const trelloQueueWorker = services["trello-queue-worker"] ?? {};
+  assert(trelloQueueWorker.working_dir === "/home/node/.openclaw/workspace/trello_bridge", `${composePath}: trello-queue-worker working_dir should stay explicit`);
+  assert(trelloQueueWorker.command?.includes("start_queue_worker.mjs"), `${composePath}: trello-queue-worker should run start_queue_worker.mjs`);
+  assert(trelloQueueWorker.healthcheck?.test, `${composePath}: trello-queue-worker should keep a healthcheck`);
+  const workerHealth = JSON.stringify(trelloQueueWorker.healthcheck?.test ?? []);
+  assert(!workerHealth.includes("18789"), `${composePath}: trello-queue-worker healthcheck must not probe openclaw-gateway port 18789`);
+  assert(workerHealth.includes("queue_worker.pid"), `${composePath}: trello-queue-worker healthcheck should verify worker pid files`);
+  assert(trelloQueueWorker.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: trello-queue-worker should wait for trello-gateway health`);
+}
+
+function validateTrelloGatewayDir() {
+  const dir = "trello-gateway";
+  for (const file of ["Dockerfile", "deploy.sh", "trello_gateway.mjs", "trello_transition_matrix.csv", "README.md", ".env.example"]) {
+    assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked gateway file`);
+  }
+
+  const gitignore = readText(".gitignore");
+  assert(gitignore.includes("trello-gateway/.env"), ".gitignore: trello-gateway/.env must stay ignored");
+
+  const deployScript = readText(`${dir}/deploy.sh`);
+  assert(deployScript.includes("set -eu"), "trello-gateway/deploy.sh: should use set -eu");
+  assert(!deployScript.includes(".env.example") || deployScript.includes("copy from trello-gateway/.env.example"), "trello-gateway/deploy.sh: should not overwrite live .env");
+  pass("trello-gateway/: static directory checks completed");
 }
 
 function validateCaddyfile() {
@@ -249,6 +284,7 @@ validateJsonFiles();
 const yamlFiles = validateYamlFiles();
 validateDeployWorkflow(yamlFiles);
 validateCompose(yamlFiles);
+validateTrelloGatewayDir();
 validateCaddyfile();
 validateDockerfile();
 validateExampleConfig();

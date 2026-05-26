@@ -12,6 +12,7 @@ This repository holds **your** configuration and Docker/Caddy glue. **OpenClaw i
 | `workspace/docker-compose.droplet.yml` | Compose definition; uses `OPENCLAW_IMAGE` from `.env`. |
 | `Caddyfile.droplet` | Reverse proxy / TLS (example for your VPS). |
 | `github-pr-bridge/` | GitHub `pull_request` webhook intake sidecar (HMAC verify + Trello card dedupe/update). |
+| `trello-gateway/` | Isolated Trello credential holder (`trello_gateway.mjs`, matrix CSV, Dockerfile). Secrets in `trello-gateway/.env` on the droplet only. |
 
 ## What is intentionally not tracked
 
@@ -58,15 +59,18 @@ It copies these files to the droplet and restarts services:
 - `workspace/docker-compose.droplet.yml` -> `/home/deploy/openclaw/docker-compose.yml`
 - `Caddyfile.droplet` -> `/home/deploy/openclaw/Caddyfile.droplet`
 - `github-pr-bridge/*` -> `/home/deploy/openclaw/github-pr-bridge/*`
+- `trello-gateway/*` (tracked files only) -> `/home/deploy/openclaw/trello-gateway/*`
 
 Then it runs:
 
 ```bash
 cd /home/deploy/openclaw
-docker compose build openclaw-gateway
-docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge
+docker compose build openclaw-gateway trello-gateway
+docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker
 docker compose ps
 ```
+
+The workflow **does not** overwrite `/home/deploy/openclaw/.env` or `/home/deploy/openclaw/trello-gateway/.env`. Create `trello-gateway/.env` once on the droplet from `trello-gateway/.env.example`.
 
 ### Required GitHub repo secrets
 
@@ -79,7 +83,8 @@ Set these in **GitHub -> Settings -> Secrets and variables -> Actions**:
 
 Notes:
 - Keep runtime secrets (`/home/deploy/openclaw/.env`) only on the droplet.
-- This workflow does not overwrite `/home/deploy/openclaw/.env` or `/home/deploy/openclaw/data/*`.
+- Keep Trello API credentials in `/home/deploy/openclaw/trello-gateway/.env` only — agent containers use `TRELLO_GATEWAY_URL` + `TRELLO_GATEWAY_KEY`.
+- This workflow does not overwrite `/home/deploy/openclaw/.env`, `/home/deploy/openclaw/trello-gateway/.env`, or `/home/deploy/openclaw/data/*`.
 - GitHub PR webhook setup details: [GITHUB-PR-WEBHOOK.md](./GITHUB-PR-WEBHOOK.md).
 
 ## Optional: fork upstream for patches
