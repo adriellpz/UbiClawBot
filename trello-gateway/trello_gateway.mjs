@@ -24,6 +24,7 @@ import http from 'node:http';
 import { readFileSync, appendFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { classifyContractOperation, evaluateContractWrite } from './trello_card_contract.mjs';
 
 // ─── Config ──────────────────────────────────────────────────────────
 const ENV_FILE = process.env.GATEWAY_ENV_FILE || '/etc/trello-gateway/env';
@@ -44,6 +45,14 @@ const TRELLO_TOKEN = process.env.TRELLO_API_TOKEN;
 const BOARD_ID = process.env.TRELLO_BOARD_ID || '69f96aafc342ad1c89f48e0c';
 const LOG_FILE = process.env.GATEWAY_LOG || '/var/log/trello-gateway.log';
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
+const TRELLO_API_BASE_URL = (process.env.TRELLO_API_BASE_URL || 'https://api.trello.com/1').replace(/\/$/, '');
+const DISABLE_OVERDUE_CHECKS = process.env.DISABLE_OVERDUE_CHECKS === 'true';
+const CONTRACT_EXEMPT_LIST_NAMES = new Set(
+  (process.env.TRELLO_CONTRACT_EXEMPT_LIST_NAMES || 'Done')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean),
+);
 
 // Per-agent Trello credentials for comment authorship (agentId → { key, token })
 // Looks for TRELLO_API_KEY_<AGENT> + TRELLO_API_TOKEN_<AGENT> in env.
@@ -68,6 +77,7 @@ function loadMatrix() {
   const headers = lines[0].split(',');
   const transitions = new Map();
   const forbidden = new Set();
+  const listNames = new Set();
   
   for (const line of lines.slice(1)) {
     const cols = line.split(',');
@@ -77,6 +87,8 @@ function loadMatrix() {
     const script = cols[6]?.trim();
     
     if (!to || !from) continue;
+    listNames.add(to);
+    listNames.add(from);
     
     const key = `${from}→${to}`;
     
@@ -87,10 +99,10 @@ function loadMatrix() {
     }
   }
   
-  return { transitions, forbidden };
+  return { transitions, forbidden, listNames };
 }
 
-const { transitions, forbidden } = loadMatrix();
+const { transitions, forbidden, listNames: CONTRACT_SCOPED_LISTS } = loadMatrix();
 
 // Per-agent token bucket rate limiters (prevent Trello API exhaustion)
 const RATE_BUCKETS = {};
@@ -193,7 +205,7 @@ async function trelloApi(method, path, params = {}, body = undefined, agentId) {
   const key = creds ? creds.key : TRELLO_KEY;
   const token = creds ? creds.token : TRELLO_TOKEN;
   
-  const url = new URL(`https://api.trello.com/1${path}`);
+  const url = new URL(`${TRELLO_API_BASE_URL}${path}`);
   url.searchParams.set('key', key);
   url.searchParams.set('token', token);
   for (const [k, v] of Object.entries(params)) {
@@ -271,6 +283,74 @@ function cardUrl(shortUrl) {
   return `https://trello.com/c/${shortUrl}`;
 }
 
+function buildContractOptions() {
+  return {
+    scopedListNames: CONTRACT_SCOPED_LISTS,
+    doneListNames: CONTRACT_EXEMPT_LIST_NAMES,
+  };
+}
+
+function createContractSnapshot({ listName, desc, checklists = [] }) {
+  return {
+    listName,
+    desc: typeof desc === 'string' ? desc : '',
+    checklists,
+  };
+}
+
+function normalizeChecklistSpecs(checklists = []) {
+  if (!Array.isArray(checklists)) return [];
+  return checklists
+    .map((checklist) => {
+      if (typeof checklist === 'string') {
+        return { name: checklist.trim(), items: [] };
+      }
+      const items = Array.isArray(checklist?.items)
+        ? checklist.items
+            .map((item) => (typeof item === 'string' ? { name: item.trim() } : item))
+            .filter((item) => typeof item?.name === 'string' && item.name.trim() !== '')
+            .map((item) => ({
+              name: item.name.trim(),
+              state: item.state === 'complete' || item.checked === true ? 'complete' : 'incomplete',
+            }))
+        : [];
+      return { name: typeof checklist?.name === 'string' ? checklist.name.trim() : '', items };
+    })
+    .filter((checklist) => checklist.name);
+}
+
+async function fetchBoardLists(agentId) {
+  return await trelloApi('GET', `/boards/${BOARD_ID}/lists`, { fields: 'name,closed' }, undefined, agentId);
+}
+
+async function fetchCardChecklists(cardId, agentId) {
+  return await trelloApi('GET', `/cards/${cardId}/checklists`, { fields: 'name', checkItems: 'all' }, undefined, agentId);
+}
+
+function resolveList(lists, idOrName) {
+  if (!idOrName) return null;
+  return lists.find((list) => !list.closed && (list.id === idOrName || list.name.toLowerCase() === String(idOrName).toLowerCase())) || null;
+}
+
+function sendContractBlocked(res, validation, requestId, context = {}) {
+  res.writeHead(403);
+  res.end(JSON.stringify({
+    blocked: true,
+    reason: validation.reason,
+    code: validation.code,
+    details: validation.details?.reason,
+    ...context,
+  }));
+}
+
+async function createChecklistWithItems(cardId, checklistSpec, agentId) {
+  const checklist = await trelloApi('POST', `/cards/${cardId}/checklists`, { name: checklistSpec.name }, undefined, agentId);
+  for (const item of checklistSpec.items || []) {
+    await trelloApi('POST', `/checklists/${checklist.id}/checkItems`, { name: item.name, state: item.state }, undefined, agentId);
+  }
+  return checklist;
+}
+
 // ─── HTTP Server ─────────────────────────────────────────────────────
 async function handleRequest(req, res) {
   const requestId = String(++requestCounter).padStart(8, '0');
@@ -339,11 +419,13 @@ async function handleRequest(req, res) {
   
   let card = null;
   let currentList = null;
+  let boardLists = null;
+  let currentChecklists = [];
   
   if (!isReadOp && !isLabelOp && cardId) {
     // Fetch card info for write operations
     try {
-      card = await trelloApi('GET', `/cards/${cardId}`, { fields: 'name,idList,closed,shortUrl' });
+      card = await trelloApi('GET', `/cards/${cardId}`, { fields: 'name,idList,closed,shortUrl,desc' });
     } catch (e) {
       res.writeHead(502);
       res.end(JSON.stringify({ error: 'Failed to fetch card', details: e.message }));
@@ -360,8 +442,12 @@ async function handleRequest(req, res) {
     
     // Get current list name
     try {
-      const lists = await trelloApi('GET', `/boards/${BOARD_ID}/lists`, { fields: 'name' });
-      currentList = lists.find(l => l.id === card.idList)?.name || 'Unknown';
+      boardLists = await fetchBoardLists(agentId);
+      currentList = boardLists.find(l => l.id === card.idList)?.name || 'Unknown';
+    } catch {}
+
+    try {
+      currentChecklists = await fetchCardChecklists(cardId, agentId);
     } catch {}
   }
   
@@ -378,7 +464,7 @@ async function handleRequest(req, res) {
           return;
         }
         // Resolve list
-        const allLists = await trelloApi('GET', `/boards/${BOARD_ID}/lists`, { fields: 'name,closed' });
+        const allLists = await fetchBoardLists(agentId);
         const targetList = allLists.find(l => !l.closed && l.name.toLowerCase() === listName.toLowerCase());
         if (!targetList) {
           res.writeHead(400);
@@ -401,13 +487,41 @@ async function handleRequest(req, res) {
           log({ event: 'blocked_create_scheduled', agentId, list: targetList.name }, requestId);
           return;
         }
+        const requestedChecklists = normalizeChecklistSpecs(params.checklists);
+        const createValidation = evaluateContractWrite({
+          agentId,
+          classification: classifyContractOperation({ operation, params }),
+          current: null,
+          next: createContractSnapshot({
+            listName: targetList.name,
+            desc: params.desc || '',
+            checklists: requestedChecklists,
+          }),
+          ...buildContractOptions(),
+        });
+        if (!createValidation.ok) {
+          sendContractBlocked(res, createValidation, requestId, { list: targetList.name });
+          log({ event: 'blocked_contract', agentId, operation, list: targetList.name, code: createValidation.code, reason: createValidation.reason }, requestId);
+          return;
+        }
         // Build payload
         const createBody = { idList: targetList.id, name: cardName };
         if (params.desc) createBody.desc = params.desc;
         if (params.due) createBody.due = params.due;
         if (params.pos) createBody.pos = params.pos;
         const newCard = await trelloApi('POST', '/cards', createBody, undefined, agentId);
-        result = { created: true, cardId: newCard.id, cardName: newCard.name, list: targetList.name, url: cardUrl(newCard.shortUrl) };
+        const createdChecklists = [];
+        for (const checklistSpec of requestedChecklists) {
+          createdChecklists.push(await createChecklistWithItems(newCard.id, checklistSpec, agentId));
+        }
+        result = {
+          created: true,
+          cardId: newCard.id,
+          cardName: newCard.name,
+          list: targetList.name,
+          url: cardUrl(newCard.shortUrl),
+          checklists: createdChecklists.map((checklist) => ({ id: checklist.id, name: checklist.name })),
+        };
         log({ event: 'card_created', agentId, cardId: newCard.id, cardName: newCard.name, list: targetList.name }, requestId);
         break;
       }
@@ -516,11 +630,23 @@ async function handleRequest(req, res) {
         }
         
         // Resolve list name to ID
-        const lists = await trelloApi('GET', `/boards/${BOARD_ID}/lists`, { fields: 'name,closed' });
+        const lists = boardLists || await fetchBoardLists(agentId);
         const target = lists.find(l => !l.closed && (l.id === targetList || l.name.toLowerCase() === targetList.toLowerCase()));
         if (!target) {
           res.writeHead(400);
           res.end(JSON.stringify({ error: `List not found: ${targetList}` }));
+          return;
+        }
+        const moveValidation = evaluateContractWrite({
+          agentId,
+          classification: classifyContractOperation({ operation, params }),
+          current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
+          next: createContractSnapshot({ listName: target.name, desc: card.desc || '', checklists: currentChecklists }),
+          ...buildContractOptions(),
+        });
+        if (!moveValidation.ok) {
+          sendContractBlocked(res, moveValidation, requestId, { from: currentList, to: target.name });
+          log({ event: 'blocked_contract', agentId, operation, cardId, code: moveValidation.code, reason: moveValidation.reason }, requestId);
           return;
         }
         
@@ -601,8 +727,181 @@ async function handleRequest(req, res) {
           res.end(JSON.stringify({ error: 'Missing fields to update' }));
           return;
         }
+        const classification = classifyContractOperation({ operation, params });
+        let nextListName = currentList;
+        if (fields.idList !== undefined) {
+          const lists = boardLists || await fetchBoardLists(agentId);
+          const target = resolveList(lists, fields.idList);
+          if (!target) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: `List not found: ${fields.idList}` }));
+            return;
+          }
+          nextListName = target.name;
+        }
+        if (classification.mode === 'structural') {
+          const updateValidation = evaluateContractWrite({
+            agentId,
+            classification,
+            current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
+            next: createContractSnapshot({
+              listName: nextListName,
+              desc: fields.desc !== undefined ? fields.desc : card.desc || '',
+              checklists: currentChecklists,
+            }),
+            ...buildContractOptions(),
+          });
+          if (!updateValidation.ok) {
+            sendContractBlocked(res, updateValidation, requestId, { card: card.name });
+            log({ event: 'blocked_contract', agentId, operation, cardId, code: updateValidation.code, reason: updateValidation.reason }, requestId);
+            return;
+          }
+        }
+        if (fields.idList !== undefined && nextListName !== currentList) {
+          const moveValidation = validateTransition(currentList, nextListName, agentId, params.explicitFlags || []);
+          if (!moveValidation.ok) {
+            res.writeHead(403);
+            res.end(JSON.stringify({ blocked: true, reason: moveValidation.reason, from: currentList, to: nextListName }));
+            log({ event: 'blocked_transition', agentId, cardId, from: currentList, to: nextListName, reason: moveValidation.reason }, requestId);
+            return;
+          }
+        }
         await trelloApi('PUT', `/cards/${cardId}`, fields, undefined, agentId);
         result = { updated: true, card: card.name, fields };
+        break;
+      }
+
+      case 'create_checklist': {
+        const checklistName = typeof params.name === 'string' ? params.name.trim() : '';
+        if (!checklistName) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Missing checklist name' }));
+          return;
+        }
+        const nextChecklists = [...currentChecklists, { name: checklistName }];
+        const checklistValidation = evaluateContractWrite({
+          agentId,
+          classification: classifyContractOperation({ operation, params }),
+          current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
+          next: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: nextChecklists }),
+          ...buildContractOptions(),
+        });
+        if (!checklistValidation.ok) {
+          sendContractBlocked(res, checklistValidation, requestId, { card: card.name });
+          log({ event: 'blocked_contract', agentId, operation, cardId, code: checklistValidation.code, reason: checklistValidation.reason }, requestId);
+          return;
+        }
+        const checklist = await createChecklistWithItems(cardId, { name: checklistName, items: [] }, agentId);
+        result = { created: true, checklist, card: card.name, repair: checklistValidation.mode === 'repair' };
+        break;
+      }
+
+      case 'update_checklist': {
+        const checklistId = params.checklistId;
+        const checklistName = typeof params.name === 'string' ? params.name.trim() : '';
+        if (!checklistId || !checklistName) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Missing checklistId or name' }));
+          return;
+        }
+        const existingChecklist = currentChecklists.find((checklist) => checklist.id === checklistId);
+        if (!existingChecklist) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: `Checklist not found: ${checklistId}` }));
+          return;
+        }
+        const nextChecklists = currentChecklists.map((checklist) => checklist.id === checklistId ? { ...checklist, name: checklistName } : checklist);
+        const checklistValidation = evaluateContractWrite({
+          agentId,
+          classification: classifyContractOperation({ operation, params }),
+          current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
+          next: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: nextChecklists }),
+          ...buildContractOptions(),
+        });
+        if (!checklistValidation.ok) {
+          sendContractBlocked(res, checklistValidation, requestId, { card: card.name });
+          log({ event: 'blocked_contract', agentId, operation, cardId, code: checklistValidation.code, reason: checklistValidation.reason }, requestId);
+          return;
+        }
+        const checklist = await trelloApi('PUT', `/checklists/${checklistId}`, { name: checklistName }, undefined, agentId);
+        result = { updated: true, checklist, card: card.name, repair: checklistValidation.mode === 'repair' };
+        break;
+      }
+
+      case 'delete_checklist': {
+        const checklistId = params.checklistId;
+        if (!checklistId) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Missing checklistId' }));
+          return;
+        }
+        const existingChecklist = currentChecklists.find((checklist) => checklist.id === checklistId);
+        if (!existingChecklist) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: `Checklist not found: ${checklistId}` }));
+          return;
+        }
+        const nextChecklists = currentChecklists.filter((checklist) => checklist.id !== checklistId);
+        const checklistValidation = evaluateContractWrite({
+          agentId,
+          classification: classifyContractOperation({ operation, params }),
+          current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
+          next: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: nextChecklists }),
+          ...buildContractOptions(),
+        });
+        if (!checklistValidation.ok) {
+          sendContractBlocked(res, checklistValidation, requestId, { card: card.name });
+          log({ event: 'blocked_contract', agentId, operation, cardId, code: checklistValidation.code, reason: checklistValidation.reason }, requestId);
+          return;
+        }
+        await trelloApi('DELETE', `/checklists/${checklistId}`, {}, undefined, agentId);
+        result = { deleted: true, checklistId, card: card.name, repair: checklistValidation.mode === 'repair' };
+        break;
+      }
+
+      case 'create_checklist_item': {
+        const checklistId = params.checklistId;
+        const itemName = typeof params.name === 'string' ? params.name.trim() : '';
+        if (!checklistId || !itemName) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Missing checklistId or item name' }));
+          return;
+        }
+        const item = await trelloApi('POST', `/checklists/${checklistId}/checkItems`, {
+          name: itemName,
+          state: params.state === 'complete' || params.checked === true ? 'complete' : 'incomplete',
+        }, undefined, agentId);
+        result = { created: true, item, card: card.name };
+        break;
+      }
+
+      case 'update_checklist_item': {
+        const checkItemId = params.checkItemId;
+        if (!checkItemId || (params.name === undefined && params.state === undefined && params.checked === undefined)) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Missing checkItemId or update fields' }));
+          return;
+        }
+        const itemFields = {};
+        if (params.name !== undefined) itemFields.name = params.name;
+        if (params.state !== undefined || params.checked !== undefined) {
+          itemFields.state = params.state || (params.checked === true ? 'complete' : 'incomplete');
+        }
+        const item = await trelloApi('PUT', `/cards/${cardId}/checkItem/${checkItemId}`, itemFields, undefined, agentId);
+        result = { updated: true, item, card: card.name };
+        break;
+      }
+
+      case 'delete_checklist_item': {
+        const checklistId = params.checklistId;
+        const checkItemId = params.checkItemId;
+        if (!checklistId || !checkItemId) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Missing checklistId or checkItemId' }));
+          return;
+        }
+        await trelloApi('DELETE', `/checklists/${checklistId}/checkItems/${checkItemId}`, {}, undefined, agentId);
+        result = { deleted: true, checklistId, checkItemId, card: card.name };
         break;
       }
 
@@ -851,6 +1150,10 @@ async function checkOverdueCards() {
 }
 
 function startOverdueCheck() {
+  if (DISABLE_OVERDUE_CHECKS) {
+    console.log('Overdue card detection disabled');
+    return;
+  }
   // First check after 60s (let gateway boot fully), then every 15 minutes
   setTimeout(() => {
     checkOverdueCards();

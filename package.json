@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Static validation gate for the UbiClawBot deployment/config repository.",
   "scripts": {
-    "test": "node --test github-pr-bridge/server.test.mjs trello-routines/routine_manifest.test.mjs trello-routines/ensure_routines_logic.test.mjs trello-routines/ensure_routines.test.mjs trello-pipeline/server.test.mjs trello-pipeline/queue_worker.test.mjs trello-pipeline/smoke.test.mjs && node scripts/test-gate.mjs"
+    "test": "node --test github-pr-bridge/server.test.mjs trello-gateway/trello_card_contract.test.mjs trello-gateway/trello_gateway.test.mjs trello-routines/routine_manifest.test.mjs trello-routines/ensure_routines_logic.test.mjs trello-routines/ensure_routines.test.mjs trello-pipeline/server.test.mjs trello-pipeline/queue_worker.test.mjs trello-pipeline/smoke.test.mjs && node scripts/test-gate.mjs"
   },
   "devDependencies": {
     "yaml": "^2.8.1"

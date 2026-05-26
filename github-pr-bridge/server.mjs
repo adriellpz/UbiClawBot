@@ -74,20 +74,37 @@ function buildCardTitle(priority, prNumber) {
   return `${priority} - Review PR ${prNumber}`;
 }
 
+function buildNextStepsChecklist() {
+  return {
+    name: "Next steps",
+    items: [
+      { name: "Review the pull request in GitHub." },
+      { name: "Leave a GitHub review with concrete feedback or approval." },
+      { name: "Update the Trello card after the review is complete." },
+    ],
+  };
+}
+
 function buildCardDescription(payload) {
   const pr = payload.pull_request;
   const requestedReviewer = payload.requested_reviewer?.login || payload.requested_team?.name || "n/a";
   return [
+    "Original Request:",
+    `Review pull request: ${pr.title}`,
+    "",
+    "Research:",
     `PR: ${pr.html_url}`,
-    `Title: ${pr.title}`,
     `Action: ${payload.action}`,
     `Author: ${pr.user?.login || "unknown"}`,
     `Branches: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
     `Draft: ${pr.draft ? "yes" : "no"}`,
     `Review requested: ${requestedReviewer}`,
-    "",
     "Reminder: Ubi should submit a real GitHub review on this PR.",
     "Adriel remains the final merge gate.",
+    "",
+    "Peer Review:",
+    "",
+    "Work completed:",
   ].join("\n");
 }
 
@@ -222,12 +239,34 @@ async function addCardComment(cardId, text) {
   });
 }
 
+async function createDirectChecklist(cardId, checklist) {
+  const createdChecklist = await trelloFetch(`/cards/${encodeURIComponent(cardId)}/checklists`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: checklist.name }),
+  });
+
+  for (const item of checklist.items || []) {
+    await trelloFetch(`/checklists/${encodeURIComponent(createdChecklist.id)}/checkItems`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: item.name,
+        state: item.checked ? "complete" : "incomplete",
+      }),
+    });
+  }
+
+  return createdChecklist;
+}
+
 async function upsertReviewCard(payload) {
   const pr = payload.pull_request;
   const prNumber = pr.number;
   const priority = priorityForEvent(payload.action, pr);
   const cardTitle = buildCardTitle(priority, prNumber);
   const description = buildCardDescription(payload);
+  const checklist = buildNextStepsChecklist();
   const existing = await findExistingOpenCard(pr);
 
   if (existing) {
@@ -248,6 +287,7 @@ async function upsertReviewCard(payload) {
         listName: intakeList.name,
         name: cardTitle,
         desc: description,
+        checklists: [checklist],
         pos: "top",
       },
     });
@@ -268,6 +308,7 @@ async function upsertReviewCard(payload) {
       pos: "top",
     }),
   });
+  await createDirectChecklist(created.id, checklist);
   return { mode: "created", cardId: created.id, cardUrl: created.url };
 }
 
