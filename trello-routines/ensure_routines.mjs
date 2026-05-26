@@ -133,6 +133,14 @@ function descHasTags(desc, habitId, period) {
   return tags.routineId === habitId && tags.routinePeriod === period;
 }
 
+function findExistingRoutineCard(openCards, habitId, period, title) {
+  return (
+    openCards.find((card) => descHasTags(card.desc, habitId, period)) ||
+    openCards.find((card) => String(card?.name || "").trim() === title) ||
+    null
+  );
+}
+
 function evTime(ev, which) {
   const value = ev?.[which];
   if (typeof value === "string") return new Date(value).getTime();
@@ -203,8 +211,18 @@ async function main() {
 
       const period = mtDateStr(date);
       const title = habit.title_template.replace("{date}", period);
-      const existing = openCards.find((card) => descHasTags(card.desc, habit.id, period));
-      if (existing) continue;
+      const existing = findExistingRoutineCard(openCards, habit.id, period, title);
+      if (existing) {
+        report.skipped.push({
+          habit: habit.id,
+          period,
+          title,
+          reason: "existing_open_card",
+          cardId: existing.id || null,
+          matchedBy: descHasTags(existing.desc, habit.id, period) ? "routine_tags" : "exact_title",
+        });
+        continue;
+      }
       const slot = findRoutinePreferSlot({
         instanceDate: period,
         preferStart: habit.prefer_start,
