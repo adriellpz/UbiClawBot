@@ -334,7 +334,7 @@ async function handleRequest(req, res) {
   bucket.tokens -= 1;
   
   // Read operations don't need cardId validation upfront
-  const isReadOp = ['get', 'list', 'search', 'comments', 'board_lists', 'board_custom_fields', 'status'].includes(operation);
+  const isReadOp = ['get', 'list', 'search', 'comments', 'board_lists', 'board_open_cards', 'board_custom_fields', 'status'].includes(operation);
   const isLabelOp = ['get_labels', 'create_label', 'update_label'].includes(operation);
   
   let card = null;
