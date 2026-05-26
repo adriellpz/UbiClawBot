@@ -683,6 +683,87 @@ test("dry-run routines script skips a routine instance that already exists on th
   assert.equal(gateway.calls.some((call) => call.operation === "create_card"), false);
 });
 
+test("dry-run routines script skips an exact-title routine card even when routine tags are missing", async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-routines-"));
+  const manifestPath = path.join(tempDir, "routine_manifest.json");
+  const eventsPath = path.join(tempDir, "events.json");
+
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify(
+      {
+        timezone: "America/Denver",
+        routines: [
+          {
+            id: "submit_timesheet",
+            title_template: "R - Submit timesheet - {date}",
+            trello_list: "Routine",
+            duration_minutes: 60,
+            recurrence: "weekly",
+            days: ["WED"],
+            prefer_start: "08:00",
+            prefer_end: "10:00",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  fs.writeFileSync(eventsPath, JSON.stringify([], null, 2));
+
+  const gateway = createGatewayStub({
+    boardOpenCards: [
+      {
+        id: "existing-routine-untagged-1",
+        name: "R - Submit timesheet - 2026-05-27",
+        listName: "Routine",
+        shortUrl: "https://trello.com/c/existing-routine-untagged-1",
+        shortLink: "existing-routine-untagged-1",
+        desc: "Original Request:\nR - Submit timesheet - 2026-05-27\n\nPeer Review:\n\nWork completed:",
+      },
+    ],
+  });
+  const listener = await listen(gateway.server);
+  t.after(async () => {
+    await closeServer(listener.server);
+  });
+
+  const result = await runScript(
+    [
+      "trello-routines/ensure_routines.mjs",
+      "--manifest",
+      manifestPath,
+      "--events-file",
+      eventsPath,
+      "--lookahead-days",
+      "1",
+      "--today",
+      "2026-05-27",
+      "--dry-run",
+    ],
+    {
+      cwd: REPO_ROOT,
+      env: {
+        TRELLO_GATEWAY_URL: listener.url,
+        TRELLO_GATEWAY_KEY: "gw-test",
+      },
+    },
+  );
+
+  assert.equal(result.code, 0, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.created.length, 0);
+  assert.equal(report.skipped.length, 1);
+  assert.equal(report.skipped[0].reason, "existing_open_card");
+  assert.equal(report.skipped[0].matchedBy, "exact_title");
+  assert.equal(report.skipped[0].cardId, "existing-routine-untagged-1");
+  assert.equal(gateway.calls.some((call) => call.operation === "board_open_cards"), true);
+  assert.equal(gateway.calls.some((call) => call.operation === "create_card"), false);
+  assert.equal(gateway.calls.some((call) => call.operation === "update"), false);
+  assert.equal(gateway.calls.some((call) => call.operation === "comment"), false);
+});
+
 test("dry-run routines script fetches calendar events from gog when no events file is provided", async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-routines-"));
   const manifestPath = path.join(tempDir, "routine_manifest.json");
