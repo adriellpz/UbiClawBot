@@ -94,7 +94,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
             cardId: "card-123",
             cardName: body.params?.name,
             list: body.params?.listName,
-            url: "https://trello.example/c/card-123",
+            shortUrl: "card-123",
           };
           break;
         default:
@@ -187,6 +187,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
   );
   assert.equal(responseBody.ok, true);
   assert.equal(responseBody.mode, "created");
+  assert.equal(responseBody.cardUrl, "https://trello.com/c/card-123");
   assert.deepEqual(responseBody.wake, { ok: true });
 
   assert.deepEqual(
@@ -206,4 +207,150 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
   assert.equal(hookCalls[0].body.agentId, "main");
   assert.equal(hookCalls[0].body.sessionKey, "hook:github-pr:14");
   assert.match(hookCalls[0].body.message, /github_pr_review_requested/);
+  assert.match(hookCalls[0].body.message, /https:\/\/trello\.com\/c\/card-123/);
+});
+
+test("gateway search normalizes shortUrl when updating an existing PR card", async (t) => {
+  const gatewayCalls = [];
+  const hookCalls = [];
+
+  const gateway = await listen(
+    http.createServer(async (req, res) => {
+      assert.equal(req.headers.authorization, "Bearer gw-test");
+      const body = await getJsonBody(req);
+      gatewayCalls.push(body);
+
+      let payload = { success: true };
+      switch (body.operation) {
+        case "search":
+          payload = {
+            success: true,
+            cards: [
+              {
+                id: "card-existing",
+                idList: "list-review",
+                name: "P2 - Review PR 14",
+                desc: "PR: https://github.com/adriellpz/UbiClawBot/pull/14",
+                closed: false,
+                shortUrl: "card-existing",
+              },
+            ],
+          };
+          break;
+        case "board_lists":
+          payload = {
+            success: true,
+            lists: [
+              { id: "list-review", name: "Review", closed: false },
+              { id: "list-done", name: "Done", closed: false },
+            ],
+          };
+          break;
+        case "comment":
+          payload = { success: true, commented: true };
+          break;
+        default:
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: `Unexpected operation ${body.operation}` }));
+          return;
+      }
+
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }),
+  );
+
+  const hook = await listen(
+    http.createServer(async (req, res) => {
+      hookCalls.push({
+        authorization: req.headers.authorization,
+        body: await getJsonBody(req),
+      });
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  let stdout = "";
+  let stderr = "";
+  const bridgePort = 19193;
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      GITHUB_PR_BRIDGE_PORT: String(bridgePort),
+      GITHUB_PR_WEBHOOK_SECRET: "test-secret",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_BOARD_ID: "board123",
+      OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
+      OPENCLAW_HOOK_TOKEN: "hook-test",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  bridge.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  bridge.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hook.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${bridgePort}/healthz`);
+
+  const payload = {
+    action: "synchronize",
+    pull_request: {
+      number: 14,
+      html_url: "https://github.com/adriellpz/UbiClawBot/pull/14",
+      title: "Wake Ubi through gateway",
+      user: { login: "adriellpz" },
+      head: { ref: "feature/gateway" },
+      base: { ref: "main" },
+      draft: false,
+      labels: [],
+    },
+  };
+  const body = JSON.stringify(payload);
+  const signature = `sha256=${createHmac("sha256", "test-secret").update(body).digest("hex")}`;
+
+  const res = await fetch(`http://127.0.0.1:${bridgePort}/github-pr`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-hub-signature-256": signature,
+      "x-github-event": "pull_request",
+      "x-github-delivery": "delivery-2",
+    },
+    body,
+  });
+
+  const responseBody = await res.json();
+
+  assert.equal(
+    res.status,
+    200,
+    `bridge stdout:\n${stdout}\nbridge stderr:\n${stderr}\nresponse:\n${JSON.stringify(responseBody, null, 2)}`,
+  );
+  assert.equal(responseBody.ok, true);
+  assert.equal(responseBody.mode, "updated");
+  assert.equal(responseBody.cardUrl, "https://trello.com/c/card-existing");
+  assert.deepEqual(responseBody.wake, { ok: true });
+
+  assert.deepEqual(
+    gatewayCalls.map((call) => call.operation),
+    ["search", "board_lists", "comment"],
+  );
+  const commentCall = gatewayCalls.find((call) => call.operation === "comment");
+  assert.equal(commentCall?.cardId, "card-existing");
+  assert.match(commentCall?.params.text, /GitHub update: `synchronize`/);
+
+  assert.equal(hookCalls.length, 1);
+  assert.equal(hookCalls[0].authorization, "Bearer hook-test");
+  assert.match(hookCalls[0].body.message, /https:\/\/trello\.com\/c\/card-existing/);
 });

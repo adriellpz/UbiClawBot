@@ -180,6 +180,11 @@ function buildCardSearchQuery(prNumber) {
   return TRELLO_BOARD_ID ? `/pull/${prNumber} board:${TRELLO_BOARD_ID}` : `/pull/${prNumber}`;
 }
 
+function cardUrl(shortUrl) {
+  if (!shortUrl) return undefined;
+  return String(shortUrl).startsWith("http") ? shortUrl : `https://trello.com/c/${shortUrl}`;
+}
+
 async function findExistingOpenCard(pullRequest) {
   const prNumber = pullRequest.number;
   const prUrl = pullRequest.html_url;
