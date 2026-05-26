@@ -201,7 +201,20 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
   assert.equal("cardId" in createCardCall, false);
   assert.equal(createCardCall?.params.listName, "Review");
   assert.equal(createCardCall?.params.name, "P2 - Review PR 14");
-  assert.match(createCardCall?.params.desc, /Wake Ubi through gateway/);
+  assert.match(createCardCall?.params.desc, /Original Request:/);
+  assert.match(createCardCall?.params.desc, /Research:/);
+  assert.match(createCardCall?.params.desc, /Peer Review:\n\nWork completed:/);
+  assert.match(createCardCall?.params.desc, /https:\/\/github\.com\/adriellpz\/UbiClawBot\/pull\/14/);
+  assert.deepEqual(createCardCall?.params.checklists, [
+    {
+      name: "Next steps",
+      items: [
+        { name: "Review the pull request in GitHub." },
+        { name: "Leave a GitHub review with concrete feedback or approval." },
+        { name: "Update the Trello card after the review is complete." },
+      ],
+    },
+  ]);
 
   assert.equal(hookCalls.length, 1);
   assert.equal(hookCalls[0].authorization, "Bearer hook-test");
