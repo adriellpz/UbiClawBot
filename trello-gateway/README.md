@@ -7,10 +7,19 @@ Isolated Docker service that holds **all Trello API credentials**. OpenClaw agen
 | File | Purpose |
 |------|---------|
 | `trello_gateway.mjs` | Gateway daemon (validated ops + transition matrix) |
-| `trello_transition_matrix.csv` | Allowed/forbidden list moves (canonical copy from MarcosAgent) |
+| `trello_transition_matrix.csv` | Allowed/forbidden list moves loaded by the gateway |
 | `Dockerfile` | `node:22-alpine` image |
 | `.env.example` | Placeholder env — copy to `.env` on the droplet |
 | `deploy.sh` | Manual rebuild/recreate on the droplet |
+
+## Source of truth
+
+`UbiClawBot/trello-gateway/` is the canonical home for both gateway deploy artifacts:
+
+- `trello-gateway/trello_gateway.mjs`
+- `trello-gateway/trello_transition_matrix.csv`
+
+Other repos should reference these files, not keep their own tracked copies.
 
 ## Droplet paths
 
@@ -39,5 +48,3 @@ Set matching `TRELLO_GATEWAY_KEY` in `/home/deploy/openclaw/.env` for agent cont
 - **Script/matrix only:** GitHub deploy copies tracked files and restarts services (volume mounts pick up changes).
 - **Manual:** `./trello-gateway/deploy.sh` from `/home/deploy/openclaw`.
 - **Matrix edits:** restart `trello-gateway` after CSV changes.
-
-Phase 2 will add automated sync from UbiAgent/MarcosAgent workspace copies.

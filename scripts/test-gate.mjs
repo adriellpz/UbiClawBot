@@ -216,6 +216,14 @@ function validateTrelloGatewayDir() {
   const deployScript = readText(`${dir}/deploy.sh`);
   assert(deployScript.includes("set -eu"), "trello-gateway/deploy.sh: should use set -eu");
   assert(!deployScript.includes(".env.example") || deployScript.includes("copy from trello-gateway/.env.example"), "trello-gateway/deploy.sh: should not overwrite live .env");
+
+  const gatewayScript = readText(`${dir}/trello_gateway.mjs`);
+  assert(!gatewayScript.includes("workspace-marcos/trello-refactor/trello_transition_matrix.csv"), "trello-gateway/trello_gateway.mjs: should not default to a MarcosAgent workspace path");
+  assert(gatewayScript.includes("new URL('./trello_transition_matrix.csv', import.meta.url)"), "trello-gateway/trello_gateway.mjs: should resolve the local transition matrix by default");
+
+  const gatewayReadme = readText(`${dir}/README.md`);
+  assert(!gatewayReadme.includes("canonical copy from MarcosAgent"), "trello-gateway/README.md: canonical ownership should live in this repo");
+  assert(!gatewayReadme.includes("Phase 2 will add automated sync"), "trello-gateway/README.md: stale phase-2 sync placeholder should be removed");
   pass("trello-gateway/: static directory checks completed");
 }
 
