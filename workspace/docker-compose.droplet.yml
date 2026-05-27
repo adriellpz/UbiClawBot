@@ -230,6 +230,7 @@ services:
       TRELLO_PIPELINE_STATE_DIR: ${TRELLO_PIPELINE_STATE_DIR:-/var/lib/trello-pipeline}
     volumes:
       - ./trello-gateway/trello_gateway.mjs:/app/trello_gateway.mjs:ro
+      - ./trello-gateway/trello_card_contract.mjs:/app/trello_card_contract.mjs:ro
       - ./trello-gateway/trello_transition_matrix.csv:/app/trello_transition_matrix.csv:ro
       - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
     ports:

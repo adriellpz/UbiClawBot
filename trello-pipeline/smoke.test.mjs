@@ -151,7 +151,7 @@ test("repo-owned trello pipeline smoke test handles reschedule flow end to end",
     }),
   );
 
-  const port = 19195;
+  const port = 19197;
   const bridge = spawn(process.execPath, ["server.mjs"], {
     cwd: new URL(".", import.meta.url),
     env: {

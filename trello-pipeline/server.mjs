@@ -120,6 +120,13 @@ function isUbiMentioningMarcos(action) {
   return /@marcostheai\b/i.test(action?.data?.text || "");
 }
 
+function isBacklogIntake(actionable) {
+  const kind = actionable?.kind;
+  if (kind === "trello_card_moved_to_backlog") return true;
+  if (kind === "trello_card_created" && actionable?.listName === "Backlog") return true;
+  return false;
+}
+
 function actionableFromAction(action) {
   const type = action.type;
   const data = action.data || {};
@@ -378,12 +385,57 @@ async function wakeOpenClaw(actionable, targetAgent) {
   const token = hookToken();
   if (!token) return { woke: false, reason: "missing-hook-token" };
 
-  const text = [
+  const marcosHookRules = [
+    "- Do not merely acknowledge/queue; work to complete the task or raise a comment to @adriellopez1",
+    "- For calendar event creation or reschedule, move the card directly to the Reschedule list and scheduling will happen automatically.",
+    "- Prefer Trello-only delivery for routine Trello housekeeping updates.",
+  ];
+  const backlogIntakeRules = [
+    "- Do not merely acknowledge or queue. Work to complete the task, or move the card to the Blocked list with a comment that explains exactly why you are blocked. Order is mandatory: comment first, then move.",
+    "- Do not move to Blocked while waiting for @marcostheai peer review. Keep the card in Backlog until Marcos replies; read his comment via gateway comments and update the Peer Review section.",
+    "- Calendar events are only required when something specific is needed from @adriellopez1.",
+    "- For calendar event creation or reschedule: Comment on the card why the time is needed on Adriel's calendar, set the Time Needed custom field (minutes), then move the card directly to the Reschedule list; scheduling will happen automatically.",
+    "- Prefer Trello-only delivery for routine Trello housekeeping updates. Refer to the ubi_trello_ops skill as needed.",
+  ];
+  const defaultUbiHookRules = [
+    "- Do not merely acknowledge/queue; either handle safely or make a visible follow-up state.",
+    "- Never move cards directly to Scheduled (gateway blocks this). For calendar time: comment, set Time Needed, move to Reschedule only.",
+    "- For calendar reschedules, move existing events rather than creating duplicates.",
+    "- If Adriel says Trello/Ubi-only, do not create calendar events.",
+    "- Prefer Trello-only delivery for routine Trello housekeeping updates.",
+  ];
+  const backlogIntakeProcedure = [
+    "0. Style the card (cover, priority tag).",
+    '1. Copy the original title to the description as the first line: "Original Request:\\n{original title}"',
+    "2. Add priority as a prefix to the title and update the title to a short descriptive name.",
+    "3. Update the description with these headers after the Original Request section:",
+    '   Research: {search the web if relevant; also search existing board cards via gateway search (operation search, query string) and note related cards/links; otherwise "Not relevant"}',
+    "   Next steps: {implementation plan or concrete steps after research}",
+    "   Peer Review: {when Next steps is ready, comment @marcostheai from this card asking for plan approval/feedback; leave the card in Backlog; record Marcos findings here after he replies}",
+    "   Work completed: {after Marcos approves (or gives actionable feedback), complete the Next steps and update this section until done or blocked}",
+    '4. Only move to Blocked for a concrete external blocker (comment first, then move). Never use Blocked to mean "waiting on Marcos."',
+    "5. Only move the card to Done if all the steps have been completed.",
+  ];
+  const hookRules =
+    targetAgent === "marcos"
+      ? marcosHookRules
+      : targetAgent === "main" && isBacklogIntake(actionable)
+        ? backlogIntakeRules
+        : defaultUbiHookRules;
+  const procedureLines = targetAgent === "main" && isBacklogIntake(actionable) ? backlogIntakeProcedure : null;
+  const textParts = [
     "Trello actionable event received. Handle this now using Trello as source of truth.",
     "",
-    "Event JSON:",
-    JSON.stringify(actionable, null, 2),
-  ].join("\n");
+    "REMINDER: If this Trello update came in via webhook, your response/update should be posted on Trello (card comment/move) unless Adriel specifically asked for Telegram/chat response. Review ubi_trello_ops skill rules for Trello response expectations.",
+    "",
+    "Rules:",
+    ...hookRules,
+  ];
+  if (procedureLines) {
+    textParts.push("", "Procedure (follow in order):", ...procedureLines);
+  }
+  textParts.push("", "Event JSON:", JSON.stringify(actionable, null, 2));
+  const text = textParts.join("\n");
 
   const response = await fetch(OPENCLAW_HOOK_URL, {
     method: "POST",

@@ -111,6 +111,7 @@ function validateDeployWorkflow(workflows) {
 
   assert(workflow.name === "Deploy to Droplet", `${workflowPath}: expected workflow name to stay explicit`);
   assert(workflow.on?.workflow_dispatch !== undefined, `${workflowPath}: expected manual workflow_dispatch trigger`);
+  assert(Array.isArray(workflow.on?.schedule) && workflow.on.schedule.length > 0, `${workflowPath}: expected nightly schedule trigger`);
   assert(Array.isArray(workflow.on?.push?.branches) && workflow.on.push.branches.includes("main"), `${workflowPath}: deploy push trigger must be limited to main`);
   assert(!workflow.on?.pull_request, `${workflowPath}: deploy workflow must not run on pull_request`);
   assert(workflow.concurrency?.group === "deploy-droplet-main", `${workflowPath}: expected deploy concurrency group`);
@@ -135,6 +136,7 @@ function validateDeployWorkflow(workflows) {
   assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
 
   if (typeof script === "string") {
+    assert(script.includes("trello_card_contract.mjs"), `${workflowPath}: deploy script should copy trello_card_contract.mjs with the gateway artifacts`);
     const composeUpLine = script.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
     assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
     assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
@@ -202,6 +204,7 @@ function validateCompose(workflows) {
   assert(trelloGateway.healthcheck?.test, `${composePath}: trello-gateway should keep a healthcheck`);
   assert(String(trelloGateway.ports?.[0] ?? "").startsWith("127.0.0.1:18792"), `${composePath}: trello-gateway should bind 127.0.0.1:18792 on the host`);
   assert((trelloGateway.environment ?? {}).TRELLO_PIPELINE_STATE_DIR !== undefined, `${composePath}: trello-gateway should share the repo-owned pipeline state path`);
+  assert(Array.isArray(trelloGateway.volumes) && trelloGateway.volumes.some((volume) => String(volume).includes("./trello-gateway/trello_card_contract.mjs:/app/trello_card_contract.mjs:ro")), `${composePath}: trello-gateway should mount trello_card_contract.mjs`);
 
   const trelloQueueWorker = services["trello-queue-worker"] ?? {};
   assert(trelloQueueWorker.working_dir === "/opt/trello-pipeline", `${composePath}: trello-queue-worker should run from the repo-owned runtime path`);
@@ -231,7 +234,7 @@ function validateCompose(workflows) {
 
 function validateTrelloGatewayDir() {
   const dir = "trello-gateway";
-  for (const file of ["Dockerfile", "deploy.sh", "trello_gateway.mjs", "trello_transition_matrix.csv", "README.md", ".env.example"]) {
+  for (const file of ["Dockerfile", "deploy.sh", "trello_card_contract.mjs", "trello_gateway.mjs", "trello_transition_matrix.csv", ".env.example"]) {
     assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked gateway file`);
   }
 
@@ -243,20 +246,16 @@ function validateTrelloGatewayDir() {
   assert(!deployScript.includes(".env.example") || deployScript.includes("copy from trello-gateway/.env.example"), "trello-gateway/deploy.sh: should not overwrite live .env");
 
   const gatewayScript = readText(`${dir}/trello_gateway.mjs`);
+  assert(gatewayScript.includes("./trello_card_contract.mjs"), "trello-gateway/trello_gateway.mjs: should import the local trello_card_contract.mjs");
   assert(!gatewayScript.includes("workspace-marcos/trello-refactor/trello_transition_matrix.csv"), "trello-gateway/trello_gateway.mjs: should not default to a MarcosAgent workspace path");
   assert(gatewayScript.includes("new URL('./trello_transition_matrix.csv', import.meta.url)"), "trello-gateway/trello_gateway.mjs: should resolve the local transition matrix by default");
   assert(!gatewayScript.includes("/home/node/.openclaw/workspace/trello_bridge/state"), "trello-gateway/trello_gateway.mjs: should not use the old workspace-backed pipeline state path");
-
-  const gatewayReadme = readText(`${dir}/README.md`);
-  assert(!gatewayReadme.includes("canonical copy from MarcosAgent"), "trello-gateway/README.md: canonical ownership should live in this repo");
-  assert(!gatewayReadme.includes("Phase 2 will add automated sync"), "trello-gateway/README.md: stale phase-2 sync placeholder should be removed");
   pass("trello-gateway/: static directory checks completed");
 }
 
 function validateTrelloRoutinesDir() {
   const dir = "trello-routines";
   for (const file of [
-    "README.md",
     "ensure_routines.mjs",
     "ensure_routines_logic.mjs",
     "ensure_routines.test.mjs",
@@ -272,10 +271,6 @@ function validateTrelloRoutinesDir() {
     assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked routines file`);
   }
 
-  const readme = readText(`${dir}/README.md`);
-  assert(readme.includes("/opt/trello-routines"), "trello-routines/README.md: should document the repo-owned runtime path");
-  assert(readme.includes("TRELLO_GATEWAY_URL"), "trello-routines/README.md: should document gateway-based Trello access");
-
   const loopScript = readText(`${dir}/start_routines_loop.sh`);
   assert(loopScript.includes("ensure_routines.mjs"), "trello-routines/start_routines_loop.sh: should run ensure_routines.mjs");
   assert(loopScript.includes("last_run.json"), "trello-routines/start_routines_loop.sh: should write a heartbeat file");
@@ -285,7 +280,6 @@ function validateTrelloRoutinesDir() {
 function validateTrelloPipelineDir() {
   const dir = "trello-pipeline";
   for (const file of [
-    "README.md",
     "server.mjs",
     "server.test.mjs",
     "trello_queue_worker.mjs",
@@ -300,9 +294,6 @@ function validateTrelloPipelineDir() {
   ]) {
     assert(existsSync(path.join(repoRoot, dir, file)), `${dir}/${file}: expected tracked pipeline file`);
   }
-  const readme = readText(`${dir}/README.md`);
-  assert(readme.includes("/opt/trello-pipeline"), "trello-pipeline/README.md: should document the repo-owned runtime path");
-  assert(readme.includes("TRELLO_PIPELINE_STATE_DIR"), "trello-pipeline/README.md: should document the repo-owned state path");
   pass("trello-pipeline/: static directory checks completed");
 }
 
