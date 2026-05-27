@@ -161,6 +161,7 @@ export function classifyContractOperation({ operation, params = {} }) {
     case "move":
     case "create_checklist":
     case "update_checklist":
+    // Future invariant: block delete_checklist when it would remove the sole native Next steps checklist.
     case "delete_checklist":
       return { mode: "structural", operation };
     default:
@@ -186,6 +187,8 @@ function isRepairStep({ classification, current, next }) {
     const descOnlyRepair = touchedFields.size === 1 && touchedFields.has("desc");
     if (!descOnlyRepair) return false;
     if ((current?.desc || "") === (next?.desc || "")) return false;
+    // Repair must land on a contract-shaped body; partial or legacy desc shapes stay blocked
+    // until the agent writes all required sections (checklist may still be missing on this step).
     return parseContractDescription(next?.desc || "").ok;
   }
 
