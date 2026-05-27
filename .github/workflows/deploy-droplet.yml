@@ -122,4 +122,5 @@ jobs:
             cd /home/deploy/openclaw
             docker compose build openclaw-gateway trello-gateway
             docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
+            curl -fsS "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" >/dev/null
             docker compose ps
