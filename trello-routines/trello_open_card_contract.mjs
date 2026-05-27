@@ -1,3 +1,5 @@
+export const OPEN_CARD_SECTION_ORDER = ["Original Request", "Research", "Peer Review", "Work completed"];
+
 export const NEXT_STEPS_CHECKLIST_NAME = "Next steps";
 
 function normalizeSectionContent(content) {
@@ -18,21 +20,20 @@ export function buildOpenCardDescription({
   peerReview = "",
   workCompleted = "",
 }) {
-  const sections = [
-    ["Original Request", normalizeSectionContent(originalRequest)],
-    ["Research", normalizeSectionContent(research)],
-    ["Peer Review", normalizeSectionContent(peerReview)],
-    ["Work completed", normalizeSectionContent(workCompleted)],
-  ];
+  const sections = {
+    "Original Request": normalizeSectionContent(originalRequest),
+    Research: normalizeSectionContent(research),
+    "Peer Review": normalizeSectionContent(peerReview),
+    "Work completed": normalizeSectionContent(workCompleted),
+  };
 
-  return sections
-    .flatMap(([title, content], index) => {
-      const lines = [`${title}:`];
-      if (content) lines.push(content);
-      if (index < sections.length - 1) lines.push("");
-      return lines;
-    })
-    .join("\n");
+  return OPEN_CARD_SECTION_ORDER.flatMap((sectionName, index) => {
+    const lines = [`${sectionName}:`];
+    const content = sections[sectionName];
+    if (content) lines.push(content);
+    if (index < OPEN_CARD_SECTION_ORDER.length - 1) lines.push("");
+    return lines;
+  }).join("\n");
 }
 
 export function buildNextStepsChecklist(items = []) {
@@ -50,4 +51,11 @@ export function buildNextStepsChecklist(items = []) {
     name: NEXT_STEPS_CHECKLIST_NAME,
     items: normalizedItems,
   };
+}
+
+export function hasRequiredOpenCardSections(desc) {
+  const matches = [...String(desc || "").matchAll(/^(Original Request|Research|Peer Review|Work completed):\s*$/gm)].map(
+    (match) => match[1],
+  );
+  return matches.join("|") === OPEN_CARD_SECTION_ORDER.join("|");
 }
