@@ -120,6 +120,10 @@ function isUbiMentioningMarcos(action) {
   return /@marcostheai\b/i.test(action?.data?.text || "");
 }
 
+function isAgentBacklogCreate(action) {
+  return action?.type === "createCard" && action?.data?.list?.name === "Backlog";
+}
+
 function isBacklogIntake(actionable) {
   const kind = actionable?.kind;
   if (kind === "trello_card_moved_to_backlog") return true;
@@ -133,7 +137,13 @@ function actionableFromAction(action) {
   const card = data.card || {};
   const creator = action.memberCreator || {};
 
-  if (isAgentMember(action) && !isDeterministicHandlerMove(action) && !isMarcosMentioningUbi(action) && !isUbiMentioningMarcos(action)) {
+  if (
+    isAgentMember(action) &&
+    !isDeterministicHandlerMove(action) &&
+    !isMarcosMentioningUbi(action) &&
+    !isUbiMentioningMarcos(action) &&
+    !isAgentBacklogCreate(action)
+  ) {
     return null;
   }
 
