@@ -134,6 +134,7 @@ function validateDeployWorkflow(workflows) {
   assert(typeof script === "string" && script.includes("trello-routines"), `${workflowPath}: deploy script should copy and restart trello-routines`);
   assert(typeof script === "string" && script.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
   assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
+  assert(typeof script === "string" && script.includes("http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"), `${workflowPath}: deploy script should verify github-pr-bridge local health after restart`);
 
   if (typeof script === "string") {
     assert(script.includes("trello_card_contract.mjs"), `${workflowPath}: deploy script should copy trello_card_contract.mjs with the gateway artifacts`);
@@ -190,6 +191,10 @@ function validateCompose(workflows) {
   assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);
   assert(githubPrBridge.working_dir === "/opt/github-pr-bridge", `${composePath}: github-pr-bridge working_dir should stay explicit`);
   assert(githubPrBridge.command?.includes("server.mjs"), `${composePath}: github-pr-bridge should run server.mjs`);
+  assert(githubPrBridge.healthcheck?.test, `${composePath}: github-pr-bridge should keep a healthcheck`);
+  const githubBridgeHealth = JSON.stringify(githubPrBridge.healthcheck?.test ?? []);
+  assert(githubBridgeHealth.includes("127.0.0.1:19091/healthz"), `${composePath}: github-pr-bridge healthcheck should probe port 19091 /healthz`);
+  assert(!githubBridgeHealth.includes("127.0.0.1:18789"), `${composePath}: github-pr-bridge healthcheck must not probe openclaw-gateway port 18789`);
   const githubBridgeEnv = githubPrBridge.environment ?? {};
   assert(githubBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: github-pr-bridge should use TRELLO_GATEWAY_URL`);
   assert(githubBridgeEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: github-pr-bridge should use TRELLO_GATEWAY_KEY`);
