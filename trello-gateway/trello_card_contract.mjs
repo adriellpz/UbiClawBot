@@ -147,21 +147,49 @@ export function classifyContractOperation({ operation, params = {} }) {
     case "create_checklist_item":
     case "update_checklist_item":
     case "delete_checklist_item":
-      return { mode: "non_structural" };
+      return { mode: "non_structural", operation };
     case "update": {
       const fields = params.fields || {};
       const touchesStructure = Object.keys(fields).some((field) => UPDATE_STRUCTURAL_FIELDS.has(field));
-      return { mode: touchesStructure ? "structural" : "non_structural" };
+      return {
+        mode: touchesStructure ? "structural" : "non_structural",
+        operation,
+        touchedFields: Object.keys(fields),
+      };
     }
     case "create_card":
     case "move":
     case "create_checklist":
     case "update_checklist":
     case "delete_checklist":
-      return { mode: "structural" };
+      return { mode: "structural", operation };
     default:
-      return { mode: "unknown" };
+      return { mode: "unknown", operation };
   }
+}
+
+function hasNextStepsChecklist(snapshot) {
+  const checklistNames = normalizeChecklistNames(snapshot?.checklists);
+  return checklistNames.filter((name) => name === NEXT_STEPS_CHECKLIST_NAME).length === 1;
+}
+
+function isRepairStep({ classification, current, next }) {
+  const op = classification?.operation;
+  if (!current || !next) return false;
+
+  if (op === "create_checklist" || op === "update_checklist") {
+    return !hasNextStepsChecklist(current) && hasNextStepsChecklist(next);
+  }
+
+  if (op === "update") {
+    const touchedFields = new Set(classification?.touchedFields || []);
+    const descOnlyRepair = touchedFields.size === 1 && touchedFields.has("desc");
+    if (!descOnlyRepair) return false;
+    if ((current?.desc || "") === (next?.desc || "")) return false;
+    return parseContractDescription(next?.desc || "").ok;
+  }
+
+  return false;
 }
 
 export function parseContractDescription(desc) {
@@ -295,6 +323,9 @@ export function evaluateContractWrite({
 
   if (!nextValidation.ok) {
     if (currentScoped && !currentValidation.ok) {
+      if (isRepairStep({ classification, current, next })) {
+        return { ok: true, mode: "repair" };
+      }
       return {
         ok: false,
         mode,

@@ -158,6 +158,16 @@ function createStubTrelloServer() {
   });
   setChecklists("card-drifted-body-only", [{ id: "chk-next-body-only", name: "Next steps" }]);
 
+  addCard({
+    id: "card-empty-intake",
+    name: "Empty intake card",
+    idList: "list-backlog",
+    closed: false,
+    shortUrl: "card-empty-intake",
+    desc: "",
+  });
+  setChecklists("card-empty-intake", []);
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://127.0.0.1");
     const path = url.pathname;
@@ -562,4 +572,62 @@ test("update can repair a drifted card by replacing the body with a compliant de
 
   assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
   assert.equal(response.json.updated, true);
+});
+
+test("update allows description-only repair on an empty intake card missing Next steps", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const response = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "update",
+    cardId: "card-empty-intake",
+    params: {
+      fields: {
+        desc: [
+          "Original Request:",
+          "Review PR #30.",
+          "",
+          "Research:",
+          "",
+          "",
+          "Peer Review:",
+          "",
+          "Work completed:",
+          "",
+        ].join("\n"),
+      },
+    },
+  });
+
+  assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
+  assert.equal(response.json.updated, true);
+});
+
+test("create_checklist allows Next steps repair on an empty intake card missing sections", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const response = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "create_checklist",
+    cardId: "card-empty-intake",
+    params: {
+      name: "Next steps",
+    },
+  });
+
+  assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
+  assert.equal(response.json.success, true);
+  assert.equal(trello.getChecklists("card-empty-intake")[0]?.name, "Next steps");
 });
