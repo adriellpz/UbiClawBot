@@ -122,5 +122,15 @@ jobs:
             cd /home/deploy/openclaw
             docker compose build openclaw-gateway trello-gateway
             docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
-            curl -fsS "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" >/dev/null
+            # github-pr-bridge binds shortly after container start; retry instead of one-shot curl.
+            for attempt in $(seq 1 30); do
+              if curl -fsS "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" >/dev/null; then
+                break
+              fi
+              if [ "$attempt" -eq 30 ]; then
+                echo "github-pr-bridge health check failed after 30 attempts" >&2
+                exit 1
+              fi
+              sleep 2
+            done
             docker compose ps
