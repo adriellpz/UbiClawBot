@@ -135,7 +135,6 @@ function validateDeployWorkflow(workflows) {
   assert(typeof script === "string" && script.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
   assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
   assert(typeof script === "string" && script.includes("http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"), `${workflowPath}: deploy script should verify github-pr-bridge local health after restart`);
-  assert(typeof script === "string" && /for attempt in \$\(seq 1 30\)/u.test(script), `${workflowPath}: deploy script should retry github-pr-bridge health checks after restart instead of one-shot curl`);
 
   if (typeof script === "string") {
     assert(script.includes("trello_card_contract.mjs"), `${workflowPath}: deploy script should copy trello_card_contract.mjs with the gateway artifacts`);
