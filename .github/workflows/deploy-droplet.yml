@@ -110,7 +110,7 @@ jobs:
             mkdir -p /home/deploy/openclaw/trello-pipeline
             cp /home/deploy/openclaw/.deploy-tmp-trello-pipeline/trello-pipeline/* /home/deploy/openclaw/trello-pipeline/
             mkdir -p /home/deploy/openclaw/trello-gateway
-            for f in Dockerfile deploy.sh trello_gateway.mjs trello_transition_matrix.csv README.md .env.example; do
+            for f in Dockerfile deploy.sh trello_card_contract.mjs trello_gateway.mjs trello_transition_matrix.csv .env.example; do
               cp "/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f" "/home/deploy/openclaw/trello-gateway/$f"
             done
             chmod 700 /home/deploy/openclaw/trello-gateway/trello_gateway.mjs
