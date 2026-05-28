@@ -24,7 +24,12 @@ import http from 'node:http';
 import { readFileSync, appendFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { classifyContractOperation, evaluateContractWrite } from './trello_card_contract.mjs';
+import {
+  classifyContractOperation,
+  evaluateContractWrite,
+  isContractScopedList,
+  NEXT_STEPS_CHECKLIST_NAME,
+} from './trello_card_contract.mjs';
 
 // ─── Config ──────────────────────────────────────────────────────────
 const ENV_FILE = process.env.GATEWAY_ENV_FILE || '/etc/trello-gateway/env';
@@ -298,6 +303,15 @@ function createContractSnapshot({ listName, desc, checklists = [] }) {
   };
 }
 
+function resolveCreateChecklists(listName, paramsChecklists) {
+  const requested = normalizeChecklistSpecs(paramsChecklists);
+  if (requested.length > 0) return requested;
+  if (isContractScopedList(listName, buildContractOptions())) {
+    return [{ name: NEXT_STEPS_CHECKLIST_NAME, items: [] }];
+  }
+  return requested;
+}
+
 function normalizeChecklistSpecs(checklists = []) {
   if (!Array.isArray(checklists)) return [];
   return checklists
@@ -487,7 +501,7 @@ async function handleRequest(req, res) {
           log({ event: 'blocked_create_scheduled', agentId, list: targetList.name }, requestId);
           return;
         }
-        const requestedChecklists = normalizeChecklistSpecs(params.checklists);
+        const requestedChecklists = resolveCreateChecklists(targetList.name, params.checklists);
         const createValidation = evaluateContractWrite({
           agentId,
           classification: classifyContractOperation({ operation, params }),
