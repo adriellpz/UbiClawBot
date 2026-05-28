@@ -6,20 +6,13 @@ import os from "node:os";
 import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { loadEnvFile } from "./load_env.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATE = process.env.TRELLO_PIPELINE_STATE_DIR || "/var/lib/trello-pipeline";
 fs.mkdirSync(STATE, { recursive: true });
 
-function loadEnv(file) {
-  if (!file || !fs.existsSync(file)) return;
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match && !process.env[match[1]]) process.env[match[1]] = match[2];
-  }
-}
-
-loadEnv(process.env.TRELLO_PIPELINE_ENV_FILE);
+loadEnvFile(process.env.TRELLO_PIPELINE_ENV_FILE);
 
 const PORT = Number(process.env.PORT || 18990);
 const TOKEN = process.env.TRELLO_BRIDGE_TOKEN;
@@ -690,7 +683,9 @@ server.listen(PORT, "0.0.0.0", () => {
       );
     }, 60_000).unref();
   } else {
-    console.log("trello fallback poll disabled: missing Trello API credentials");
+    console.log(
+      "trello fallback poll disabled: missing Trello API credentials (set TRELLO_PIPELINE_ENV_FILE to trello-gateway/.env for poll-only read access)",
+    );
   }
 
   if (process.env.GOG_KEYRING_PASSWORD) {

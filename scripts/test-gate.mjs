@@ -186,6 +186,14 @@ function validateCompose(workflows) {
   assert(trelloBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: trello-bridge should use TRELLO_GATEWAY_URL`);
   assert(trelloBridgeEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: trello-bridge should use TRELLO_GATEWAY_KEY`);
   assert(trelloBridgeEnv.TRELLO_PIPELINE_STATE_DIR !== undefined, `${composePath}: trello-bridge should set TRELLO_PIPELINE_STATE_DIR`);
+  assert(
+    trelloBridgeEnv.TRELLO_PIPELINE_ENV_FILE === "/opt/trello-gateway/.env",
+    `${composePath}: trello-bridge should load poll creds from trello-gateway/.env`,
+  );
+  assert(
+    (trelloBridge.volumes ?? []).some((volume) => String(volume).includes("./trello-gateway/.env:/opt/trello-gateway/.env:ro")),
+    `${composePath}: trello-bridge should mount trello-gateway/.env read-only for poll fallback`,
+  );
 
   const githubPrBridge = services["github-pr-bridge"] ?? {};
   assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);

@@ -153,9 +153,12 @@ services:
       OPENCLAW_HOOK_URL: ${OPENCLAW_HOOK_URL:-}
       OPENCLAW_HOOK_TOKEN: ${OPENCLAW_HOOK_TOKEN:-}
       TRELLO_PIPELINE_STATE_DIR: ${TRELLO_PIPELINE_STATE_DIR:-/var/lib/trello-pipeline}
+      # Poll fallback reads Trello API creds from trello-gateway/.env only (not main .env).
+      TRELLO_PIPELINE_ENV_FILE: /opt/trello-gateway/.env
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ./trello-pipeline:/opt/trello-pipeline:ro
+      - ./trello-gateway/.env:/opt/trello-gateway/.env:ro
       - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
     working_dir: /opt/trello-pipeline
     command: ["node", "server.mjs"]
