@@ -285,6 +285,9 @@ export function validateCardSnapshot({ desc, checklists = [] }, options = {}) {
   return { ok: true, sections: parsed.sections };
 }
 
+/** Deterministic pipeline handlers (reschedule, done, missed) run as `system`. */
+export const CONTRACT_EXEMPT_AGENT_IDS = new Set(["system"]);
+
 export function evaluateContractWrite({
   agentId,
   classification,
@@ -293,6 +296,10 @@ export function evaluateContractWrite({
   scopedListNames = DEFAULT_CONTRACT_SCOPED_LISTS,
   doneListNames = DEFAULT_DONE_LIST_NAMES,
 }) {
+  if (CONTRACT_EXEMPT_AGENT_IDS.has(agentId)) {
+    return { ok: true, mode: "exempt" };
+  }
+
   const mode = classification?.mode || "unknown";
   if (mode === "non_structural") {
     return { ok: true, mode };
