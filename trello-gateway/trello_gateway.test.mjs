@@ -378,6 +378,64 @@ test("create_card enforces a compliant body and creates the native Next steps ch
   assert.equal(trello.getChecklists(response.json.cardId)[0]?.name, "Next steps");
 });
 
+test("create_card auto-injects Next steps when creating in a scoped list without checklists", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const response = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "create_card",
+    params: {
+      listName: "Backlog",
+      name: "Create with auto checklist",
+      desc: [
+        "Original Request:",
+        "Create directly in Backlog.",
+        "",
+        "Research:",
+        "Omit checklists param; gateway should inject Next steps.",
+        "",
+        "Peer Review:",
+        "",
+        "Work completed:",
+        "",
+      ].join("\n"),
+    },
+  });
+
+  assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
+  assert.equal(response.json.success, true);
+  assert.equal(trello.getChecklists(response.json.cardId)[0]?.name, "Next steps");
+});
+
+test("create_card rejects scoped creates with an invalid description even when checklists are omitted", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const response = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "create_card",
+    params: {
+      listName: "Backlog",
+      name: "Create invalid body",
+      desc: "No contract sections.",
+    },
+  });
+
+  assert.equal(response.status, 403, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
+  assert.equal(response.json.blocked, true);
+});
+
 test("create_card rejects cards that prefill Peer Review content", async (t) => {
   const trello = createStubTrelloServer();
   const trelloListener = await listen(trello.server);

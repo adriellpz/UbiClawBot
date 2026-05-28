@@ -32,3 +32,32 @@ This repo owns the tracked gateway artifacts:
 Edit the tracked files in `UbiClawBot`, then deploy through the GitHub Actions workflow or an equivalent manual artifact sync. Do not rely on `git pull` inside `/home/deploy/openclaw`.
 
 Restart or recreate `trello-gateway` after script, matrix, or env changes.
+
+## `create_card`
+
+Creates a card in a target list (`params.listName`, default `Backlog`).
+
+### Contract-scoped lists
+
+Lists in the transition matrix (except exempt lists like `Done`) require the open-card contract at creation time. Because Trello creates the card shell before checklists exist, the gateway validates a **planned snapshot** and then creates any requested checklists immediately after `POST /cards`.
+
+- **`params.desc`**: must include the four description sections in order (`Original Request`, `Research`, `Peer Review`, `Work completed`). `Peer Review` must be blank on create.
+- **`params.checklists`** (optional): array of checklist specs to create with the card. Each entry may be a string checklist name or `{ name, items?: [{ name, state? }] }`.
+- **Auto-inject**: when `params.checklists` is omitted and the target list is contract-scoped, the gateway injects a native `Next steps` checklist so agents can create directly in `Backlog` (and other scoped lists) without staging in `Done` first.
+
+Example:
+
+```json
+{
+  "agentId": "main",
+  "operation": "create_card",
+  "params": {
+    "listName": "Backlog",
+    "name": "New intake card",
+    "desc": "Original Request:\n...\n\nResearch:\n...\n\nPeer Review:\n\nWork completed:\n\n",
+    "checklists": [{ "name": "Next steps", "items": [{ "name": "First action" }] }]
+  }
+}
+```
+
+`main` cannot create directly in `Scheduled`; use `Backlog` or `Routine`, then move via `Reschedule`. Agents cannot create in `Adriel Focus`.
