@@ -7,6 +7,7 @@
 - `trello-bridge` and `trello-queue-worker` run from `/opt/trello-pipeline`
 - durable state lives at `${TRELLO_PIPELINE_STATE_DIR:-/var/lib/trello-pipeline}`
 - Trello access goes through `TRELLO_GATEWAY_URL` and `TRELLO_GATEWAY_KEY`
+- optional fallback poll in `server.mjs` reads `TRELLO_API_KEY` / `TRELLO_API_TOKEN` from `trello-gateway/.env` via `TRELLO_PIPELINE_ENV_FILE` (compose mounts it at `/opt/trello-gateway/.env`)
 - calendar reads and writes go through `gog` using the mounted OpenClaw config home
 
 ## Main responsibilities

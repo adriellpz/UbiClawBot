@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { loadEnvFile } from "./load_env.mjs";
 
 import { isEmailHookCard } from "../shared/email_hook_card.mjs";
 import { isGogCanaryCard } from "../shared/gog_canary_card.mjs";
@@ -15,15 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATE = process.env.TRELLO_PIPELINE_STATE_DIR || "/var/lib/trello-pipeline";
 fs.mkdirSync(STATE, { recursive: true });
 
-function loadEnv(file) {
-  if (!file || !fs.existsSync(file)) return;
-  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (match && !process.env[match[1]]) process.env[match[1]] = match[2];
-  }
-}
-
-loadEnv(process.env.TRELLO_PIPELINE_ENV_FILE);
+loadEnvFile(process.env.TRELLO_PIPELINE_ENV_FILE);
 
 const PORT = Number(process.env.PORT || 18990);
 const TOKEN = process.env.TRELLO_BRIDGE_TOKEN;
@@ -738,7 +731,8 @@ server.listen(PORT, "0.0.0.0", () => {
   } else {
     console.warn(
       "WARNING: trello fallback poll DISABLED — missing TRELLO_API_KEY/TRELLO_API_TOKEN. " +
-        "Webhook misses will not be recovered (cards can get stuck mid-transition). Check /home/deploy/openclaw/.env.",
+        "Webhook misses will not be recovered (cards can get stuck mid-transition). " +
+        "Set TRELLO_PIPELINE_ENV_FILE to trello-gateway/.env (mounted at /opt/trello-gateway/.env) — do not put raw Trello creds in /home/deploy/openclaw/.env.",
     );
     appendJsonl("errors.jsonl", {
       at: new Date().toISOString(),
