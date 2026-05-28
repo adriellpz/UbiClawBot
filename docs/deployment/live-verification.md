@@ -23,7 +23,7 @@ Per issue Further Notes and [`README.md`](./README.md):
 
 Operators must **not** treat `/home/deploy/openclaw` as a pullable clone or run `git pull` there. Updates flow: push to `main` (or manual `workflow_dispatch`) → workflow copies artifacts → `docker compose` rebuild/restart on droplet.
 
-Persistent droplet-only paths (not overwritten by deploy): `/home/deploy/openclaw/.env`, `/home/deploy/openclaw/trello-gateway/.env`, `/home/deploy/openclaw/data/*` (see [`secrets.md`](./secrets.md)).
+Persistent droplet-only paths (not overwritten by deploy): `/home/deploy/openclaw/.env`, `/home/deploy/openclaw/trello-gateway/.env`, `/root/openclaw/data/*` (see [`secrets.md`](./secrets.md)).
 
 ## What was verified locally (blocked session)
 

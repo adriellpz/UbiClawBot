@@ -26,9 +26,18 @@ The workflow updates tracked files only. It does not overwrite:
 
 - `/home/deploy/openclaw/.env`
 - `/home/deploy/openclaw/trello-gateway/.env`
-- `/home/deploy/openclaw/data/*`
+- `/root/openclaw/data/*`
 
 See [`secrets.md`](./secrets.md) for the secret contract.
+
+### Droplet path model
+
+The production droplet intentionally uses two host roots:
+
+- `/home/deploy/openclaw` = deploy repo files copied by CI (`docker-compose.yml`, `Caddyfile.droplet`, `github-pr-bridge/`, `trello-gateway/`, `.env`)
+- `/root/openclaw/data` = live OpenClaw config + workspaces mounted into containers
+
+There is also a stale lookalike path at `/home/deploy/openclaw/data/`. Containers do **not** use it when `.env` points at `/root/openclaw/data/...`, so treat it as archive/ignore-only unless you intentionally migrate paths.
 
 Live droplet spot-check record: [`live-verification.md`](./live-verification.md).
 

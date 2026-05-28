@@ -19,9 +19,16 @@ Live runtime secrets/config stay here:
 
 - `/home/deploy/openclaw/.env`
 - `/home/deploy/openclaw/trello-gateway/.env`
-- `/home/deploy/openclaw/data/config/openclaw.json`
+- `/root/openclaw/data/config/openclaw.json`
 
 The deploy workflow does not overwrite those files.
+
+### Path model
+
+Production uses a split layout:
+- `/home/deploy/openclaw` holds deploy-managed files and the main `.env`
+- `/root/openclaw/data/...` holds the live config/workspace mounted into containers
+- `/home/deploy/openclaw/data/...` is a stale lookalike path; do not treat it as the live runtime tree
 
 ## Operational rules
 
