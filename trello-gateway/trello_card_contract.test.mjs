@@ -208,6 +208,26 @@ test("evaluateContractWrite blocks structural non-repair writes on a drifted car
   assert.equal(result.code, "card_requires_repair");
 });
 
+test("evaluateContractWrite exempts system agent from contract enforcement", () => {
+  const result = evaluateContractWrite({
+    agentId: "system",
+    classification: classifyContractOperation({ operation: "move" }),
+    current: cardState({
+      listName: "Reschedule",
+      desc: driftedDescription(),
+      checklists: [],
+    }),
+    next: cardState({
+      listName: "Scheduled",
+      desc: driftedDescription(),
+      checklists: [],
+    }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, "exempt");
+});
+
 test("evaluateContractWrite allows structural repair on a drifted card", () => {
   const result = evaluateContractWrite({
     agentId: "main",
