@@ -45,8 +45,8 @@ Persistent droplet-only paths (not overwritten by deploy): `/home/deploy/opencla
 | `smoke-verifier.mjs --vault-root …` | **PASS** — layout, workspaces, legacy-paths, gateway healthz |
 | Phase 2 `wiki/workflows/raw-input.md` | **Present** |
 | Phase 2 `cheryl/skills/cheryl-vault-inbox/` | **Present** (`SKILL.md`) |
-| Cheryl `*/15` raw-input cron in `jobs.json` | **Present** — `agentId: scheduler`, `*/15 * * * *`, `America/Denver`, NO_REPLY if empty |
-| Curator smoke drop | **Pending async** — `raw-input/ubi-2026-05-30-handoff-test.md` refreshed 2026-05-29; expect filing within ~15 min (not awaited in session) |
+| Cheryl `*/15` raw-input cron in `jobs.json` | **Present** — `agentId: scheduler`, `*/15 * * * *`, `America/Denver`, NO_REPLY if empty; model `opencode-go/deepseek-v4-flash` per [`openclaw-agents.md`](./openclaw-agents.md) |
+| Curator smoke drop | **Filed manually** during vault cleanup to `wiki/workflows/ubi-2026-05-30-handoff-test.md`; async cron filing not separately awaited |
 
 ### Droplet command evidence (redacted)
 
