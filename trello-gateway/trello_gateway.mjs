@@ -1107,51 +1107,59 @@ function writeOverdueTracked(state) {
   }
 }
 
+const OVERDUE_REMINDER_LISTS = ['Scheduled', 'Routine'];
+
+function overdueReminderText(listName, timeStr, pastDueMin) {
+  return `⏰ Calendar block ended ${timeStr} (${pastDueMin}m ago) and this card is still in ${listName}. Is it done, still in progress, or should be marked Missed/Rescheduled? @adriellopez1`;
+}
+
 async function checkOverdueCards() {
   try {
     const now = new Date();
     const state = readOverdueTracked();
     const tracked = state.flagged;
 
-    // Get Scheduled list id
     const lists = await trelloApi('GET', `/boards/${BOARD_ID}/lists`, { fields: 'name' });
-    const scheduledList = lists.find(l => l.name === 'Scheduled');
-    if (!scheduledList) return;
-
-    // Get cards in Scheduled with minimal fields
-    const cards = await trelloApi('GET', `/lists/${scheduledList.id}/cards`, {
-      fields: 'name,due,shortUrl',
-    });
+    const reminderLists = OVERDUE_REMINDER_LISTS
+      .map((name) => lists.find((l) => l.name === name))
+      .filter(Boolean);
+    if (reminderLists.length === 0) return;
 
     const currentIds = new Set();
     let flagged = 0;
 
-    for (const card of cards) {
-      currentIds.add(card.id);
-      const due = card.due ? new Date(card.due) : null;
-
-      if (!due || due > now) {
-        tracked[card.id] = '__skip__';
-        continue;
-      }
-
-      // Flag by commenting — every 15-min pass, no dedup
-      // Adriel wants constant reminders until the card leaves Scheduled.
-      const pastDueMin = Math.round((now - due) / 60000);
-      const timeStr = due.toLocaleString('en-US', {
-        timeZone: 'America/Denver',
-        hour: 'numeric', minute: '2-digit',
-        month: 'short', day: 'numeric',
+    for (const list of reminderLists) {
+      const cards = await trelloApi('GET', `/lists/${list.id}/cards`, {
+        fields: 'name,due,shortUrl',
       });
 
-      await trelloApi('POST', `/cards/${card.id}/actions/comments`, {}, {
-        text: `⏰ Calendar block ended ${timeStr} (${pastDueMin}m ago) and this card is still in Scheduled. Is it done, still in progress, or should be marked Missed/Rescheduled? @adriellopez1`,
-      }, 'system');
+      for (const card of cards) {
+        currentIds.add(card.id);
+        const due = card.due ? new Date(card.due) : null;
 
-      // Remove from tracked so it re-flags next pass (we only keep it to
-      // avoid re-flagging cards whose block hasn't ended yet).
-      delete tracked[card.id];
-      flagged++;
+        if (!due || due > now) {
+          tracked[card.id] = '__skip__';
+          continue;
+        }
+
+        // Flag by commenting — every 15-min pass, no dedup
+        // Adriel wants constant reminders until the card leaves Scheduled/Routine.
+        const pastDueMin = Math.round((now - due) / 60000);
+        const timeStr = due.toLocaleString('en-US', {
+          timeZone: 'America/Denver',
+          hour: 'numeric', minute: '2-digit',
+          month: 'short', day: 'numeric',
+        });
+
+        await trelloApi('POST', `/cards/${card.id}/actions/comments`, {}, {
+          text: overdueReminderText(list.name, timeStr, pastDueMin),
+        }, 'system');
+
+        // Remove from tracked so it re-flags next pass (we only keep it to
+        // avoid re-flagging cards whose block hasn't ended yet).
+        delete tracked[card.id];
+        flagged++;
+      }
     }
 
     // Cleanup stale tracked IDs
