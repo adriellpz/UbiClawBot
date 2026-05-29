@@ -1,0 +1,445 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "/home/node/.openclaw/agent-vault/ubi",
+      "skipBootstrap": true,
+      "experimental": {
+        "localModelLean": true
+      },
+      "model": {
+        "primary": "openai-codex/gpt-5.5"
+      },
+      "models": {
+        "ollama/llama3.1:8b": {
+          "streaming": true
+        },
+        "openai-codex/gpt-5.5": {},
+        "opencode-go/deepseek-v4-flash": {},
+        "opencode-go/deepseek-v4-pro": {},
+        "opencode-go/qwen3.5-plus": {},
+        "opencode-go/kimi-k2.6": {}
+      },
+      "compaction": {
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 6000,
+          "systemPrompt": "Session is nearing compaction. Persist durable user preferences, decisions, tasks, IDs, links, blockers, and other long-lived context before compaction. Do not store secrets. Keep notes concise and sourced when useful.",
+          "prompt": "Write any lasting notes to memory/YYYY-MM-DD.md or the appropriate workspace memory file. If there is nothing durable to store, reply with the exact silent token NO_REPLY."
+        }
+      },
+      "memorySearch": {
+        "enabled": true,
+        "provider": "openai",
+        "model": "text-embedding-3-small",
+        "fallback": "none"
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "model": "opencode-go/deepseek-v4-flash",
+        "tools": {
+          "alsoAllow": [
+            "browser",
+            "canvas",
+            "message",
+            "heartbeat_respond",
+            "gateway",
+            "nodes",
+            "agents_list",
+            "tts",
+            "dir_fetch",
+            "dir_list",
+            "file_fetch",
+            "file_write"
+          ]
+        }
+      },
+      {
+        "id": "scheduler",
+        "name": "Cheryl Scheduling Assistant",
+        "workspace": "/home/node/.openclaw/agent-vault/cheryl",
+        "model": "opencode-go/deepseek-v4-flash",
+        "thinkingDefault": "medium",
+        "tools": {
+          "alsoAllow": [
+            "exec",
+            "read",
+            "write",
+            "edit",
+            "memory_search",
+            "memory_get"
+          ]
+        }
+      },
+      {
+        "id": "marcos",
+        "name": "marcos",
+        "workspace": "/home/node/.openclaw/agent-vault/marcos",
+        "agentDir": "/home/node/.openclaw/agents/marcos/agent",
+        "model": "opencode-go/deepseek-v4-pro"
+      }
+    ]
+  },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "REPLACE_ME_LONG_HEX_GATEWAY_TOKEN"
+    },
+    "port": 18789,
+    "bind": "lan",
+    "trustedProxies": [
+      "127.0.0.1",
+      "::1",
+      "172.17.0.1",
+      "172.18.0.1"
+    ],
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    },
+    "controlUi": {
+      "allowInsecureAuth": false,
+      "dangerouslyDisableDeviceAuth": false,
+      "allowedOrigins": [
+        "http://localhost:18789",
+        "http://127.0.0.1:18789",
+        "https://ai.sonofwolf.org"
+      ]
+    }
+  },
+  "channels": {
+    "whatsapp": {
+      "dmPolicy": "pairing",
+      "groupPolicy": "disabled",
+      "enabled": true,
+      "accounts": {
+        "default": {
+          "enabled": true
+        }
+      }
+    },
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groups": {
+        "*": {
+          "requireMention": false
+        }
+      },
+      "defaultAccount": "main",
+      "accounts": {
+        "main": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN"
+          },
+          "dmPolicy": "pairing"
+        },
+        "scheduler": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN_SCHEDULER"
+          },
+          "dmPolicy": "pairing"
+        },
+        "marcos": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN_MARCOS"
+          },
+          "dmPolicy": "pairing"
+        }
+      }
+    }
+  },
+  "session": {
+    "dmScope": "main",
+    "maintenance": {
+      "mode": "enforce",
+      "maxEntries": 50
+    }
+  },
+  "tools": {
+    "profile": "coding",
+    "web": {
+      "search": {
+        "provider": "duckduckgo",
+        "enabled": true
+      }
+    },
+    "sessions": {
+      "visibility": "all"
+    },
+    "agentToAgent": {
+      "enabled": true,
+      "allow": [
+        "main",
+        "scheduler",
+        "marcos"
+      ]
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "openai": {
+        "baseUrl": "https://api.openai.com/v1",
+        "api": "openai-responses",
+        "auth": "api-key",
+        "models": [
+          {
+            "id": "gpt-4o-mini",
+            "name": "GPT-4o mini"
+          }
+        ]
+      },
+      "ollama": {
+        "baseUrl": "http://host.docker.internal:11434/v1",
+        "api": "openai-completions",
+        "auth": "api-key",
+        "apiKey": "ollama",
+        "models": [
+          {
+            "id": "llama3.1:8b",
+            "name": "Llama 3.1 8B (local Ollama)",
+            "contextWindow": 32768
+          }
+        ]
+      },
+      "opencode-go": {
+        "baseUrl": "https://opencode.ai/zen/go/v1",
+        "api": "openai-completions",
+        "auth": "api-key",
+        "apiKey": {
+          "source": "env",
+          "provider": "default",
+          "id": "OPENCODE_API_KEY"
+        },
+        "models": [
+          {
+            "id": "deepseek-v4-pro",
+            "name": "DeepSeek V4 Pro"
+          },
+          {
+            "id": "deepseek-v4-flash",
+            "name": "DeepSeek V4 Flash"
+          },
+          {
+            "id": "kimi-k2.6",
+            "name": "Kimi K2.6"
+          }
+        ]
+      }
+    }
+  },
+  "wizard": {
+    "lastRunAt": "2026-05-12T16:39:54.791Z",
+    "lastRunVersion": "2026.4.23",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.5.12",
+    "lastTouchedAt": "2026-05-17T14:53:10.790Z"
+  },
+  "plugins": {
+    "entries": {
+      "ollama": {
+        "enabled": true
+      },
+      "openai": {
+        "enabled": true
+      },
+      "whatsapp": {
+        "enabled": true
+      },
+      "telegram": {
+        "enabled": true
+      },
+      "duckduckgo": {
+        "enabled": true
+      },
+      "brave": {
+        "enabled": false
+      },
+      "browser": {
+        "enabled": true
+      },
+      "memory-core": {
+        "config": {
+          "dreaming": {
+            "enabled": false
+          }
+        }
+      },
+      "opencode-go": {
+        "enabled": true
+      },
+      "opencode": {
+        "enabled": true
+      }
+    }
+  },
+  "auth": {
+    "profiles": {
+      "openai-codex:REPLACE_ME_ACCOUNT": {
+        "provider": "openai-codex",
+        "mode": "oauth"
+      },
+      "opencode:default": {
+        "provider": "opencode",
+        "mode": "api_key"
+      },
+      "opencode-go:default": {
+        "provider": "opencode-go",
+        "mode": "api_key"
+      }
+    }
+  },
+  "commands": {
+    "ownerAllowFrom": [
+      "telegram:REPLACE_ME_TELEGRAM_USER_ID"
+    ]
+  },
+  "browser": {
+    "enabled": true,
+    "defaultProfile": "openclaw",
+    "remoteCdpTimeoutMs": 3000,
+    "remoteCdpHandshakeTimeoutMs": 5000,
+    "ssrfPolicy": {
+      "allowedHostnames": [
+        "host.docker.internal",
+        "connect.browserbase.com"
+      ],
+      "dangerouslyAllowPrivateNetwork": false
+    },
+    "executablePath": "/home/node/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome",
+    "noSandbox": true,
+    "headless": true,
+    "profiles": {
+      "browserbase": {
+        "cdpUrl": "wss://connect.browserbase.com?apiKey=REPLACE_ME_BROWSERBASE_API_KEY&projectId=REPLACE_ME_BROWSERBASE_PROJECT_ID",
+        "color": "#F97316"
+      }
+    }
+  },
+  "hooks": {
+    "enabled": true,
+    "path": "/hooks",
+    "token": "REPLACE_ME_HOOKS_SHARED_SECRET",
+    "allowRequestSessionKey": true,
+    "defaultSessionKey": "hook:ingress",
+    "allowedAgentIds": [
+      "main",
+      "scheduler",
+      "marcos"
+    ],
+    "allowedSessionKeyPrefixes": [
+      "hook:",
+      "hook:gmail:"
+    ],
+    "presets": [],
+    "gmail": {
+      "account": "ubitheai@gmail.com",
+      "label": "INBOX",
+      "topic": "projects/ubi-openclaw/topics/gog-gmail-watch",
+      "subscription": "gog-gmail-watch-push",
+      "pushToken": "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN",
+      "hookUrl": "http://127.0.0.1:18789/hooks/gmail",
+      "includeBody": true,
+      "maxBytes": 20000,
+      "renewEveryMinutes": 720,
+      "serve": {
+        "bind": "0.0.0.0",
+        "port": 8788,
+        "path": "/"
+      },
+      "tailscale": {
+        "mode": "off",
+        "path": "/gmail-pubsub"
+      },
+      "model": "opencode-go/deepseek-v4-flash"
+    },
+    "internal": {
+      "enabled": true,
+      "load": {
+        "extraDirs": [
+          "/home/node/.openclaw/workspace/hooks"
+        ]
+      },
+      "entries": {
+        "trello-bridge-start": {
+          "enabled": false
+        },
+        "trello-queue-worker-start": {
+          "enabled": false
+        },
+        "trello-gateway-start": {
+          "enabled": true
+        },
+        "github-cli-config-link": {
+          "enabled": true
+        }
+      }
+    },
+    "mappings": [
+      {
+        "id": "gmail-adriel-only",
+        "match": {
+          "path": "gmail"
+        },
+        "action": "agent",
+        "wakeMode": "now",
+        "name": "Gmail (adriel only)",
+        "agentId": "main",
+        "model": "opencode-go/deepseek-v4-flash",
+        "sessionKey": "hook:gmail:{{messages[0].id}}",
+        "messageTemplate": "New email from {{messages[0].from}}\nSubject: {{messages[0].subject}}\n{{messages[0].snippet}}\n{{messages[0].body}}",
+        "transform": {
+          "module": "gmail-from-adriel-only.mjs"
+        }
+      }
+    ]
+  },
+  "env": {
+    "vars": {
+      "GH_CONFIG_DIR": "/home/node/.openclaw/gh"
+    }
+  },
+  "skills": {
+    "install": {
+      "nodeManager": "npm"
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "main",
+      "match": {
+        "channel": "telegram",
+        "accountId": "main"
+      }
+    },
+    {
+      "agentId": "scheduler",
+      "match": {
+        "channel": "telegram",
+        "accountId": "scheduler"
+      }
+    },
+    {
+      "agentId": "marcos",
+      "match": {
+        "channel": "telegram",
+        "accountId": "marcos"
+      }
+    }
+  ],
+  "cron": {
+    "sessionRetention": "6h"
+  }
+}

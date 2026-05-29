@@ -23,6 +23,7 @@ export const REQUIRED_CANONICAL_DOC_PATHS = [
   "docs/deployment/live-verification.md",
   "docs/deployment/secrets.md",
   "docs/deployment/openclaw-agents.md",
+  "docs/deployment/droplet-backup.md",
   "docs/services/trello-gateway.md",
   "docs/services/trello-pipeline.md",
   "docs/services/trello-routines.md",

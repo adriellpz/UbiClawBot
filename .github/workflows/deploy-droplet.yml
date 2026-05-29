@@ -10,6 +10,11 @@ on:
       - "trello-routines/**"
       - "trello-gateway/**"
       - "scripts/manual/**"
+      - "scripts/backup-droplet.sh"
+      - "scripts/sync-live-config.sh"
+      - "scripts/sync-live-config.mjs"
+      - "scripts/sanitize-live-config.mjs"
+      - "config/live/**"
       - "deploy/**"
       - "Caddyfile.droplet"
       - ".github/workflows/deploy-droplet.yml"
@@ -101,6 +106,26 @@ jobs:
           source: "deploy/manifest.json"
           target: "/home/deploy/openclaw/.deploy-tmp-deploy"
 
+      - name: Copy live OpenClaw config template to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "config/live/**"
+          target: "/home/deploy/openclaw/.deploy-tmp-live-config"
+
+      - name: Copy ops scripts to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "scripts/backup-droplet.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs"
+          target: "/home/deploy/openclaw/.deploy-tmp-ops-scripts"
+
       - name: Copy trello-gateway to droplet
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -175,6 +200,13 @@ jobs:
             cp /home/deploy/openclaw/.deploy-tmp-scripts-manual/scripts/manual/* /home/deploy/openclaw/scripts/manual/
             mkdir -p /home/deploy/openclaw/deploy
             cp /home/deploy/openclaw/.deploy-tmp-deploy/deploy/manifest.json /home/deploy/openclaw/deploy/manifest.json
+            mkdir -p /home/deploy/openclaw/config/live
+            cp -r /home/deploy/openclaw/.deploy-tmp-live-config/config/live/. /home/deploy/openclaw/config/live/
+            cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/backup-droplet.sh /home/deploy/openclaw/scripts/backup-droplet.sh
+            cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.sh /home/deploy/openclaw/scripts/sync-live-config.sh
+            cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs /home/deploy/openclaw/scripts/sync-live-config.mjs
+            cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs /home/deploy/openclaw/scripts/sanitize-live-config.mjs
+            chmod +x /home/deploy/openclaw/scripts/backup-droplet.sh /home/deploy/openclaw/scripts/sync-live-config.sh
             mkdir -p /home/deploy/openclaw/trello-gateway
             for f in Dockerfile deploy.sh trello_card_contract.mjs trello_gateway.mjs trello_transition_matrix.csv .env.example; do
               cp "/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f" "/home/deploy/openclaw/trello-gateway/$f"
@@ -190,6 +222,11 @@ jobs:
             smoke_required_file "github-pr-bridge/server.mjs"
             smoke_required_file "docker-compose.yml"
             smoke_required_file "deploy/manifest.json"
+            smoke_required_file "config/live/openclaw.json"
+            smoke_required_file "scripts/sync-live-config.sh"
+
+            cd "${OPENCLAW_ROOT}"
+            bash scripts/sync-live-config.sh
 
             cd "${OPENCLAW_ROOT}"
             docker compose build openclaw-gateway trello-gateway

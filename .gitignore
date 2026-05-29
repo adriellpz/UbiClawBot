@@ -10,10 +10,12 @@ trello-gateway/.env
 # --- Upstream OpenClaw source (install separately or use container image only) ---
 openclaw-repo/
 
-# --- Config: real runtime config stays local; template is tracked ---
+# --- Config: real runtime config stays local; template + sanitized live copy tracked ---
 config/**
 !config/.gitkeep
 !config/openclaw.example.json
+!config/live/
+!config/live/**
 
 # --- Workspace: agent/workspace content stays local; only deploy artifacts tracked ---
 workspace/**
