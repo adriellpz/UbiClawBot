@@ -37,7 +37,7 @@ After vault migration on the droplet, set in `/home/deploy/openclaw/.env` (not o
 - `OPENCLAW_AGENT_VAULT_DIR` — host path to the Obsidian-synced vault (`data/agent-vault` on the droplet)
 - `OPENCLAW_AGENT_RUNTIME_DIR` — host path to non-synced runtime scripts (`data/agent-runtime`)
 
-Point each agent’s `workspace` in live `openclaw.json` at `/home/node/.openclaw/agent-vault/{ubi,cheryl,marcos}`. Keep `OPENCLAW_WORKSPACE_DIR` mounted until legacy trees are renamed post-soak.
+Point each agent’s `workspace` in live `openclaw.json` at `/home/node/.openclaw/agent-vault/{ubi,cheryl,marcos}`. Legacy `workspace` trees on the host are renamed to `*.old` for rollback; compose no longer mounts `/home/node/.openclaw/workspace`.
 
 Live droplet spot-check record: [`live-verification.md`](./live-verification.md).
 
