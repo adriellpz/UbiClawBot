@@ -245,3 +245,24 @@ test("evaluateContractWrite allows structural repair on a drifted card", () => {
   assert.equal(result.ok, true);
   assert.equal(result.mode, "repair");
 });
+
+test("evaluateContractWrite repairs missing Next steps when create_checklist params are not folded into next", () => {
+  const drifted = {
+    listName: "Backlog",
+    desc: compliantDescription(),
+    checklists: [],
+  };
+  const result = evaluateContractWrite({
+    agentId: "main",
+    classification: classifyContractOperation({
+      operation: "create_checklist",
+      params: { name: "Next steps" },
+    }),
+    current: drifted,
+    next: { ...drifted, checklists: [] },
+    params: { name: "Next steps" },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, "repair");
+});

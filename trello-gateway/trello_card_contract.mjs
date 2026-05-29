@@ -174,6 +174,53 @@ function hasNextStepsChecklist(snapshot) {
   return checklistNames.filter((name) => name === NEXT_STEPS_CHECKLIST_NAME).length === 1;
 }
 
+/**
+ * Merge planned structural effects into `next` before validation.
+ * Trello writes checklists after the card shell exists; callers may forget to
+ * fold request params into the planned snapshot (especially create_checklist).
+ */
+export function projectContractNextSnapshot({ classification, params = {}, current, next }) {
+  if (!next) return next;
+
+  const operation = classification?.operation;
+  if (operation === "create_checklist") {
+    const checklistName = typeof params.name === "string" ? params.name.trim() : "";
+    if (!checklistName) return next;
+    const baseChecklists = Array.isArray(next.checklists) ? [...next.checklists] : [];
+    const names = normalizeChecklistNames(baseChecklists);
+    if (names.includes(checklistName)) return next;
+    return { ...next, checklists: [...baseChecklists, { name: checklistName }] };
+  }
+
+  if (operation === "update_checklist") {
+    const checklistId = params.checklistId;
+    const checklistName = typeof params.name === "string" ? params.name.trim() : "";
+    if (!checklistId || !checklistName) return next;
+    const baseChecklists = Array.isArray(next.checklists) ? next.checklists : [];
+    return {
+      ...next,
+      checklists: baseChecklists.map((checklist) =>
+        checklist?.id === checklistId ? { ...checklist, name: checklistName } : checklist,
+      ),
+    };
+  }
+
+  if (operation === "create_card" && !current) {
+    const rawChecklists = params.checklists;
+    if (!Array.isArray(rawChecklists) || rawChecklists.length === 0) return next;
+    const baseChecklists = Array.isArray(next.checklists) ? [...next.checklists] : [];
+    for (const entry of rawChecklists) {
+      const name = typeof entry === "string" ? entry.trim() : typeof entry?.name === "string" ? entry.name.trim() : "";
+      if (!name) continue;
+      const names = normalizeChecklistNames(baseChecklists);
+      if (!names.includes(name)) baseChecklists.push({ name });
+    }
+    return { ...next, checklists: baseChecklists };
+  }
+
+  return next;
+}
+
 function isRepairStep({ classification, current, next }) {
   const op = classification?.operation;
   if (!current || !next) return false;
@@ -293,12 +340,15 @@ export function evaluateContractWrite({
   classification,
   current = null,
   next = null,
+  params = {},
   scopedListNames = DEFAULT_CONTRACT_SCOPED_LISTS,
   doneListNames = DEFAULT_DONE_LIST_NAMES,
 }) {
   if (CONTRACT_EXEMPT_AGENT_IDS.has(agentId)) {
     return { ok: true, mode: "exempt" };
   }
+
+  const plannedNext = projectContractNextSnapshot({ classification, params, current, next });
 
   const mode = classification?.mode || "unknown";
   if (mode === "non_structural") {
@@ -308,15 +358,15 @@ export function evaluateContractWrite({
   const currentScoped = current
     ? isContractScopedList(current.listName, { scopedListNames, doneListNames })
     : false;
-  const nextScoped = next
-    ? isContractScopedList(next.listName, { scopedListNames, doneListNames })
+  const nextScoped = plannedNext
+    ? isContractScopedList(plannedNext.listName, { scopedListNames, doneListNames })
     : false;
 
   const currentValidation = currentScoped
     ? validateCardSnapshot(current)
     : { ok: true, skipped: true, sections: {} };
   const nextValidation = nextScoped
-    ? validateCardSnapshot(next, { requireBlankPeerReview: !current })
+    ? validateCardSnapshot(plannedNext, { requireBlankPeerReview: !current })
     : { ok: true, skipped: true, sections: {} };
 
   if (!nextScoped) {
@@ -333,7 +383,7 @@ export function evaluateContractWrite({
 
   if (!nextValidation.ok) {
     if (currentScoped && !currentValidation.ok) {
-      if (isRepairStep({ classification, current, next })) {
+      if (isRepairStep({ classification, current, next: plannedNext })) {
         return { ok: true, mode: "repair" };
       }
       return {
