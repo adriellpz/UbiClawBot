@@ -511,6 +511,7 @@ async function handleRequest(req, res) {
             desc: params.desc || '',
             checklists: requestedChecklists,
           }),
+          params,
           ...buildContractOptions(),
         });
         if (!createValidation.ok) {
@@ -656,6 +657,7 @@ async function handleRequest(req, res) {
           classification: classifyContractOperation({ operation, params }),
           current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
           next: createContractSnapshot({ listName: target.name, desc: card.desc || '', checklists: currentChecklists }),
+          params,
           ...buildContractOptions(),
         });
         if (!moveValidation.ok) {
@@ -763,6 +765,7 @@ async function handleRequest(req, res) {
               desc: fields.desc !== undefined ? fields.desc : card.desc || '',
               checklists: currentChecklists,
             }),
+            params,
             ...buildContractOptions(),
           });
           if (!updateValidation.ok) {
@@ -798,6 +801,7 @@ async function handleRequest(req, res) {
           classification: classifyContractOperation({ operation, params }),
           current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
           next: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: nextChecklists }),
+          params,
           ...buildContractOptions(),
         });
         if (!checklistValidation.ok) {
@@ -830,6 +834,7 @@ async function handleRequest(req, res) {
           classification: classifyContractOperation({ operation, params }),
           current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
           next: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: nextChecklists }),
+          params,
           ...buildContractOptions(),
         });
         if (!checklistValidation.ok) {
@@ -861,6 +866,7 @@ async function handleRequest(req, res) {
           classification: classifyContractOperation({ operation, params }),
           current: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: currentChecklists }),
           next: createContractSnapshot({ listName: currentList, desc: card.desc || '', checklists: nextChecklists }),
+          params,
           ...buildContractOptions(),
         });
         if (!checklistValidation.ok) {

@@ -574,6 +574,33 @@ test("move blocks structural non-repair writes on a drifted card", async (t) => 
   assert.match(response.json.reason, /repair/i);
 });
 
+test("create_checklist repair unlocks move to Done on a compliant card missing Next steps", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const repair = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "create_checklist",
+    cardId: "card-missing-checklist",
+    params: { name: "Next steps" },
+  });
+  assert.equal(repair.status, 200, JSON.stringify({ repair, output: gateway.getOutput() }, null, 2));
+
+  const move = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "move",
+    cardId: "card-missing-checklist",
+    params: { targetList: "Done" },
+  });
+  assert.equal(move.status, 200, JSON.stringify({ move, output: gateway.getOutput() }, null, 2));
+  assert.equal(move.json.moved, true);
+});
+
 test("create_checklist can repair a compliant body that is only missing Next steps", async (t) => {
   const trello = createStubTrelloServer();
   const trelloListener = await listen(trello.server);
