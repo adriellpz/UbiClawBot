@@ -4,12 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - "workspace/Dockerfile.gog"
-      - "workspace/docker-compose.droplet.yml"
+      - "workspace/**"
       - "github-pr-bridge/**"
       - "trello-pipeline/**"
       - "trello-routines/**"
       - "trello-gateway/**"
+      - "scripts/manual/**"
+      - "deploy/**"
       - "Caddyfile.droplet"
       - ".github/workflows/deploy-droplet.yml"
   schedule:
@@ -24,6 +25,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,6 +81,26 @@ jobs:
           source: "trello-pipeline/*"
           target: "/home/deploy/openclaw/.deploy-tmp-trello-pipeline"
 
+      - name: Copy manual ops scripts to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "scripts/manual/*"
+          target: "/home/deploy/openclaw/.deploy-tmp-scripts-manual"
+
+      - name: Copy deploy manifest to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "deploy/manifest.json"
+          target: "/home/deploy/openclaw/.deploy-tmp-deploy"
+
       - name: Copy trello-gateway to droplet
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -89,17 +111,57 @@ jobs:
           source: "trello-gateway/*"
           target: "/home/deploy/openclaw/.deploy-tmp-trello-gateway"
 
-      - name: Apply files, rebuild, and restart services
+      - name: Apply files, rebuild, restart, and smoke-test
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          envs: GITHUB_SHA,GITHUB_REF
           script_stop: true
           script: |
             set -eu
-            mkdir -p /home/deploy/openclaw
+            OPENCLAW_ROOT=/home/deploy/openclaw
+
+            smoke_required_file() {
+              local rel="$1"
+              if [ ! -f "${OPENCLAW_ROOT}/${rel}" ]; then
+                echo "smoke failed: missing file ${rel}" >&2
+                exit 1
+              fi
+            }
+
+            smoke_http() {
+              local url="$1"
+              local label="$2"
+              for attempt in $(seq 1 30); do
+                if curl -fsS "$url" >/dev/null; then
+                  return 0
+                fi
+                if [ "$attempt" -eq 30 ]; then
+                  echo "smoke failed: ${label} ${url}" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+            }
+
+            write_deployed_revision() {
+              local deployed_at
+              deployed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              cat > "${OPENCLAW_ROOT}/deployed-revision.json" <<REVISION
+            {
+              "gitSha": "${GITHUB_SHA:-unknown}",
+              "gitRef": "${GITHUB_REF:-unknown}",
+              "deployedAt": "${deployed_at}",
+              "workflow": "deploy-droplet.yml",
+              "manifestVersion": 1
+            }
+            REVISION
+            }
+
+            mkdir -p "${OPENCLAW_ROOT}"
             cp /home/deploy/openclaw/.deploy-tmp/Dockerfile.gog /home/deploy/openclaw/Dockerfile.gog
             cp /home/deploy/openclaw/.deploy-tmp/docker-compose.droplet.yml /home/deploy/openclaw/docker-compose.yml
             cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet /home/deploy/openclaw/Caddyfile.droplet
@@ -109,27 +171,37 @@ jobs:
             cp /home/deploy/openclaw/.deploy-tmp-trello-routines/trello-routines/* /home/deploy/openclaw/trello-routines/
             mkdir -p /home/deploy/openclaw/trello-pipeline
             cp /home/deploy/openclaw/.deploy-tmp-trello-pipeline/trello-pipeline/* /home/deploy/openclaw/trello-pipeline/
+            mkdir -p /home/deploy/openclaw/scripts/manual
+            cp /home/deploy/openclaw/.deploy-tmp-scripts-manual/scripts/manual/* /home/deploy/openclaw/scripts/manual/
+            mkdir -p /home/deploy/openclaw/deploy
+            cp /home/deploy/openclaw/.deploy-tmp-deploy/deploy/manifest.json /home/deploy/openclaw/deploy/manifest.json
             mkdir -p /home/deploy/openclaw/trello-gateway
             for f in Dockerfile deploy.sh trello_card_contract.mjs trello_gateway.mjs trello_transition_matrix.csv .env.example; do
               cp "/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f" "/home/deploy/openclaw/trello-gateway/$f"
             done
             chmod 700 /home/deploy/openclaw/trello-gateway/trello_gateway.mjs
             chmod +x /home/deploy/openclaw/trello-gateway/deploy.sh
-            cd /home/deploy/openclaw
+
+            smoke_required_file "scripts/manual/backfill_routine_card_due.mjs"
+            smoke_required_file "scripts/manual/backfill_calendar_links_to_description.mjs"
+            smoke_required_file "trello-routines/ensure_routines.mjs"
+            smoke_required_file "trello-pipeline/server.mjs"
+            smoke_required_file "trello-gateway/trello_gateway.mjs"
+            smoke_required_file "github-pr-bridge/server.mjs"
+            smoke_required_file "docker-compose.yml"
+            smoke_required_file "deploy/manifest.json"
+
+            cd "${OPENCLAW_ROOT}"
             docker compose build openclaw-gateway trello-gateway
             docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
-            # github-pr-bridge binds shortly after container start; retry instead of one-shot curl.
-            for attempt in $(seq 1 30); do
-              if curl -fsS "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" >/dev/null; then
-                break
-              fi
-              if [ "$attempt" -eq 30 ]; then
-                echo "github-pr-bridge health check failed after 30 attempts" >&2
-                exit 1
-              fi
-              sleep 2
-            done
-            # Reload Caddy only when the candidate config differs from what is installed.
+
+            smoke_http "http://127.0.0.1:18792/healthz" "trello-gateway"
+            smoke_http "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" "github-pr-bridge"
+            smoke_http "http://127.0.0.1:18990/health" "trello-bridge"
+
+            write_deployed_revision
+            cat "${OPENCLAW_ROOT}/deployed-revision.json"
+
             if cmp -s /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile 2>/dev/null; then
               echo "Caddyfile unchanged — skipping validate/install/reload"
             else
