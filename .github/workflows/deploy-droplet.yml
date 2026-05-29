@@ -115,10 +115,6 @@ jobs:
             done
             chmod 700 /home/deploy/openclaw/trello-gateway/trello_gateway.mjs
             chmod +x /home/deploy/openclaw/trello-gateway/deploy.sh
-            # Validate candidate first; install + reload only after a successful validation.
-            sudo caddy validate --config /home/deploy/openclaw/Caddyfile.droplet
-            sudo install -m 0644 /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile
-            sudo systemctl reload caddy
             cd /home/deploy/openclaw
             docker compose build openclaw-gateway trello-gateway
             docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
@@ -133,4 +129,16 @@ jobs:
               fi
               sleep 2
             done
+            # Reload Caddy only when the candidate config differs from what is installed.
+            if cmp -s /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile 2>/dev/null; then
+              echo "Caddyfile unchanged — skipping validate/install/reload"
+            else
+              sudo caddy validate --config /home/deploy/openclaw/Caddyfile.droplet
+              sudo install -m 0644 /home/deploy/openclaw/Caddyfile.droplet /etc/caddy/Caddyfile
+              if ! sudo systemctl reload caddy; then
+                echo "caddy reload failed; journal follows, then restart" >&2
+                sudo journalctl -u caddy.service -n 30 --no-pager >&2 || true
+                sudo systemctl restart caddy
+              fi
+            fi
             docker compose ps
