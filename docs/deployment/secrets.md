@@ -19,7 +19,10 @@ Live runtime secrets/config stay here:
 
 - `/home/deploy/openclaw/.env`
 - `/home/deploy/openclaw/trello-gateway/.env`
-- `/home/deploy/openclaw/data/config/openclaw.json`
+- **`/root/openclaw/data/config/openclaw.json`** — authoritative OpenClaw config (mounted as `/home/node/.openclaw`; set via `OPENCLAW_CONFIG_DIR` in `.env`)
+- `/root/openclaw/data/config/cron/jobs.json` — scheduled agent jobs (wiki curator, routines, etc.)
+
+**Do not edit** `/home/deploy/openclaw/data/config/openclaw.json` — stale copy from an old layout; not used by compose. See [`openclaw-agents.md`](./openclaw-agents.md).
 
 The deploy workflow does not overwrite those files.
 

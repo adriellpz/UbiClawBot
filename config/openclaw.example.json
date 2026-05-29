@@ -19,6 +19,7 @@
     "list": [
       {
         "id": "main",
+        "model": "opencode-go/deepseek-v4-flash",
         "tools": {
           "alsoAllow": [
             "browser",
@@ -57,6 +58,7 @@
         "id": "marcos",
         "name": "marcos",
         "workspace": "/home/node/.openclaw/agent-vault/marcos",
+        "model": "opencode-go/deepseek-v4-pro",
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
         "tools": {
           "deny": [

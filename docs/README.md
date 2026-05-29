@@ -8,6 +8,7 @@ Start here:
 - [`deployment/README.md`](./deployment/README.md) for the current deploy model
 - [`deployment/live-verification.md`](./deployment/live-verification.md) for droplet spot-check status (done / waived / blocked)
 - [`deployment/secrets.md`](./deployment/secrets.md) for Actions and droplet secret contracts
+- [`deployment/openclaw-agents.md`](./deployment/openclaw-agents.md) for live agent models and config paths (Cheryl = DeepSeek Flash)
 - [`services/trello-gateway.md`](./services/trello-gateway.md) for the isolated Trello API service
 - [`services/trello-pipeline.md`](./services/trello-pipeline.md) for webhook ingress, queue worker, and deterministic handlers
 - [`services/trello-routines.md`](./services/trello-routines.md) for the scheduled routines job
