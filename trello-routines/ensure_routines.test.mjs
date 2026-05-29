@@ -490,6 +490,8 @@ test("non-dry routines script creates a scheduled routine card and calendar even
   assert.equal(report.created[0].cardId, "card-created-1");
 
   assert.equal(gateway.calls.some((call) => call.operation === "create_card"), true);
+  const createCall = gateway.calls.find((call) => call.operation === "create_card");
+  assert.equal(createCall?.params?.due, "2026-05-27T16:30:00.000Z");
   assert.equal(gateway.calls.some((call) => call.operation === "update"), true);
   const updated = gateway.calls.find((call) => call.operation === "update");
   assert.match(updated?.params?.fields?.desc || "", /Calendar time:/);

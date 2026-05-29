@@ -276,17 +276,26 @@ async function main() {
       }
 
       if (dryRun) {
-        report.created.push({ habit: habit.id, period, title, shifted: slot.shifted, dryRun });
+        report.created.push({
+          habit: habit.id,
+          period,
+          title,
+          shifted: slot.shifted,
+          due: slot.end.toISOString(),
+          dryRun,
+        });
         continue;
       }
 
       const calendarTime = formatCalendarTimeRange(slot.start, slot.end);
+      const due = slot.end.toISOString();
       const created = await createCard(
         title,
         {
           listName: habit.trello_list || "Routine",
           desc: buildCardDescription(habit, period),
           checklists: buildRoutineChecklist(),
+          due,
         },
         AGENT_ID,
       );
@@ -322,6 +331,7 @@ async function main() {
         period,
         cardId: created.cardId,
         title,
+        due,
         claimLog,
         shifted: slot.shifted,
       });
