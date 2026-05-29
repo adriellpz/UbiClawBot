@@ -8,7 +8,7 @@ Deploys are driven by `.github/workflows/deploy-droplet.yml`:
 - nightly `schedule`
 - manual `workflow_dispatch`
 
-The workflow copies tracked artifacts into `/home/deploy/openclaw`, validates Caddy, rebuilds `openclaw-gateway` and `trello-gateway`, then force-recreates:
+The workflow copies the artifact set declared in [`deploy/manifest.json`](../../deploy/manifest.json) into `/home/deploy/openclaw`, validates Caddy, rebuilds `openclaw-gateway` and `trello-gateway`, runs post-deploy smoke checks, writes `deployed-revision.json`, then force-recreates:
 
 - `openclaw-gateway`
 - `openclaw-cli`
@@ -19,6 +19,17 @@ The workflow copies tracked artifacts into `/home/deploy/openclaw`, validates Ca
 - `trello-routines`
 
 `/home/deploy/openclaw` is the deployed artifact tree, not a pullable git checkout. Do not treat that path as the repo clone and do not rely on pull-based updates there.
+
+After a successful deploy, check what landed:
+
+```bash
+cat /home/deploy/openclaw/deployed-revision.json
+cat /home/deploy/openclaw/deploy/manifest.json
+```
+
+Manual ops scripts (for example routine due backfill) live at `/home/deploy/openclaw/scripts/manual/` and are copied on every deploy — do not SCP them by hand.
+
+CI enforces that `.github/workflows/deploy-droplet.yml` stays in sync with `deploy/manifest.json` via `deploy-contract.test.mjs`.
 
 ## What stays on the droplet
 

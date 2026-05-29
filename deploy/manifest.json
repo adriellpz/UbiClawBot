@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "dropletRoot": "/home/deploy/openclaw",
+  "revisionFile": "deployed-revision.json",
+  "pathFilters": [
+    "workspace/**",
+    "github-pr-bridge/**",
+    "trello-routines/**",
+    "trello-pipeline/**",
+    "trello-gateway/**",
+    "scripts/manual/**",
+    "deploy/**",
+    "Caddyfile.droplet",
+    ".github/workflows/deploy-droplet.yml"
+  ],
+  "copyBundles": [
+    {
+      "id": "workspace",
+      "scpSource": "workspace/Dockerfile.gog,workspace/docker-compose.droplet.yml",
+      "installMarkers": [
+        "cp /home/deploy/openclaw/.deploy-tmp/Dockerfile.gog",
+        "cp /home/deploy/openclaw/.deploy-tmp/docker-compose.droplet.yml"
+      ]
+    },
+    {
+      "id": "caddyfile",
+      "scpSource": "Caddyfile.droplet",
+      "installMarkers": ["cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet"]
+    },
+    {
+      "id": "github-pr-bridge",
+      "scpSource": "github-pr-bridge/*",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/github-pr-bridge",
+        "cp /home/deploy/openclaw/.deploy-tmp-github-pr-bridge/github-pr-bridge/*"
+      ]
+    },
+    {
+      "id": "trello-routines",
+      "scpSource": "trello-routines/*",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/trello-routines",
+        "cp /home/deploy/openclaw/.deploy-tmp-trello-routines/trello-routines/*"
+      ]
+    },
+    {
+      "id": "trello-pipeline",
+      "scpSource": "trello-pipeline/*",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/trello-pipeline",
+        "cp /home/deploy/openclaw/.deploy-tmp-trello-pipeline/trello-pipeline/*"
+      ]
+    },
+    {
+      "id": "scripts-manual",
+      "scpSource": "scripts/manual/*",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/scripts/manual",
+        "cp /home/deploy/openclaw/.deploy-tmp-scripts-manual/scripts/manual/*"
+      ]
+    },
+    {
+      "id": "trello-gateway",
+      "scpSource": "trello-gateway/*",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/trello-gateway",
+        "cp \"/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f\""
+      ]
+    },
+    {
+      "id": "deploy-manifest",
+      "scpSource": "deploy/manifest.json",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/deploy",
+        "cp /home/deploy/openclaw/.deploy-tmp-deploy/deploy/manifest.json"
+      ]
+    }
+  ],
+  "gatewayFiles": [
+    "Dockerfile",
+    "deploy.sh",
+    "trello_card_contract.mjs",
+    "trello_gateway.mjs",
+    "trello_transition_matrix.csv",
+    ".env.example"
+  ],
+  "composeRecreateServices": [
+    "openclaw-gateway",
+    "openclaw-cli",
+    "trello-bridge",
+    "github-pr-bridge",
+    "trello-gateway",
+    "trello-queue-worker",
+    "trello-routines"
+  ],
+  "smokeChecks": {
+    "requiredFiles": [
+      "scripts/manual/backfill_routine_card_due.mjs",
+      "scripts/manual/backfill_calendar_links_to_description.mjs",
+      "trello-routines/ensure_routines.mjs",
+      "trello-pipeline/server.mjs",
+      "trello-gateway/trello_gateway.mjs",
+      "github-pr-bridge/server.mjs",
+      "docker-compose.yml",
+      "deploy/manifest.json"
+    ],
+    "httpEndpoints": [
+      {
+        "id": "trello-gateway",
+        "url": "http://127.0.0.1:18792/healthz"
+      },
+      {
+        "id": "github-pr-bridge",
+        "url": "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"
+      },
+      {
+        "id": "trello-bridge",
+        "url": "http://127.0.0.1:18990/health"
+      }
+    ]
+  }
+}

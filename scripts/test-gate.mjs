@@ -81,6 +81,7 @@ function validateJsonFiles() {
     "package.json",
     "package-lock.json",
     "config/openclaw.example.json",
+    "deploy/manifest.json",
   ];
 
   for (const file of jsonFiles) {
