@@ -52,6 +52,8 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
+      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
+      - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -124,6 +126,8 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
+      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
+      - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
     stdin_open: true
     tty: true
     init: true
@@ -206,6 +210,8 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
+      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
+      - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
       - ./github-pr-bridge:/opt/github-pr-bridge:ro
     working_dir: /opt/github-pr-bridge
     command: ["node", "server.mjs"]

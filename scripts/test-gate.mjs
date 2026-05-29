@@ -170,6 +170,8 @@ function validateCompose(workflows) {
     assert(String(port).startsWith("127.0.0.1:"), `${composePath}: published port must bind to 127.0.0.1, got ${port}`);
   }
   assert(Array.isArray(gateway.volumes) && gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw")), `${composePath}: gateway should mount OpenClaw config volume`);
+  assert(gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw/agent-vault")), `${composePath}: gateway should mount agent workspace vault`);
+  assert(gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw/agent-runtime")), `${composePath}: gateway should mount agent runtime (non-synced scripts)`);
   assert(gateway.healthcheck?.test, `${composePath}: gateway should keep a healthcheck`);
 
   const cli = services["openclaw-cli"] ?? {};
