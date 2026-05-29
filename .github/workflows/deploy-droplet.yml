@@ -150,15 +150,15 @@ jobs:
             write_deployed_revision() {
               local deployed_at
               deployed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              cat > "${OPENCLAW_ROOT}/deployed-revision.json" <<REVISION
-            {
-              "gitSha": "${GITHUB_SHA:-unknown}",
-              "gitRef": "${GITHUB_REF:-unknown}",
-              "deployedAt": "${deployed_at}",
-              "workflow": "deploy-droplet.yml",
-              "manifestVersion": 1
-            }
-            REVISION
+              printf '%s\n' \
+                '{' \
+                "  \"gitSha\": \"${GITHUB_SHA:-unknown}\"," \
+                "  \"gitRef\": \"${GITHUB_REF:-unknown}\"," \
+                "  \"deployedAt\": \"${deployed_at}\"," \
+                "  \"workflow\": \"deploy-droplet.yml\"," \
+                "  \"manifestVersion\": 1" \
+                '}' \
+                > "${OPENCLAW_ROOT}/deployed-revision.json"
             }
 
             mkdir -p "${OPENCLAW_ROOT}"
