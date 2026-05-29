@@ -6,11 +6,11 @@ Record for issue #26 Testing Decisions: deployment and integration claims valida
 
 | Field | Value |
 |-------|-------|
-| **status** | `blocked` |
-| **date** | 2026-05-26 |
-| **reviewer** | Ralph loop implement (cycle 1) |
+| **status** | `done` |
+| **date** | 2026-05-29 |
+| **reviewer** | Ralph loop implement (cycle 3) |
 
-Droplet SSH spot-check was **not performed** in this session: no `DROPLET_HOST` / `DROPLET_SSH_KEY` available to the agent environment (`ssh` to droplet: connection refused / host unset).
+Wiki raw-input Phase 1+2 executed on droplet via `ssh myserver` as **root** (chown `deploy:deploy` after vault mutations). Tools rsynced to `/home/deploy/openclaw/tools/agent-workspace-vault/`. Active-surface legacy path scan reports **0** remaining `Docs/` hits on agent skills/cron after rewrite; smoke-verifier **PASS**.
 
 ## Deployment model (artifact tree vs git checkout)
 
@@ -25,31 +25,60 @@ Operators must **not** treat `/home/deploy/openclaw` as a pullable clone or run 
 
 Persistent droplet-only paths (not overwritten by deploy): `/home/deploy/openclaw/.env`, `/home/deploy/openclaw/trello-gateway/.env`, `/home/deploy/openclaw/data/*` (see [`secrets.md`](./secrets.md)).
 
-## What was verified locally (blocked session)
-
-Without SSH, the following repo-local checks support the documented model:
+## What was verified locally
 
 | Check | Result |
 |-------|--------|
-| `npm test` in UbiClawBot | PASS — unit tests + `scripts/test-gate.mjs` |
+| `npm test` in UbiClawBot | PASS — 98/98 (2026-05-29 implement cycle 3) |
 | `docs/deployment/README.md` | States artifact tree at `/home/deploy/openclaw`; no `git pull` guidance |
-| `.github/workflows/deploy-droplet.yml` | SCP + SSH deploy; copies `workspace/`, `trello-*`, `github-pr-bridge`, `Caddyfile.droplet`; restarts compose services |
-| `workspace/docker-compose.droplet.yml` | Services: `openclaw-gateway`, `trello-bridge`, `github-pr-bridge`, `trello-gateway`, `trello-queue-worker`, `trello-routines` |
-| Embedded SSH script | `bash -n` passes per test-gate |
+| `.github/workflows/deploy-droplet.yml` | SCP + SSH deploy; copies tracked bundles; restarts compose services |
 | Cross-repo docs gate | Historical architecture paths demoted; agent pointers to `UbiClawBot/docs/` |
 
-## What remains for `status: done`
+## Wiki bootstrap spot-check (REQ-P0-012) — 2026-05-29
 
-When an operator has droplet SSH (GitHub Actions secrets `DROPLET_HOST`, `DROPLET_USER`, `DROPLET_SSH_KEY`):
+| Check | Result |
+|-------|--------|
+| `raw-input/` + `raw-input/_failed/` | **Present** under `/home/deploy/openclaw/data/agent-vault/` |
+| `wiki/` six buckets | **Present** — `reports/`, `runbooks/`, `job-search/`, `personal/`, `projects/`, `workflows/` (+ `openclaw-docs/`) |
+| `bootstrap-wiki.mjs` on droplet | **Present** — rsync from `agent-workspace-vault`; dry-run + live executed |
+| Active-surface `Docs/` (`rewrite-vault-paths.mjs --smoke-only`) | **0 remaining** (108 files scanned) before final smoke; rewrite pass updated 48 historical wiki files (343 replacements) |
+| `smoke-verifier.mjs --vault-root …` | **PASS** — layout, workspaces, legacy-paths, gateway healthz |
+| Phase 2 `wiki/workflows/raw-input.md` | **Present** |
+| Phase 2 `cheryl/skills/cheryl-vault-inbox/` | **Present** (`SKILL.md`) |
+| Cheryl `*/15` raw-input cron in `jobs.json` | **Present** — `agentId: scheduler`, `*/15 * * * *`, `America/Denver`, NO_REPLY if empty |
+| Curator smoke drop | **Pending async** — `raw-input/ubi-2026-05-30-handoff-test.md` refreshed 2026-05-29; expect filing within ~15 min (not awaited in session) |
 
-1. `ssh` to droplet; `cd /home/deploy/openclaw && docker compose ps` — confirm expected services healthy.
-2. Confirm path is artifact tree (no `.git` as primary update mechanism, or document if present but unused).
-3. Spot-check `curl` / health endpoints per `docs/services/*.md` (e.g. gateway `GET /healthz` on host bind `127.0.0.1:18792`).
-4. Update this file: set **status** to `done`, add date and command output snippets (redact secrets).
+### Droplet command evidence (redacted)
+
+```
+# rsync tools (local → droplet)
+rsync -av --delete …/agent-workspace-vault/ root@myserver:/home/deploy/openclaw/tools/agent-workspace-vault/
+
+# Phase 1
+node …/bootstrap-wiki.mjs --vault /home/deploy/openclaw/data/agent-vault \
+  --docs /root/openclaw/data/workspace.old/Docs --marcos …/marcos --dry-run  # errors: []
+node …/bootstrap-wiki.mjs … # live, errors: []
+node …/rewrite-vault-paths.mjs --root …/agent-vault  # changedFiles: 48, totalReplacements: 343, smoke.remaining: 0
+node …/generate-vault-indexes.mjs --root …/agent-vault
+chown -R deploy:deploy /home/deploy/openclaw/data/agent-vault
+node …/smoke-verifier.mjs --vault-root …/agent-vault  # Smoke: OK
+
+# Legacy path scan (active surface)
+node …/rewrite-vault-paths.mjs --smoke-only --root …/agent-vault
+# → { "scanned": 108, "remaining": 0, "matches": [] }
+
+# Compose health (2026-05-29)
+docker compose ps  # openclaw-gateway, trello-*, github-pr-bridge: Up (healthy)
+```
+
+### AGENTS.md / Marcos runbooks
+
+- `ubi/`, `cheryl/`, `marcos/` AGENTS.md include wiki read + `raw-input/` producer rules; Cheryl documents `cheryl-vault-inbox` curator.
+- Marcos pointers: `wiki/runbooks/marcos/master.md`, `nightly-prompt.md`, `scope-rules.md` on droplet.
 
 ## Waived
 
-Use **status: `waived`** only with an explicit owner reason (e.g. staging-only environment, temporary droplet outage with accepted risk). Not applicable in cycle 1.
+Use **status: `waived`** only with an explicit owner reason. Not applicable after cycle 3 droplet execution.
 
 ---
 
