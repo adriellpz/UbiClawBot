@@ -1,7 +1,7 @@
 {
   "agents": {
     "defaults": {
-      "workspace": "/home/node/.openclaw/workspace",
+      "workspace": "/home/node/.openclaw/agent-vault/ubi",
       "skipBootstrap": true,
       "experimental": {
         "localModelLean": true
@@ -39,7 +39,7 @@
       {
         "id": "scheduler",
         "name": "Cheryl Scheduling Assistant",
-        "workspace": "/home/node/.openclaw/workspace-scheduler",
+        "workspace": "/home/node/.openclaw/agent-vault/cheryl",
         "thinkingDefault": "medium",
         "tools": {
           "alsoAllow": [
@@ -49,6 +49,17 @@
             "edit",
             "memory_search",
             "memory_get"
+          ]
+        }
+      },
+      {
+        "id": "marcos",
+        "name": "marcos",
+        "workspace": "/home/node/.openclaw/agent-vault/marcos",
+        "agentDir": "/home/node/.openclaw/agents/marcos/agent",
+        "tools": {
+          "deny": [
+            "group:sessions"
           ]
         }
       }
