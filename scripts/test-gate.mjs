@@ -172,6 +172,10 @@ function validateCompose(workflows) {
   assert(Array.isArray(gateway.volumes) && gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw")), `${composePath}: gateway should mount OpenClaw config volume`);
   assert(gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw/agent-vault")), `${composePath}: gateway should mount agent workspace vault`);
   assert(gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw/agent-runtime")), `${composePath}: gateway should mount agent runtime (non-synced scripts)`);
+  assert(
+    !gateway.volumes.some((volume) => String(volume).includes(":/home/node/.openclaw/workspace")),
+    `${composePath}: gateway must not mount legacy workspace after vault phase 7`,
+  );
   assert(gateway.healthcheck?.test, `${composePath}: gateway should keep a healthcheck`);
 
   const cli = services["openclaw-cli"] ?? {};

@@ -51,7 +51,6 @@ services:
       TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
       - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
     extra_hosts:
@@ -125,7 +124,6 @@ services:
       TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
       - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
     stdin_open: true
@@ -209,7 +207,6 @@ services:
       XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-/home/node/.openclaw}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
-      - ${OPENCLAW_WORKSPACE_DIR:-${HOME:-/tmp}/.openclaw/workspace}:/home/node/.openclaw/workspace
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
       - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
       - ./github-pr-bridge:/opt/github-pr-bridge:ro
