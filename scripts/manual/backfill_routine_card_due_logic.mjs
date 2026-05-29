@@ -1,5 +1,21 @@
 import { parseCalendarTimeLine } from "../../trello-pipeline/trello_card_calendar_desc.mjs";
 
+export function loadCalendarEventsRequired(fetchEventsFn) {
+  if (typeof fetchEventsFn !== "function") {
+    throw new Error("Calendar fetch failed; backfill aborted. fetchEvents is not available");
+  }
+  try {
+    const events = fetchEventsFn();
+    if (!Array.isArray(events)) {
+      throw new Error("calendar fetch returned non-array");
+    }
+    return events;
+  } catch (error) {
+    const detail = error?.message || String(error);
+    throw new Error(`Calendar fetch failed; backfill aborted. ${detail}`);
+  }
+}
+
 export function eventEndIso(event) {
   const end = event?.end?.dateTime || event?.end?.date;
   if (!end) return null;

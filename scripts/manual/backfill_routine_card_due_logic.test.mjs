@@ -4,9 +4,24 @@ import test from "node:test";
 import {
   dueMatchesExpected,
   eventEndIso,
+  loadCalendarEventsRequired,
   parseCalendarTimeEnd,
   planRoutineDueBackfill,
 } from "./backfill_routine_card_due_logic.mjs";
+
+test("loadCalendarEventsRequired returns events from fetchEvents", () => {
+  const events = [{ id: "ev1", end: { dateTime: "2026-05-27T10:30:00-06:00" } }];
+  assert.deepEqual(loadCalendarEventsRequired(() => events), events);
+});
+
+test("loadCalendarEventsRequired throws when fetchEvents fails", () => {
+  assert.throws(
+    () => loadCalendarEventsRequired(() => {
+      throw new Error("gog: auth expired");
+    }),
+    /Calendar fetch failed; backfill aborted\. gog: auth expired/,
+  );
+});
 
 test("eventEndIso returns ISO string from calendar event end", () => {
   assert.equal(eventEndIso({ end: { dateTime: "2026-05-27T10:30:00-06:00" } }), "2026-05-27T16:30:00.000Z");

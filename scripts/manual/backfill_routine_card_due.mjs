@@ -7,11 +7,14 @@
  *
  * Requires TRELLO_API_KEY/TRELLO_API_TOKEN (or trello_bridge .env).
  * Uses TRELLO_GATEWAY_URL + TRELLO_GATEWAY_KEY for writes when configured.
+ *
+ * Calendar is required: if gog cannot load events, the script exits immediately
+ * (no Trello reads/writes). Fix GOG_BIN / GOG_ACCOUNT / calendar access first.
  */
 import fs from "node:fs";
 
 import { fetchEvents, findAllLinkedEvents } from "../../trello-pipeline/calendar_lookup.mjs";
-import { planRoutineDueBackfill } from "./backfill_routine_card_due_logic.mjs";
+import { loadCalendarEventsRequired, planRoutineDueBackfill } from "./backfill_routine_card_due_logic.mjs";
 
 const bridgeEnv = process.env.TRELLO_BRIDGE_ENV || "/home/node/.openclaw/workspace/trello_bridge/.env";
 if (fs.existsSync(bridgeEnv)) {
@@ -69,26 +72,49 @@ async function setCardDue(cardId, due) {
   return trello("PUT", `cards/${cardId}`, { due });
 }
 
+function fatalCalendarFetch(error) {
+  const payload = {
+    event: "calendar_fetch_failed",
+    fatal: true,
+    calendarId: process.env.GOOGLE_CALENDAR_ID || "adriellpz@gmail.com",
+    gogAccount: process.env.GOG_ACCOUNT || "ubitheai@gmail.com",
+    gogBin: process.env.GOG_BIN || "gog",
+    message: error?.message || String(error),
+  };
+  console.error("FATAL: routine due backfill requires a working calendar fetch.");
+  console.error(JSON.stringify(payload, null, 2));
+  process.exit(1);
+}
+
 async function main() {
+  let allEvents;
+  try {
+    allEvents = loadCalendarEventsRequired(fetchEvents);
+  } catch (error) {
+    fatalCalendarFetch(error);
+    return;
+  }
+
+  console.error(
+    JSON.stringify({
+      event: "calendar_fetch_ok",
+      eventCount: allEvents.length,
+      dryRun,
+    }),
+  );
+
   const lists = await trello(
     "GET",
     `boards/${board}/lists?cards=open&card_fields=id,name,desc,closed,idList,due,shortUrl,shortLink`,
   );
-  const report = { dryRun, updated: [], skipped: [], issues: [] };
-  let allEvents = [];
-
-  try {
-    allEvents = fetchEvents();
-  } catch (error) {
-    report.issues.push({ reason: "calendar_fetch_failed", error: error.message });
-  }
+  const report = { dryRun, calendarEventCount: allEvents.length, updated: [], skipped: [], issues: [] };
 
   for (const list of lists) {
     if (list.name.toLowerCase() !== "routine") continue;
 
     for (const card of list.cards || []) {
       const enriched = { ...card, listName: list.name };
-      const matchedEvents = allEvents.length ? findAllLinkedEvents(enriched, allEvents) : [];
+      const matchedEvents = findAllLinkedEvents(enriched, allEvents);
       const decision = planRoutineDueBackfill(enriched, { matchedEvents });
 
       if (decision.action === "skip") {
