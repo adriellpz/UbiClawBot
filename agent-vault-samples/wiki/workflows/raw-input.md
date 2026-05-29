@@ -27,6 +27,7 @@ After curation, documents live under one of:
 - **Move** (`mv`) each processed drop to its target under `wiki/`; merge content only when the drop explicitly updates an existing page
 - Never delete human-edited wiki pages without a matching drop that says to replace/merge
 - On ambiguity or policy conflict: leave the file in `raw-input/` or move to `raw-input/_failed/` with a one-line reason file or header note
+- **Reclaiming `_failed/`:** operator fixes the drop (path hint, content, or policy) and moves it back to `raw-input/` root for the next curator run; curator does not auto-retry `_failed/` without that move
 - Operator may edit `wiki/` directly in Obsidian; respect those edits on merge
 
 ## Producer rules

@@ -4,4 +4,4 @@ We split the Obsidian document corpus from agent publishing: producers (Ubi, Che
 
 **Considered options:** (1) all agents write `wiki/` directly with path zones; (2) Karpathy-style `sources/` with Ubi as sole maintainer; (3) flat shared wiki with wiki librarian (Ubi only). We chose inbox + trained curator so producers never clobber each other or human-edited pages, while keeping a single RAG-friendly `wiki/`.
 
-**Consequences:** New Cheryl skill and cron; Ubi/Marcos skills and crons must target `raw-input/` not `wiki/`; `CONTEXT.md` glossary defines raw input, wiki curator, and bootstrap; v2 may add filesystem hooks or frontmatter in filenames.
+**Consequences:** New Cheryl skill and cron (~every fifteen minutes in v1 — worst-case filing latency is just under one interval); Ubi/Marcos skills and crons must target `raw-input/` not `wiki/`; `CONTEXT.md` glossary defines raw input, wiki curator, and bootstrap; v2 may add filesystem hooks or frontmatter in filenames.
