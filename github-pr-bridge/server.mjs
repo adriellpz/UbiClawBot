@@ -26,6 +26,7 @@ const RELEVANT_ACTIONS = new Set([
   "synchronize",
   "ready_for_review",
   "review_requested",
+  "closed",
 ]);
 const wakeDeduper = new Map();
 const LIST_CACHE_TTL_MS = Number(
@@ -317,8 +318,17 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
   const dedupeKey = `${pr.number}:${payload.action}:${cardResult.mode}:${githubDeliveryId || "none"}`;
   if (!shouldWake(dedupeKey)) return { skipped: "deduped_recently" };
 
+  const isClosed = payload.action === "closed";
+  const instructionLines = isClosed
+    ? ["PR closed; update Trello with the current GitHub outcome and do not reopen unless Adriel explicitly asks."]
+    : [
+        "Step 0: Style the card (cover, priority tag).",
+        "Step 1: Fill `Original Request`, `Research`, `Peer Review`, `Work completed`.",
+        "Step 2: Leave a GitHub review on this PR, request changes if needed, copy findings into the card Peer Review section, then move the card to Done when complete.",
+        "Adriel is the final merge gate — do not merge.",
+      ];
   const message = [
-    "github_pr_review_requested",
+    isClosed ? "github_pr_closed" : "github_pr_review_requested",
     `action: ${payload.action}`,
     `pr: #${pr.number} ${pr.title}`,
     `url: ${pr.html_url}`,
@@ -326,10 +336,7 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
     `branches: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
     `trello: ${cardResult.mode} ${cardResult.cardUrl}`,
     "",
-    "Step 0: Style the card (cover, priority tag).",
-    "Step 1: Fill `Original Request`, `Research`, `Peer Review`, `Work completed`.",
-    "Step 2: Leave a GitHub review on this PR, request changes if needed, copy findings into the card Peer Review section, then move the card to Done when complete.",
-    "Adriel is the final merge gate — do not merge.",
+    ...instructionLines,
   ].join("\n");
 
   // /hooks/agent expects a message body; keep the payload shape compatible.

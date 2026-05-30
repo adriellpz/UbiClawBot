@@ -201,6 +201,14 @@ function validateCompose(workflows) {
   assert(trelloBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: trello-bridge should use TRELLO_GATEWAY_URL`);
   assert(trelloBridgeEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: trello-bridge should use TRELLO_GATEWAY_KEY`);
   assert(trelloBridgeEnv.TRELLO_PIPELINE_STATE_DIR !== undefined, `${composePath}: trello-bridge should set TRELLO_PIPELINE_STATE_DIR`);
+  assert(
+    trelloBridgeEnv.TRELLO_PIPELINE_ENV_FILE === "/opt/trello-gateway/.env",
+    `${composePath}: trello-bridge should load poll creds from trello-gateway/.env`,
+  );
+  assert(
+    (trelloBridge.volumes ?? []).some((volume) => String(volume).includes("./trello-gateway/.env:/opt/trello-gateway/.env:ro")),
+    `${composePath}: trello-bridge should mount trello-gateway/.env read-only for poll fallback`,
+  );
 
   const githubPrBridge = services["github-pr-bridge"] ?? {};
   assert(githubPrBridge.network_mode === "service:openclaw-gateway", `${composePath}: github-pr-bridge should share gateway network namespace`);
@@ -388,6 +396,15 @@ function validateExampleConfig() {
   pass("config/openclaw.example.json: template safety checks completed");
 }
 
+function validateGithubPrBridge() {
+  const serverPath = "github-pr-bridge/server.mjs";
+  const source = readText(serverPath);
+  assert(source.includes('"closed"'), `${serverPath}: pull_request.closed should be treated as a relevant action`);
+  assert(source.includes('"github_pr_closed"'), `${serverPath}: closed PR hooks should wake OpenClaw with a close-specific event kind`);
+  assert(source.includes("do not reopen unless Adriel explicitly asks"), `${serverPath}: closed PR hook instructions should not ask Ubi to reopen PRs by default`);
+  pass(`${serverPath}: closed PR handling checks completed`);
+}
+
 function optionalToolChecks() {
   const docker = spawnSync("docker", ["compose", "version"], { encoding: "utf8" });
   if (docker.status === 0) {
@@ -421,6 +438,7 @@ validateTrelloPipelineDir();
 validateCaddyfile();
 validateDockerfile();
 validateExampleConfig();
+validateGithubPrBridge();
 optionalToolChecks();
 
 console.log("\nTest gate results");
