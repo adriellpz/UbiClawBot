@@ -188,6 +188,38 @@ jobs:
               done
             }
 
+            # Verify a public Caddy route actually reaches its upstream container,
+            # not a 502/504. github-pr-bridge shares openclaw-gateway's network
+            # namespace (network_mode: service:openclaw-gateway); if the gateway is
+            # recreated without also recreating the bridge, the bridge stays pinned to
+            # the dead namespace, its self-probing healthcheck still reports "healthy",
+            # and Caddy returns 502 on every webhook — silently dropping PR review
+            # cards. Any non-5xx response (e.g. a 401 signature reject) proves the full
+            # Caddy -> docker-proxy -> bridge chain is intact. --resolve pins the SNI
+            # host to loopback so this works without relying on public DNS/hairpin NAT.
+            smoke_public_route() {
+              local host="$1"
+              local pathq="$2"
+              local label="$3"
+              local code
+              for attempt in $(seq 1 30); do
+                code="$(curl -s -o /dev/null -m 8 -w '%{http_code}' \
+                  --resolve "${host}:443:127.0.0.1" \
+                  -X POST "https://${host}${pathq}" \
+                  -H 'Content-Type: application/json' -d '{}' 2>/dev/null || true)"
+                code="${code:-000}"
+                case "$code" in
+                  000|5*) ;;
+                  *) return 0 ;;
+                esac
+                if [ "$attempt" -eq 30 ]; then
+                  echo "smoke failed: ${label} https://${host}${pathq} returned ${code} (upstream unreachable — likely a stale github-pr-bridge netns; recreate it alongside openclaw-gateway)" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+            }
+
             write_deployed_revision() {
               local deployed_at
               deployed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -246,11 +278,21 @@ jobs:
 
             cd "${OPENCLAW_ROOT}"
             docker compose build openclaw-gateway trello-gateway
+            # github-pr-bridge MUST be recreated in the same up as openclaw-gateway:
+            # it shares the gateway's network namespace, so recreating the gateway
+            # alone leaves the bridge pinned to a dead namespace (502 on every webhook).
             docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
 
             smoke_http "http://127.0.0.1:18792/healthz" "trello-gateway"
             smoke_http "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" "github-pr-bridge"
             smoke_http "http://127.0.0.1:18990/health" "trello-bridge"
+
+            # End-to-end public check: confirm Caddy can actually reach github-pr-bridge
+            # (the local /healthz above only proves the bridge answers inside its own
+            # netns, which stays true even when that netns is the dead one). Derive the
+            # site host from the Caddyfile so we don't hardcode it here.
+            PUBLIC_HOST="$(awk '!/^#/ && /\{[ \t]*$/ {sub(/[ \t]*\{[ \t]*$/,""); print; exit}' /home/deploy/openclaw/Caddyfile.droplet)"
+            smoke_public_route "${PUBLIC_HOST:-ai.sonofwolf.org}" "/github-pr" "github-pr public route"
 
             # Trello credentials power the bridge webhook-miss fallback poll and the
             # gateway's API calls. A missing key degrades silently, so fail the deploy.
