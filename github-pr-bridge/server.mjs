@@ -28,7 +28,14 @@ const RELEVANT_ACTIONS = new Set([
   "review_requested",
 ]);
 const wakeDeduper = new Map();
+const LIST_CACHE_TTL_MS = Number(
+  process.env.TRELLO_LIST_CACHE_TTL_MS ?? 5 * 60 * 1000,
+);
 let listNameByIdCache = null;
+let listNameByIdCacheTs = 0;
+// Coalesces concurrent webhook deliveries for the same PR so the check-then-create
+// dedup cannot race two cards into existence (e.g. multiple review_requested events).
+const inFlightUpserts = new Map();
 const HAS_TRELLO_GATEWAY = Boolean(TRELLO_GATEWAY_URL && TRELLO_GATEWAY_KEY);
 
 function sendJson(res, statusCode, payload) {
@@ -154,9 +161,11 @@ async function getBoardLists({ includeClosed = false } = {}) {
 
 async function getBoardListNameById() {
   if (!HAS_TRELLO_GATEWAY && !TRELLO_BOARD_ID) return new Map();
-  if (listNameByIdCache) return listNameByIdCache;
+  const now = Date.now();
+  if (listNameByIdCache && now - listNameByIdCacheTs < LIST_CACHE_TTL_MS) return listNameByIdCache;
   const lists = await getBoardLists({ includeClosed: true });
   listNameByIdCache = new Map((Array.isArray(lists) ? lists : []).map((list) => [list.id, list.name || ""]));
+  listNameByIdCacheTs = now;
   return listNameByIdCache;
 }
 
@@ -228,7 +237,40 @@ async function addCardComment(cardId, text) {
   });
 }
 
+function buildUpdateComment(payload) {
+  const pr = payload.pull_request;
+  return [
+    `GitHub update: \`${payload.action}\``,
+    `PR: ${pr.html_url}`,
+    `Head/Base: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
+    `Author: ${pr.user?.login || "unknown"}`,
+  ].join("\n");
+}
+
 async function upsertReviewCard(payload) {
+  const prNumber = payload.pull_request.number;
+
+  // If another delivery for this PR is mid-flight, wait for it and comment on the
+  // card it produced instead of racing a duplicate through the dedup check.
+  const inFlight = inFlightUpserts.get(prNumber);
+  if (inFlight) {
+    const prior = await inFlight.catch(() => null);
+    if (prior?.cardId) {
+      await addCardComment(prior.cardId, buildUpdateComment(payload));
+      return { mode: "updated", cardId: prior.cardId, cardUrl: prior.cardUrl };
+    }
+  }
+
+  const promise = doUpsertReviewCard(payload);
+  inFlightUpserts.set(prNumber, promise);
+  try {
+    return await promise;
+  } finally {
+    if (inFlightUpserts.get(prNumber) === promise) inFlightUpserts.delete(prNumber);
+  }
+}
+
+async function doUpsertReviewCard(payload) {
   const pr = payload.pull_request;
   const prNumber = pr.number;
   const priority = priorityForEvent(payload.action, pr);
@@ -237,13 +279,7 @@ async function upsertReviewCard(payload) {
   const existing = await findExistingOpenCard(pr);
 
   if (existing) {
-    const comment = [
-      `GitHub update: \`${payload.action}\``,
-      `PR: ${pr.html_url}`,
-      `Head/Base: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
-      `Author: ${pr.user?.login || "unknown"}`,
-    ].join("\n");
-    await addCardComment(existing.id, comment);
+    await addCardComment(existing.id, buildUpdateComment(payload));
     return { mode: "updated", cardId: existing.id, cardUrl: existing.url };
   }
 

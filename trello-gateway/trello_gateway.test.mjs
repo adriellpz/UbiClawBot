@@ -184,6 +184,16 @@ function createStubTrelloServer() {
       return;
     }
 
+    if (req.method === "GET" && path === "/1/search") {
+      const fields = String(params.card_fields || "").split(",").map((field) => field.trim());
+      const matched = [...cards.values()].filter((card) => !params.query || true);
+      const projected = matched.map((card) =>
+        Object.fromEntries(fields.filter((field) => field).map((field) => [field, card[field]])),
+      );
+      send(200, { cards: projected });
+      return;
+    }
+
     if (req.method === "GET" && path.startsWith("/1/cards/") && path.endsWith("/checklists")) {
       const cardId = path.split("/")[3];
       send(200, ensureChecklists(cardId));
@@ -625,6 +635,38 @@ test("update can repair a drifted card by replacing the body with a compliant de
 
   assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
   assert.equal(response.json.updated, true);
+});
+
+test("search requests the closed field so callers can skip archived cards", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const response = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "search",
+    params: { query: "/pull/30" },
+  });
+
+  assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
+
+  const searchCall = trello.callLog.find((entry) => entry.method === "GET" && entry.path === "/1/search");
+  assert.ok(searchCall, "expected the gateway to call Trello /search");
+  const fields = new URLSearchParams(searchCall.search).get("card_fields") || "";
+  assert.ok(
+    fields.split(",").map((field) => field.trim()).includes("closed"),
+    `expected card_fields to include "closed", got: ${fields}`,
+  );
+
+  // The projected card must carry the closed flag through to the response.
+  assert.ok(Array.isArray(response.json.cards));
+  for (const card of response.json.cards) {
+    assert.ok("closed" in card, `expected returned card to include closed flag: ${JSON.stringify(card)}`);
+  }
 });
 
 test("update allows description-only repair on an empty intake card", async (t) => {
