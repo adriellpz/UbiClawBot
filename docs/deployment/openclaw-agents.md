@@ -41,6 +41,6 @@ Cheryl’s **wiki inbox cron** is an AI agent turn (`agentTurn` in `jobs.json`):
 
 ## Changing a model
 
-1. Edit `/root/openclaw/data/config/openclaw.json` on the droplet.  
-2. Restart `openclaw-gateway` (and any service that caches agent config).  
-3. Update this page and [`config/openclaw.example.json`](../../config/openclaw.example.json) if the change is intentional long-term.
+1. Edit `config/live/openclaw.json` in git (or refresh from droplet — see [`droplet-backup.md`](./droplet-backup.md)).  
+2. Merge to `main`; deploy runs `scripts/sync-live-config.sh` (preserves droplet secrets).  
+3. Or on droplet only: edit `/root/openclaw/data/config/openclaw.json`, then refresh `config/live/` before the next commit.

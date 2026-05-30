@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "98b64f6f-b82e-4ed1-ae8a-852ec81d5290",
+      "name": "Morning attention sweep",
+      "description": "Daily 6:30 AM MT: surface P1 attention, fix priority inversion by moving flexible P3 then P1 work to Reschedule (no direct calendar edits), goals check. Handlers place slots.",
+      "enabled": true,
+      "createdAtMs": 1777867012006,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 6 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skills: ubi_trello_ops, ubi_calendar_scheduling.\n\nRead first:\n- /home/node/.openclaw/agent-runtime/ubi/scripts/USER.md (core goals)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-06-2026/calendar_priority_audit_2026-05-06.md (protected blocks + inversion rules)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-23-2026/morning_attention_sweep_spec.md (this job)\n\nMorning attention sweep — three outcomes:\n\n1) PRIORITY ATTENTION\n- Surface P1 (then P2) items Adriel should see today or tomorrow: Backlog, Reschedule, Scheduled without a sensible near-term calendar block, overdue Scheduled (gateway may have commented), Adriel Focus awaiting decision.\n- No full-board cleanup; only priority-relevant cards.\n\n2) CALENDAR vs PRIORITY (next 7 days) — TRELLO ONLY, NO CALENDAR EDITS\n- You may READ Google Calendar (gog) and Trello (gateway) to detect inversion: flexible P3 work blocks on near-term days while P1 work lacks a good block this week.\n- Priority from card titles (P1/P2/P3) on Trello-linked events.\n- Do not create, update, move, or delete Google Calendar events in this job. Never duplicate events.\n- Safe fix (only allowed action): use the Trello gateway to move cards to the Reschedule list in this order:\n  (a) All eligible flexible P3 work on Scheduled (or blocking near-term time) to Reschedule first.\n  (b) Then P1 work that needs a slot to Reschedule.\n- handle_reschedule.mjs (queue worker) places calendar slots deterministically (P3 about +5 days, P1 about +1 day). Do not invent manual times.\n\nNever move to Reschedule for rebalance (protected — calendar must stay):\n- Any card on the Routine list\n- Work block, shared/family calendar visibility, dog walk, sciatica, gym/Planet Fitness/swim, OT/accountability, Sunday reset, drive buffers, therapy, antacid, date/relationship time, or titles matching those routines\n- Adriel Focus (unless Adriel explicitly asked for that exact move)\n\nIf unsure whether a card is flexible work vs protected routine, leave it alone.\n\nOptional: one Trello comment on a summary/backlog card listing what you moved (Trello only; no Telegram for routine moves).\n\n3) GOALS\n- For each USER.md core goal, briefly: on track / stalled / no time this week. If stalled, name the smallest next Trello action (not a calendar edit).\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nFor calendar READS only (no writes):\nexport GOG_KEYRING_PASSWORD=\"$(cat /home/node/.openclaw/credentials/gog-keyring-password)\"\nexport PATH=\"/home/node/.openclaw/tools/gogcli:$PATH\"\n\nSafety: no applications submitted, external messages, spend, PII exposure, production/credential changes, Browserbase, or Adriel Focus moves unless Adriel explicitly asked.\n\nTelegram only if:\n(a) P1 work still has no viable path after you moved cards to Reschedule (handlers may still be running — note if queue may be behind),\n(b) a core goal is stalled with no week plan,\n(c) a real decision is needed, or\n(d) you could not use gateway/Trello safely.\n\nOtherwise reply exactly NO_REPLY.",
+        "timeoutSeconds": 900
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "last"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "4e624bd1-6b71-4922-8d22-3fa98bb002b5",
+      "name": "Marcos nightly repo maintenance",
+      "description": "Nightly Marcos repo-maintenance agent workflow: safe checks, research, and dated reports; Ubi handles Trello follow-up only for blockers, decisions, failures, or new action items.",
+      "enabled": true,
+      "createdAtMs": 1778099384946,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 2 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: marcos_nightly_maintenance.\n\nRun the full nightly maintenance workflow: execute the baseline check script, do a security/maintenance research pass against primary sources, deduplicate findings, and write the dated report.\n\nTelegram only for meaningful findings, blockers, or decisions; otherwise reply NO_REPLY.",
+        "toolsAllow": [
+          "exec",
+          "read",
+          "write",
+          "edit",
+          "web_search",
+          "web_fetch"
+        ],
+        "timeoutSeconds": 900,
+        "model": "opencode-go/deepseek-v4-pro",
+        "lightContext": true
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "agentId": "marcos",
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "3a431fbd-797b-4490-a176-341fb38588c6",
+      "name": "Nightly job search",
+      "description": "Nightly 4:09 AM MT: search QA/junior roles, write report/packages, intake Trello cards via job_application_review_card_intake.mjs (Backlog template → Reschedule → P2 calendar).",
+      "enabled": true,
+      "createdAtMs": 1778558884651,
+      "schedule": {
+        "kind": "cron",
+        "expr": "9 4 * * *",
+        "tz": "America/Denver",
+        "staggerMs": 0
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skills: ubi_nightly_job_search, ubi_job_applications, ubi_trello_ops.\n\nRead: /home/node/.openclaw/agent-runtime/ubi/scripts/skills/ubi-nightly-job-search/SKILL.md\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nNightly job search — one agent run (Option B: no webhook; you complete Trello intake in this run).\n\n## Phase 1 — Search and packages\n\n1. Review prior reports/shortlists under Docs/Reports/ (especially job_search_shortlist.md and any nightly_job_search_report_*.md) to avoid stale/duplicate leads.\n2. Find fresh QA/junior developer roles: Denver/Boulder/Colorado hybrid or Remote US, target ~$65k+ (see ubi_job_applications).\n3. Write Docs/Reports/YYYY-MM-DD/nightly_job_search_report_YYYY-MM-DD.md with sources, fit scores, rejects.\n4. For the best 1–3 live matches, write packages under job_applications/packages/YYYY-MM-DD/ — status: Ready for Adriel review, not submitted.\n\n## Phase 2 — Trello per package (gateway + intake script)\n\nFor each package, do **not** use trello_create_card.mjs (legacy direct API). Run:\n\nnode /home/node/.openclaw/agent-runtime/ubi/scripts/scripts/trello/active/job_application_review_card_intake.mjs \\\n  --company \"Company Name\" \\\n  --role \"Role Title\" \\\n  --apply-url \"https://...\" \\\n  --package-path \"/home/node/.openclaw/agent-runtime/ubi/scripts/job_applications/packages/YYYY-MM-DD/file.md\" \\\n  --report-path \"/home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/YYYY-MM-DD/nightly_job_search_report_YYYY-MM-DD.md\" \\\n  --fit-score 8 \\\n  --research \"Brief fit summary from your search.\"\n\nThat script applies the **same Backlog intake template** as the bridge hook (adapted for job applications):\n\n- Original Request → Research → Next steps → Peer Review (N/A for Marcos) → Work completed\n- Styles card (cover, priority label, assign Adriel)\n- Sets Time Needed (default 45 min)\n- Comments @adriellopez1 with links\n- Moves to **Reschedule** → queue worker runs handle_reschedule.mjs → **P2** calendar block → Scheduled\n\nAgent-created cards do **not** wake a second Ubi session; this script replaces that hook path.\n\n## Safety\n\nNever submit applications, pay, create accounts, message recruiters, use Browserbase, or edit calendar directly in this job.\n\nIf no good roles: report only, reply exactly NO_REPLY unless a real blocker or decision.\n\nIf script/Trello fails: comment blocker on an existing job-search card or Telegram briefly, then report the error.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "exec",
+          "read",
+          "write",
+          "web_search",
+          "web_fetch",
+          "canvas"
+        ]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "245f6438-d5d5-4dd0-9d0b-60d6d8c91b6a",
+      "name": "Nightly ensure routines",
+      "description": "4:30 AM MT: materialize 14 days of R - routine cards + calendar events (host cron is primary; this is backup visibility).",
+      "enabled": false,
+      "createdAtMs": 1779558466649,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 4 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Host cron runs ensure_routines at 4:30 AM MT via /root/openclaw/bin/run-workspace-node.sh. Reply NO_REPLY unless /var/log/openclaw-ensure-routines.log shows errors from the last run.",
+        "timeoutSeconds": 60,
+        "toolsAllow": [
+          "read"
+        ]
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    },
+    {
+      "id": "d057b55f-8184-4cd9-9f9b-bf26446ec860",
+      "name": "Weekly routine 1:1 audit",
+      "description": "Sunday 5 AM MT: routine list 1:1 audit (host cron primary).",
+      "enabled": false,
+      "createdAtMs": 1779558466650,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 5 * * 0",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Host cron runs trello_routine_1to1_audit Sundays 5 AM MT. Check /var/log/openclaw-routine-audit.log for issueCount. Reply NO_REPLY if clean.",
+        "timeoutSeconds": 60,
+        "toolsAllow": [
+          "read"
+        ]
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    },
+    {
+      "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
+      "agentId": "scheduler",
+      "name": "Cheryl vault inbox curator",
+      "description": "Every 15 minutes, Cheryl processes agent-vault/raw-input/ via cheryl-vault-inbox skill.",
+      "enabled": true,
+      "createdAtMs": 1780076558866,
+      "schedule": {
+        "kind": "cron",
+        "expr": "*/15 * * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Run the cheryl-vault-inbox skill.\n\nInbox: /home/node/.openclaw/agent-vault/raw-input/\nFiling rules: /home/node/.openclaw/agent-vault/wiki/workflows/raw-input.md\n\nProcess all top-level inbox files (skip raw-input/_failed/). Move or merge each drop into the correct path under /home/node/.openclaw/agent-vault/wiki/. If the inbox is empty, reply exactly NO_REPLY.",
+        "timeoutSeconds": 300
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "last"
+      }
+    }
+  ]
+}

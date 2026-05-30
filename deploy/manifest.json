@@ -9,6 +9,11 @@
     "trello-pipeline/**",
     "trello-gateway/**",
     "scripts/manual/**",
+    "scripts/backup-droplet.sh",
+    "scripts/sync-live-config.sh",
+    "scripts/sync-live-config.mjs",
+    "scripts/sanitize-live-config.mjs",
+    "config/live/**",
     "deploy/**",
     "Caddyfile.droplet",
     ".github/workflows/deploy-droplet.yml"
@@ -74,6 +79,24 @@
         "mkdir -p /home/deploy/openclaw/deploy",
         "cp /home/deploy/openclaw/.deploy-tmp-deploy/deploy/manifest.json"
       ]
+    },
+    {
+      "id": "live-config",
+      "scpSource": "config/live/**",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/config/live",
+        "cp -r /home/deploy/openclaw/.deploy-tmp-live-config/config/live/. /home/deploy/openclaw/config/live/"
+      ]
+    },
+    {
+      "id": "ops-scripts",
+      "scpSource": "scripts/backup-droplet.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs",
+      "installMarkers": [
+        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/backup-droplet.sh",
+        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.sh",
+        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs",
+        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs"
+      ]
     }
   ],
   "gatewayFiles": [
@@ -102,7 +125,9 @@
       "trello-gateway/trello_gateway.mjs",
       "github-pr-bridge/server.mjs",
       "docker-compose.yml",
-      "deploy/manifest.json"
+      "deploy/manifest.json",
+      "config/live/openclaw.json",
+      "scripts/sync-live-config.sh"
     ],
     "httpEndpoints": [
       {

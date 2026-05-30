@@ -50,7 +50,7 @@ After vault migration on the droplet, set in `/home/deploy/openclaw/.env` (not o
 
 Point each agent’s `workspace` in live `openclaw.json` at `/home/node/.openclaw/agent-vault/{ubi,cheryl,marcos}`. Legacy `workspace` trees on the host are renamed to `*.old` for rollback; compose no longer mounts `/home/node/.openclaw/workspace`.
 
-**Config path:** live `openclaw.json` is under **`/root/openclaw/data/config/`** (`OPENCLAW_CONFIG_DIR`), not `/home/deploy/openclaw/data/config/`. Agent models and Cheryl wiki-curator cron: [`openclaw-agents.md`](./openclaw-agents.md).
+See [`openclaw-agents.md`](./openclaw-agents.md) for agent models and cron. Backup/snapshot workflow: [`droplet-backup.md`](./droplet-backup.md).
 
 Live droplet spot-check record: [`live-verification.md`](./live-verification.md).
 
