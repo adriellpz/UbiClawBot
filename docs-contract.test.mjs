@@ -219,5 +219,5 @@ test("CONTEXT.md maintainer glossary batch 1", () => {
 test("CONTEXT.md maintainer glossary batch 2", () => {
   const ctx = readRepoText("CONTEXT.md");
   assert.match(ctx, /\*\*wiki maintainer\*\*|\*\*wiki curator\*\*/i);
-  assert.match(ctx, /sources\/ingested\.log/i);
+  assert.match(ctx, /wiki\/sources\/ingested\.log/i);
 });
