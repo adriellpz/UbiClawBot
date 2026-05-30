@@ -114,7 +114,10 @@ function validateDeployWorkflow(workflows) {
   assert(workflow.name === "Deploy to Droplet", `${workflowPath}: expected workflow name to stay explicit`);
   assert(workflow.on?.workflow_dispatch !== undefined, `${workflowPath}: expected manual workflow_dispatch trigger`);
   assert(Array.isArray(workflow.on?.schedule) && workflow.on.schedule.length > 0, `${workflowPath}: expected nightly schedule trigger`);
-  assert(Array.isArray(workflow.on?.push?.branches) && workflow.on.push.branches.includes("main"), `${workflowPath}: deploy push trigger must be limited to main`);
+  assert(
+    workflow.on?.push === undefined,
+    `${workflowPath}: merge deploy is paused — use workflow_dispatch until push trigger is restored`,
+  );
   assert(!workflow.on?.pull_request, `${workflowPath}: deploy workflow must not run on pull_request`);
   assert(workflow.concurrency?.group === "deploy-droplet-main", `${workflowPath}: expected deploy concurrency group`);
 

@@ -1,29 +1,9 @@
 name: Deploy to Droplet
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "workspace/**"
-      - "github-pr-bridge/**"
-      - "gmail-hook-bridge/**"
-      - "gog-canary-bridge/**"
-      - "trello-pipeline/**"
-      - "trello-routines/**"
-      - "trello-gateway/**"
-      - "shared/**"
-      - "scripts/manual/**"
-      - "scripts/backup-droplet.sh"
-      - "scripts/deploy-droplet-remote.sh"
-      - "scripts/monitor-github-pr-bridge.sh"
-      - "scripts/sync-live-config.sh"
-      - "scripts/sync-live-config.mjs"
-      - "scripts/sanitize-live-config.mjs"
-      - "config/live/**"
-      - "deploy/**"
-      - "runtime/cheryl/**"
-      - "Caddyfile.droplet"
-      - ".github/workflows/deploy-droplet.yml"
+  # Push-to-main deploy paused — restarts kill in-flight Marcos PR hook sessions.
+  # Deploy manually: Actions → Deploy to Droplet → Run workflow.
+  # To re-enable merge deploys, restore the push block below (see git history).
   schedule:
     # Nightly at 08:00 UTC.
     - cron: "0 8 * * *"
