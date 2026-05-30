@@ -183,6 +183,31 @@
         "mode": "none",
         "channel": "last"
       }
+    },
+    {
+      "id": "a3c8f1e2-9b4d-4a7c-8e6f-1d2c3b4a5e6f",
+      "agentId": "scheduler",
+      "name": "Cheryl wiki contradiction review",
+      "description": "Daily 08:00 MT: list open wiki/contradictions/ records; Telegram when count > 0; NO_REPLY when empty.",
+      "enabled": true,
+      "createdAtMs": 1780076558867,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 8 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Daily **contradiction review** — run cheryl-vault-inbox skill.\n\n1. List open records under `/home/node/.openclaw/agent-vault/wiki/contradictions/` (flat `*.md` files).\n2. For each record: read body (inline `> **Contradiction:**` callout + findings) and affected pages linked in the record.\n3. If count is zero → reply exactly **NO_REPLY**.\n4. If count > 0 → send Telegram summary listing each record path + one-line finding + affected wikilinks. Do not resolve automatically.\n5. When operator directs resolution in a follow-up: update affected pages, remove inline callouts, delete the contradiction record, append wiki log chronicle line (`lint | contradiction resolved`).\n\nFollow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` contradiction review section.",
+        "timeoutSeconds": 300
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      }
     }
   ]
 }

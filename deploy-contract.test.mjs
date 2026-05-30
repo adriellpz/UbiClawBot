@@ -6,6 +6,7 @@ import {
   assertDeployWorkflowMatchesManifest,
   DEPLOY_WORKFLOW_PATH,
   getDeploySshScript,
+  getDeploySshWrapperScript,
   getDeployWorkflowYaml,
   GITHUB_PR_BRIDGE_HEALTH_URL,
   loadDeployManifest,
@@ -26,6 +27,11 @@ test("deploy workflow matches deploy/manifest.json", () => {
 test("deploy job targets GitHub production environment", () => {
   const workflow = getDeployWorkflowYaml();
   assert.equal(workflow.jobs?.deploy?.environment, "production");
+});
+
+test("deploy ssh wrapper invokes remote deploy script", () => {
+  const wrapper = getDeploySshWrapperScript();
+  assert.match(wrapper, /deploy-droplet-remote\.sh/);
 });
 
 test("deploy ssh script smoke-checks HTTP endpoints after compose up", () => {

@@ -6,6 +6,7 @@ import { parseDocument } from "yaml";
 import { loadDeployManifest } from "./deploy/manifest.mjs";
 
 export const DEPLOY_WORKFLOW_PATH = ".github/workflows/deploy-droplet.yml";
+export const DEPLOY_REMOTE_SCRIPT_PATH = "scripts/deploy-droplet-remote.sh";
 export const GITHUB_PR_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz";
 
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -23,6 +24,10 @@ export function getDeployWorkflowYaml() {
 }
 
 export function getDeploySshScript() {
+  return readFileSync(path.join(repoRoot, DEPLOY_REMOTE_SCRIPT_PATH), "utf8");
+}
+
+export function getDeploySshWrapperScript() {
   const workflow = getDeployWorkflowYaml();
   const steps = workflow?.jobs?.deploy?.steps ?? [];
   const sshStep = steps.find((step) => step.uses === "appleboy/ssh-action@v1.0.3");
