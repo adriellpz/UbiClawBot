@@ -8,6 +8,8 @@ import { loadDeployManifest } from "./deploy/manifest.mjs";
 export const DEPLOY_WORKFLOW_PATH = ".github/workflows/deploy-droplet.yml";
 export const DEPLOY_REMOTE_SCRIPT_PATH = "scripts/deploy-droplet-remote.sh";
 export const GITHUB_PR_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz";
+export const GMAIL_HOOK_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz";
+export const GOG_CANARY_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz";
 
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 

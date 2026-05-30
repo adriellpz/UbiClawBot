@@ -5,6 +5,8 @@
   "pathFilters": [
     "workspace/**",
     "github-pr-bridge/**",
+    "gmail-hook-bridge/**",
+    "gog-canary-bridge/**",
     "trello-routines/**",
     "trello-pipeline/**",
     "trello-gateway/**",
@@ -42,6 +44,22 @@
       "installMarkers": [
         "mkdir -p \"${OPENCLAW_ROOT}/github-pr-bridge\"",
         ".deploy-tmp-github-pr-bridge/github-pr-bridge/"
+      ]
+    },
+    {
+      "id": "gmail-hook-bridge",
+      "scpSource": "gmail-hook-bridge/*",
+      "installMarkers": [
+        "mkdir -p \"${OPENCLAW_ROOT}/gmail-hook-bridge\"",
+        ".deploy-tmp-gmail-hook-bridge/gmail-hook-bridge/"
+      ]
+    },
+    {
+      "id": "gog-canary-bridge",
+      "scpSource": "gog-canary-bridge/*",
+      "installMarkers": [
+        "mkdir -p \"${OPENCLAW_ROOT}/gog-canary-bridge\"",
+        ".deploy-tmp-gog-canary-bridge/gog-canary-bridge/"
       ]
     },
     {
@@ -134,6 +152,8 @@
     "openclaw-cli",
     "trello-bridge",
     "github-pr-bridge",
+    "gmail-hook-bridge",
+    "gog-canary-bridge",
     "trello-gateway",
     "trello-queue-worker",
     "trello-routines"
@@ -145,8 +165,12 @@
       "trello-routines/ensure_routines.mjs",
       "trello-pipeline/server.mjs",
       "shared/pr_review_card.mjs",
+      "shared/email_hook_card.mjs",
+      "shared/gog_canary_card.mjs",
       "trello-gateway/trello_gateway.mjs",
       "github-pr-bridge/server.mjs",
+      "gmail-hook-bridge/server.mjs",
+      "gog-canary-bridge/server.mjs",
       "docker-compose.yml",
       "deploy/manifest.json",
       "config/live/openclaw.json",
@@ -163,6 +187,14 @@
       {
         "id": "github-pr-bridge",
         "url": "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"
+      },
+      {
+        "id": "gmail-hook-bridge",
+        "url": "http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz"
+      },
+      {
+        "id": "gog-canary-bridge",
+        "url": "http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz"
       },
       {
         "id": "trello-bridge",

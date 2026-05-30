@@ -95,8 +95,6 @@ function buildCardDescription(payload) {
     `Branches: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
     `Draft: ${pr.draft ? "yes" : "no"}`,
     `Review requested: ${requestedReviewer}`,
-    "Reminder: Ubi should submit a real GitHub review on this PR.",
-    "Adriel remains the final merge gate.",
     "",
     "Peer Review:",
     "",
@@ -328,7 +326,9 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
     `branches: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
     `trello: ${cardResult.mode} ${cardResult.cardUrl}`,
     "",
-    "Leave a GitHub review on this PR, copy findings into the card Peer Review section, then move the card to Done when complete.",
+    "Step 0: Style the card (cover, priority tag).",
+    "Step 1: Fill `Original Request`, `Research`, `Peer Review`, `Work completed`.",
+    "Step 2: Leave a GitHub review on this PR, request changes if needed, copy findings into the card Peer Review section, then move the card to Done when complete.",
     "Adriel is the final merge gate — do not merge.",
   ].join("\n");
 

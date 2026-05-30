@@ -9,6 +9,8 @@ import {
   getDeploySshWrapperScript,
   getDeployWorkflowYaml,
   GITHUB_PR_BRIDGE_HEALTH_URL,
+  GMAIL_HOOK_BRIDGE_HEALTH_URL,
+  GOG_CANARY_BRIDGE_HEALTH_URL,
   loadDeployManifest,
 } from "./deploy-contract.helpers.mjs";
 
@@ -38,6 +40,8 @@ test("deploy ssh script smoke-checks HTTP endpoints after compose up", () => {
   const script = getDeploySshScript();
 
   assert(script.includes(GITHUB_PR_BRIDGE_HEALTH_URL));
+  assert(script.includes(GMAIL_HOOK_BRIDGE_HEALTH_URL));
+  assert(script.includes(GOG_CANARY_BRIDGE_HEALTH_URL));
   assert(script.includes('smoke_http "http://127.0.0.1:18792/healthz"'));
   assert(script.includes('smoke_http "http://127.0.0.1:18990/health"'));
 

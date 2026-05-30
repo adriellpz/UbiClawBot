@@ -6,7 +6,7 @@ Tracked copy of production **structure** — not secrets. Real tokens stay on th
 |------|----------------------|
 | `openclaw.json` | `/root/openclaw/data/config/openclaw.json` (secrets preserved) |
 | `cron/jobs.json` | `/root/openclaw/data/config/cron/jobs.json` (job `state` preserved) |
-| `hooks/transforms/*.mjs` | `/root/openclaw/data/config/hooks/transforms/` |
+| `hooks/transforms/*.mjs` | `/root/openclaw/data/config/hooks/transforms/` (legacy; Gmail filter now lives in `gmail-hook-bridge`) |
 
 ## Refresh from droplet
 
@@ -21,6 +21,17 @@ ssh myserver 'cat /root/openclaw/data/config/cron/jobs.json' \
 ```
 
 Commit, merge to `main`, deploy applies via `scripts/sync-live-config.sh`.
+
+## Hook bridges (Gmail + GOG auth canary)
+
+Gmail and GOG auth failure intake no longer use `hooks.mappings` agent routes. gog posts to bridge URLs configured in `hooks.gmail.hookUrl`:
+
+| Bridge | Port | Path | Role |
+|--------|------|------|------|
+| `gmail-hook-bridge` | 19092 | `/hooks/gmail` | Adriel-only sender filter → Trello card → Ubi wake |
+| `gog-canary-bridge` | 19093 | `/healthz` | Periodic `gog auth list`; on failure → Trello card → Ubi wake |
+
+Keep `"mappings": []` for Gmail. Do not re-add inline gmail agent mappings or transforms.
 
 ## Secrets live only in the droplet `.env` — do not strip them
 

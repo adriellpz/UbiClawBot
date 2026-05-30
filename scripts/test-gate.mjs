@@ -136,12 +136,16 @@ function validateDeployWorkflow(workflows) {
   assert(typeof script === "string" && script.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
   assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
   assert(typeof script === "string" && script.includes("http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"), `${workflowPath}: deploy script should verify github-pr-bridge local health after restart`);
+  assert(typeof script === "string" && script.includes("http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz"), `${workflowPath}: deploy script should verify gmail-hook-bridge local health after restart`);
+  assert(typeof script === "string" && script.includes("http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz"), `${workflowPath}: deploy script should verify gog-canary-bridge local health after restart`);
 
   if (typeof script === "string") {
     assert(script.includes("trello_card_contract.mjs"), `${workflowPath}: deploy script should copy trello_card_contract.mjs with the gateway artifacts`);
     const composeUpLine = script.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
     assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
     assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
+    assert(composeUpLine?.includes("gmail-hook-bridge"), `${workflowPath}: docker compose up should restart gmail-hook-bridge`);
+    assert(composeUpLine?.includes("gog-canary-bridge"), `${workflowPath}: docker compose up should restart gog-canary-bridge`);
     assert(composeUpLine?.includes("trello-routines"), `${workflowPath}: docker compose up should restart trello-routines`);
     assert(composeUpLine?.includes("trello-gateway"), `${workflowPath}: docker compose up should restart trello-gateway`);
     assert(composeUpLine?.includes("trello-queue-worker"), `${workflowPath}: docker compose up should restart trello-queue-worker`);
@@ -159,7 +163,7 @@ function validateCompose(workflows) {
   if (!compose) return;
 
   const services = compose.services ?? {};
-  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge", "trello-gateway", "trello-queue-worker", "trello-routines"]) {
+  for (const service of ["openclaw-gateway", "openclaw-cli", "trello-bridge", "github-pr-bridge", "gmail-hook-bridge", "gog-canary-bridge", "trello-gateway", "trello-queue-worker", "trello-routines"]) {
     assert(services[service], `${composePath}: expected service ${service}`);
   }
 
@@ -209,6 +213,31 @@ function validateCompose(workflows) {
   assert(githubBridgeEnv.TRELLO_API_KEY === undefined, `${composePath}: github-pr-bridge should not receive raw TRELLO_API_KEY`);
   assert(githubBridgeEnv.TRELLO_API_TOKEN === undefined, `${composePath}: github-pr-bridge should not receive raw TRELLO_API_TOKEN`);
   assert(githubPrBridge.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: github-pr-bridge should wait for trello-gateway health`);
+
+  const gmailHookBridge = services["gmail-hook-bridge"] ?? {};
+  assert(gmailHookBridge.network_mode === "service:openclaw-gateway", `${composePath}: gmail-hook-bridge should share gateway network namespace`);
+  assert(gmailHookBridge.working_dir === "/opt/gmail-hook-bridge", `${composePath}: gmail-hook-bridge working_dir should stay explicit`);
+  assert(gmailHookBridge.command?.includes("server.mjs"), `${composePath}: gmail-hook-bridge should run server.mjs`);
+  assert(gmailHookBridge.healthcheck?.test, `${composePath}: gmail-hook-bridge should keep a healthcheck`);
+  const gmailBridgeHealth = JSON.stringify(gmailHookBridge.healthcheck?.test ?? []);
+  assert(gmailBridgeHealth.includes("127.0.0.1:19092/healthz"), `${composePath}: gmail-hook-bridge healthcheck should probe port 19092 /healthz`);
+  const gmailBridgeEnv = gmailHookBridge.environment ?? {};
+  assert(gmailBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: gmail-hook-bridge should use TRELLO_GATEWAY_URL`);
+  assert(gmailBridgeEnv.OPENCLAW_HOOK_AGENT_ID !== undefined, `${composePath}: gmail-hook-bridge should set OPENCLAW_HOOK_AGENT_ID`);
+  assert(gmailHookBridge.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: gmail-hook-bridge should wait for trello-gateway health`);
+
+  const gogCanaryBridge = services["gog-canary-bridge"] ?? {};
+  assert(gogCanaryBridge.network_mode === "service:openclaw-gateway", `${composePath}: gog-canary-bridge should share gateway network namespace`);
+  assert(gogCanaryBridge.working_dir === "/opt/gog-canary-bridge", `${composePath}: gog-canary-bridge working_dir should stay explicit`);
+  assert(gogCanaryBridge.command?.includes("server.mjs"), `${composePath}: gog-canary-bridge should run server.mjs`);
+  assert(gogCanaryBridge.healthcheck?.test, `${composePath}: gog-canary-bridge should keep a healthcheck`);
+  const gogCanaryHealth = JSON.stringify(gogCanaryBridge.healthcheck?.test ?? []);
+  assert(gogCanaryHealth.includes("127.0.0.1:19093/healthz"), `${composePath}: gog-canary-bridge healthcheck should probe port 19093 /healthz`);
+  const gogCanaryEnv = gogCanaryBridge.environment ?? {};
+  assert(gogCanaryEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: gog-canary-bridge should use TRELLO_GATEWAY_URL`);
+  assert(gogCanaryEnv.GOG_KEYRING_PASSWORD !== undefined, `${composePath}: gog-canary-bridge should receive GOG_KEYRING_PASSWORD`);
+  assert(gogCanaryEnv.OPENCLAW_HOOK_AGENT_ID !== undefined, `${composePath}: gog-canary-bridge should set OPENCLAW_HOOK_AGENT_ID`);
+  assert(gogCanaryBridge.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: gog-canary-bridge should wait for trello-gateway health`);
 
   const trelloGateway = services["trello-gateway"] ?? {};
   assert(trelloGateway.build?.context === "./trello-gateway", `${composePath}: trello-gateway should build from ./trello-gateway`);

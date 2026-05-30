@@ -93,6 +93,10 @@ cp "${OPENCLAW_ROOT}/.deploy-tmp/docker-compose.droplet.yml" "${OPENCLAW_ROOT}/d
 cp "${OPENCLAW_ROOT}/.deploy-tmp-root/Caddyfile.droplet" "${OPENCLAW_ROOT}/Caddyfile.droplet"
 mkdir -p "${OPENCLAW_ROOT}/github-pr-bridge"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-github-pr-bridge/github-pr-bridge/"* "${OPENCLAW_ROOT}/github-pr-bridge/"
+mkdir -p "${OPENCLAW_ROOT}/gmail-hook-bridge"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-gmail-hook-bridge/gmail-hook-bridge/"* "${OPENCLAW_ROOT}/gmail-hook-bridge/"
+mkdir -p "${OPENCLAW_ROOT}/gog-canary-bridge"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-gog-canary-bridge/gog-canary-bridge/"* "${OPENCLAW_ROOT}/gog-canary-bridge/"
 mkdir -p "${OPENCLAW_ROOT}/trello-routines"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-trello-routines/trello-routines/"* "${OPENCLAW_ROOT}/trello-routines/"
 mkdir -p "${OPENCLAW_ROOT}/trello-pipeline"
@@ -134,6 +138,10 @@ smoke_required_file "scripts/manual/backfill_calendar_links_to_description.mjs"
 smoke_required_file "trello-routines/ensure_routines.mjs"
 smoke_required_file "trello-pipeline/server.mjs"
 smoke_required_file "shared/pr_review_card.mjs"
+smoke_required_file "shared/email_hook_card.mjs"
+smoke_required_file "shared/gog_canary_card.mjs"
+smoke_required_file "gmail-hook-bridge/server.mjs"
+smoke_required_file "gog-canary-bridge/server.mjs"
 smoke_required_file "trello-gateway/trello_gateway.mjs"
 smoke_required_file "github-pr-bridge/server.mjs"
 smoke_required_file "docker-compose.yml"
@@ -149,10 +157,12 @@ bash scripts/sync-live-config.sh
 
 cd "${OPENCLAW_ROOT}"
 docker compose build openclaw-gateway trello-gateway
-docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge trello-gateway trello-queue-worker trello-routines
+docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines
 
 smoke_http "http://127.0.0.1:18792/healthz" "trello-gateway"
 smoke_http "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" "github-pr-bridge"
+smoke_http "http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz" "gmail-hook-bridge"
+smoke_http "http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz" "gog-canary-bridge"
 smoke_http "http://127.0.0.1:18990/health" "trello-bridge"
 
 PUBLIC_HOST="$(awk '!/^#/ && /\{[ \t]*$/ {sub(/[ \t]*\{[ \t]*$/,""); print; exit}' "${OPENCLAW_ROOT}/Caddyfile.droplet")"
