@@ -30,9 +30,6 @@ function driftedDescription() {
     "Research:",
     "Legacy body still has the wrong section.",
     "",
-    "Next steps:",
-    "Still in the description.",
-    "",
     "Work completed:",
     "not dated",
   ].join("\n");
@@ -42,15 +39,13 @@ function cardState(overrides = {}) {
   return {
     listName: "Backlog",
     desc: compliantDescription(),
-    checklists: [{ id: "chk-next", name: "Next steps" }],
     ...overrides,
   };
 }
 
-test("validateCardSnapshot accepts a compliant open-card body and Next steps checklist", () => {
+test("validateCardSnapshot accepts a compliant open-card body", () => {
   const result = validateCardSnapshot({
     desc: compliantDescription(),
-    checklists: [{ id: "chk-next", name: "Next steps" }],
   });
 
   assert.equal(result.ok, true);
@@ -60,20 +55,9 @@ test("validateCardSnapshot accepts a compliant open-card body and Next steps che
   assert.equal(result.sections["Work completed"], "2026-05-25 MDT - Locked the validator scope.");
 });
 
-test("validateCardSnapshot rejects a card without the native Next steps checklist", () => {
-  const result = validateCardSnapshot({
-    desc: compliantDescription(),
-    checklists: [{ id: "chk-other", name: "Follow-up" }],
-  });
-
-  assert.equal(result.ok, false);
-  assert.equal(result.code, "missing_next_steps_checklist");
-});
-
 test("validateCardSnapshot can require Peer Review to start blank on create", () => {
   const result = validateCardSnapshot({
     desc: compliantDescription().replace("Peer Review:\n", "Peer Review:\nAlready reviewed.\n"),
-    checklists: [{ id: "chk-next", name: "Next steps" }],
   }, { requireBlankPeerReview: true });
 
   assert.equal(result.ok, false);
@@ -96,7 +80,6 @@ test("validateCardSnapshot rejects reordered sections", () => {
 
   const result = validateCardSnapshot({
     desc: reorderedDescription,
-    checklists: [{ id: "chk-next", name: "Next steps" }],
   });
 
   assert.equal(result.ok, false);
@@ -177,11 +160,9 @@ test("evaluateContractWrite allows safe non-structural writes on a drifted card"
     classification: classifyContractOperation({ operation: "comment" }),
     current: cardState({
       desc: driftedDescription(),
-      checklists: [],
     }),
     next: cardState({
       desc: driftedDescription(),
-      checklists: [],
     }),
   });
 
@@ -195,12 +176,10 @@ test("evaluateContractWrite blocks structural non-repair writes on a drifted car
     classification: classifyContractOperation({ operation: "move" }),
     current: cardState({
       desc: driftedDescription(),
-      checklists: [],
     }),
     next: cardState({
       listName: "Scheduled",
       desc: driftedDescription(),
-      checklists: [],
     }),
   });
 
@@ -215,12 +194,10 @@ test("evaluateContractWrite exempts system agent from contract enforcement", () 
     current: cardState({
       listName: "Reschedule",
       desc: driftedDescription(),
-      checklists: [],
     }),
     next: cardState({
       listName: "Scheduled",
       desc: driftedDescription(),
-      checklists: [],
     }),
   });
 
@@ -237,30 +214,8 @@ test("evaluateContractWrite allows structural repair on a drifted card", () => {
     }),
     current: cardState({
       desc: driftedDescription(),
-      checklists: [],
     }),
     next: cardState(),
-  });
-
-  assert.equal(result.ok, true);
-  assert.equal(result.mode, "repair");
-});
-
-test("evaluateContractWrite repairs missing Next steps when create_checklist params are not folded into next", () => {
-  const drifted = {
-    listName: "Backlog",
-    desc: compliantDescription(),
-    checklists: [],
-  };
-  const result = evaluateContractWrite({
-    agentId: "main",
-    classification: classifyContractOperation({
-      operation: "create_checklist",
-      params: { name: "Next steps" },
-    }),
-    current: drifted,
-    next: { ...drifted, checklists: [] },
-    params: { name: "Next steps" },
   });
 
   assert.equal(result.ok, true);

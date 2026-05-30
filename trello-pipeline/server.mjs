@@ -407,7 +407,7 @@ async function wakeOpenClaw(actionable, targetAgent) {
   ];
   const backlogIntakeRules = [
     "- Do not merely acknowledge or queue. Work to complete the task, or move the card to the Blocked list with a comment that explains exactly why you are blocked. Order is mandatory: comment first, then move.",
-    "- Do not move to Blocked while waiting for @marcostheai peer review. Keep the card in Backlog until Marcos replies; read his comment via gateway comments and update the Peer Review section.",
+    "- A peer review is optional: request one from @marcostheai only when the request or card is more technical in nature. PR review is a Marcos task — route any PR review to @marcostheai.",
     "- Calendar events are only required when something specific is needed from @adriellopez1.",
     "- For calendar event creation or reschedule: comment on the card why the time is needed on Adriel's calendar, add Time needed: N (minutes) in the card description, then move the card directly to the Reschedule list; scheduling will happen automatically.",
     "- Prefer Trello-only delivery for routine Trello housekeeping updates.",
@@ -425,12 +425,11 @@ async function wakeOpenClaw(actionable, targetAgent) {
     "2. Add priority as a prefix to the title and update the title to a short descriptive name.",
     "3. Update the description so it has these sections in this exact order: `Original Request`, `Research`, `Peer Review`, `Work completed`.",
     '   Research: {search the web if relevant; also search existing board cards via gateway search (operation search, query string) and note related cards/links; otherwise "Not relevant"}',
-    "   Peer Review: leave blank until Marcos replies. When he comments, copy his findings into this section.",
+    "   Peer Review: leave blank unless you request a review. Only Marcos may fill it — when he comments, copy his findings into this section.",
     "   Work completed: leave blank until actual progress happens, then append short dated milestone lines only.",
-    "4. Create a native Trello checklist named `Next steps` and put the implementation plan there instead of in the description.",
-    "5. When the checklist is ready, comment @marcostheai from this card asking for plan approval/feedback; leave the card in Backlog until he replies.",
-    '6. Only move to Blocked for a concrete external blocker (comment first, then move). Never use Blocked to mean "waiting on Marcos."',
-    "7. Only move the card to Done if all the checklist steps have actually been completed.",
+    "4. If the request or card is more technical in nature, you may request a peer review: comment @marcostheai from this card asking for feedback. PR reviews are a Marcos task — route them to @marcostheai. Otherwise proceed without a review.",
+    "5. Only move to Blocked for a concrete external blocker (comment first, then move).",
+    "6. Only move the card to Done when the task has actually been completed.",
   ];
   const hookRules =
     targetAgent === "marcos"

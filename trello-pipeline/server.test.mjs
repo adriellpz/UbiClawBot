@@ -262,7 +262,9 @@ test("repo-owned trello bridge wakes Ubi with backlog intake procedure for new B
   assert.match(hookText, /Procedure \(follow in order\):/);
   assert.match(hookText, /Original Request:/);
   assert.match(hookText, /Peer Review:/);
-  assert.match(hookText, /Do not move to Blocked while waiting for @marcostheai peer review/);
+  assert.match(hookText, /peer review is optional/i);
+  assert.match(hookText, /PR review is a Marcos task/i);
+  assert.doesNotMatch(hookText, /native Trello checklist named `Next steps`/);
   assert.equal(hookBodies[0].agentId, "main");
 
   const pendingEntries = fs

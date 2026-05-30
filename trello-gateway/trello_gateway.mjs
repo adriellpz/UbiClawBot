@@ -28,7 +28,6 @@ import {
   classifyContractOperation,
   evaluateContractWrite,
   isContractScopedList,
-  NEXT_STEPS_CHECKLIST_NAME,
 } from './trello_card_contract.mjs';
 
 // ─── Config ──────────────────────────────────────────────────────────
@@ -303,15 +302,6 @@ function createContractSnapshot({ listName, desc, checklists = [] }) {
   };
 }
 
-function resolveCreateChecklists(listName, paramsChecklists) {
-  const requested = normalizeChecklistSpecs(paramsChecklists);
-  if (requested.length > 0) return requested;
-  if (isContractScopedList(listName, buildContractOptions())) {
-    return [{ name: NEXT_STEPS_CHECKLIST_NAME, items: [] }];
-  }
-  return requested;
-}
-
 function normalizeChecklistSpecs(checklists = []) {
   if (!Array.isArray(checklists)) return [];
   return checklists
@@ -501,7 +491,7 @@ async function handleRequest(req, res) {
           log({ event: 'blocked_create_scheduled', agentId, list: targetList.name }, requestId);
           return;
         }
-        const requestedChecklists = resolveCreateChecklists(targetList.name, params.checklists);
+        const requestedChecklists = normalizeChecklistSpecs(params.checklists);
         const createValidation = evaluateContractWrite({
           agentId,
           classification: classifyContractOperation({ operation, params }),
