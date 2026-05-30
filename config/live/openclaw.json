@@ -362,8 +362,7 @@
       "tailscale": {
         "mode": "off",
         "path": "/gmail-pubsub"
-      },
-      "model": "opencode-go/deepseek-v4-flash"
+      }
     },
     "internal": {
       "enabled": true,

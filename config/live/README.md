@@ -31,7 +31,7 @@ Gmail and GOG auth failure intake no longer use `hooks.mappings` agent routes. g
 | `gmail-hook-bridge` | 19092 | `/hooks/gmail` | Adriel-only sender filter → Trello card → Ubi wake |
 | `gog-canary-bridge` | 19093 | `/healthz` | Periodic `gog auth list`; on failure → Trello card → Ubi wake |
 
-Keep `"mappings": []` for Gmail. Do not re-add inline gmail agent mappings or transforms.
+Keep `"mappings": []` for Gmail. Do not re-add inline gmail agent mappings or transforms. Gmail bridge wakes use each agent's default model from `agents.list` — do not set `hooks.gmail.model`.
 
 ## Secrets live only in the droplet `.env` — do not strip them
 
