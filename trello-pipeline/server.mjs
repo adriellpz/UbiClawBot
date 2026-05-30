@@ -38,8 +38,14 @@ const OPENCLAW_HOOK_URL = process.env.OPENCLAW_HOOK_URL || "http://127.0.0.1:187
 const pendingFile = path.join(STATE, "actionable_pending.jsonl");
 const queuedIdsFile = path.join(STATE, "actionable_queued_ids.json");
 const wakeIdsFile = path.join(STATE, "actionable_wake_ids.json");
+const wakeRetryFile = path.join(STATE, "actionable_wake_retry.json");
 const pollCursorFile = path.join(STATE, "bridge_poll_cursor.json");
 const processedActionsFile = path.join(STATE, "processed_actions.json");
+
+// A failed wake (e.g. a transient HTTP 502 from the hook) used to orphan the card:
+// the event is queued/handled but the agent is never woken and nothing retries.
+// Failed wakes are re-attempted on the poll interval, up to this many tries.
+const MAX_WAKE_ATTEMPTS = Number(process.env.TRELLO_BRIDGE_MAX_WAKE_ATTEMPTS || 6);
 
 const GOG_HEALTH_CHECK_MS = 300_000;
 const GOG_ACCOUNT = process.env.GOG_ACCOUNT || "ubitheai@gmail.com";
@@ -460,6 +466,84 @@ async function wakeOpenClaw(actionable, targetAgent) {
   return { woke: true };
 }
 
+// A wake counts as delivered if it landed or was already woken ("duplicate").
+// Reasons tied to "no wake intended" (silent_move, queue-worker-owned, no action id)
+// are not retryable; everything else (HTTP 5xx, timeouts, missing token) is.
+function wakeDelivered(wake) {
+  return Boolean(wake?.woke) || wake?.reason === "duplicate";
+}
+
+function noteWakeOutcome(actionable, target, wake) {
+  if (!actionable?.actionId) return;
+  const retries = readJson(wakeRetryFile, {});
+  const nonRetryableReasons = ["missing-action-id", "silent_move", "handled_by_queue_worker"];
+  const retryable = Boolean(target) && !wakeDelivered(wake) && !nonRetryableReasons.includes(wake?.reason);
+  if (!retryable) {
+    if (retries[actionable.actionId]) {
+      delete retries[actionable.actionId];
+      writeJson(wakeRetryFile, retries);
+    }
+    return;
+  }
+  const prev = retries[actionable.actionId];
+  retries[actionable.actionId] = {
+    actionable,
+    target,
+    attempts: (prev?.attempts || 0) + 1,
+    firstAt: prev?.firstAt || new Date().toISOString(),
+    lastAt: new Date().toISOString(),
+    lastReason: wake?.reason || "unknown",
+  };
+  const keys = Object.keys(retries);
+  if (keys.length > 500) for (const key of keys.slice(0, keys.length - 500)) delete retries[key];
+  writeJson(wakeRetryFile, retries);
+}
+
+async function retryFailedWakes() {
+  const retries = readJson(wakeRetryFile, {});
+  const ids = Object.keys(retries);
+  if (ids.length === 0) return;
+  let changed = false;
+  for (const actionId of ids) {
+    const entry = retries[actionId];
+    if (entry.attempts >= MAX_WAKE_ATTEMPTS) {
+      delete retries[actionId];
+      changed = true;
+      appendJsonl("errors.jsonl", {
+        at: new Date().toISOString(),
+        source: "wake-retry",
+        error: "gave up re-waking actionable",
+        actionId,
+        attempts: entry.attempts,
+        lastReason: entry.lastReason,
+        card: entry.actionable?.cardName,
+      });
+      continue;
+    }
+    const wake = await wakeOpenClaw(entry.actionable, entry.target).catch((error) => ({
+      woke: false,
+      reason: error?.message || String(error),
+    }));
+    appendJsonl("wakes.jsonl", {
+      at: new Date().toISOString(),
+      actionId,
+      wake,
+      target: entry.target,
+      source: "wake-retry",
+      attempt: entry.attempts + 1,
+    });
+    if (wakeDelivered(wake)) {
+      delete retries[actionId];
+    } else {
+      entry.attempts += 1;
+      entry.lastAt = new Date().toISOString();
+      entry.lastReason = wake?.reason || "unknown";
+    }
+    changed = true;
+  }
+  if (changed) writeJson(wakeRetryFile, retries);
+}
+
 async function pollTrelloFallback() {
   const actions = await trelloApi(`/boards/${TRELLO_BOARD_ID}/actions`, {
     limit: "50",
@@ -494,6 +578,7 @@ async function pollTrelloFallback() {
       wake,
       source: "trello-poll-fallback",
     });
+    noteWakeOutcome(actionable, target, wake);
   }
 
   if (actions[0]) {
@@ -653,16 +738,15 @@ const server = http.createServer((req, res) => {
       const target = wakeTarget(actionable);
       if (target) {
         wakeOpenClaw(actionable, target)
-          .then((wake) => appendJsonl("wakes.jsonl", { at: new Date().toISOString(), actionId: actionable.actionId, queued, wake, target }))
-          .catch((error) =>
-            appendJsonl("wakes.jsonl", {
-              at: new Date().toISOString(),
-              actionId: actionable.actionId,
-              queued,
-              wake: { woke: false, reason: error?.message || String(error) },
-              target,
-            }),
-          );
+          .then((wake) => {
+            appendJsonl("wakes.jsonl", { at: new Date().toISOString(), actionId: actionable.actionId, queued, wake, target });
+            noteWakeOutcome(actionable, target, wake);
+          })
+          .catch((error) => {
+            const wake = { woke: false, reason: error?.message || String(error) };
+            appendJsonl("wakes.jsonl", { at: new Date().toISOString(), actionId: actionable.actionId, queued, wake, target });
+            noteWakeOutcome(actionable, target, wake);
+          });
       } else {
         appendJsonl("wakes.jsonl", {
           at: new Date().toISOString(),
@@ -701,6 +785,15 @@ server.listen(PORT, "0.0.0.0", () => {
       error: "fallback poll disabled: missing Trello API credentials",
     });
   }
+
+  // Re-attempt undelivered wakes regardless of poll/creds state — a wake only needs
+  // the hook, not Trello API creds, and webhook-path wakes can fail with no poll running.
+  const wakeRetryMs = Number(process.env.TRELLO_BRIDGE_WAKE_RETRY_MS || 60_000);
+  setInterval(() => {
+    retryFailedWakes().catch((error) =>
+      appendJsonl("errors.jsonl", { at: new Date().toISOString(), source: "wake-retry", error: error?.message || String(error) }),
+    );
+  }, wakeRetryMs).unref();
 
   if (process.env.GOG_KEYRING_PASSWORD) {
     gogAuthHealthCheck();

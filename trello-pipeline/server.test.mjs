@@ -276,6 +276,124 @@ test("repo-owned trello bridge wakes Ubi with backlog intake procedure for new B
   assert.equal(pendingEntries[0].listName, "Backlog");
 });
 
+test("repo-owned trello bridge retries a wake that first failed with HTTP 502", async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-pipeline-wake-retry-"));
+  const stateDir = path.join(tempDir, "state");
+  const hookConfigDir = path.join(tempDir, "openclaw");
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.mkdirSync(hookConfigDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(hookConfigDir, "openclaw.json"),
+    JSON.stringify({ hooks: { token: "hook-test-token" } }),
+  );
+
+  // Hook fails the first wake (transient 502), succeeds on the retry.
+  const hookBodies = [];
+  const hookServer = await listen(
+    http.createServer(async (req, res) => {
+      const body = JSON.parse((await getTextBody(req)) || "{}");
+      hookBodies.push(body);
+      if (hookBodies.length === 1) {
+        res.writeHead(502, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "bad gateway" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const gateway = await listen(
+    http.createServer((req, res) => {
+      if (req.method === "GET" && req.url === "/healthz") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ success: true, boardId: "board-1", agents: ["system"], transitions: 1 }));
+    }),
+  );
+
+  let stdout = "";
+  let stderr = "";
+  const port = 19200;
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      TRELLO_BRIDGE_TOKEN: "bridge-test",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_PIPELINE_STATE_DIR: stateDir,
+      OPENCLAW_CONFIG: path.join(hookConfigDir, "openclaw.json"),
+      OPENCLAW_HOOK_URL: `${hookServer.url}/hooks/agent`,
+      TRELLO_API_KEY: "",
+      TRELLO_API_TOKEN: "",
+      TRELLO_BRIDGE_WAKE_RETRY_MS: "150",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  bridge.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  bridge.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hookServer.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${port}/health`);
+
+  const response = await fetch(`http://127.0.0.1:${port}/trello?token=bridge-test`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      action: {
+        id: "action-wake-retry",
+        type: "createCard",
+        memberCreator: { username: "adriellopez1" },
+        data: {
+          card: { id: "card-retry-1", name: "Retry me", shortLink: "retry-1" },
+          list: { name: "Backlog" },
+          text: "Retry me",
+        },
+      },
+    }),
+  });
+  assert.equal(response.status, 200, `bridge stdout:\n${stdout}\nbridge stderr:\n${stderr}`);
+
+  // Wait for the redelivery (first call 502s, retry interval re-wakes).
+  const waitStart = Date.now();
+  while (hookBodies.length < 2 && Date.now() - waitStart < 5_000) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.ok(hookBodies.length >= 2, `expected a retry wake, got ${hookBodies.length}\nstderr:\n${stderr}`);
+
+  // Once redelivered, the retry entry should be cleared.
+  const retryWaitStart = Date.now();
+  let retryState = {};
+  while (Date.now() - retryWaitStart < 3_000) {
+    retryState = JSON.parse(fs.readFileSync(path.join(stateDir, "actionable_wake_retry.json"), "utf8"));
+    if (Object.keys(retryState).length === 0) break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  assert.deepEqual(retryState, {}, "wake retry entry should be cleared after successful redelivery");
+
+  const retryWake = fs
+    .readFileSync(path.join(stateDir, "wakes.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .find((entry) => entry.source === "wake-retry");
+  assert.ok(retryWake, "expected a wake-retry entry in wakes.jsonl");
+  assert.equal(retryWake.wake.woke, true);
+});
+
 test("repo-owned trello bridge queues agent-created Backlog cards for intake", async (t) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-pipeline-agent-backlog-intake-"));
   const stateDir = path.join(tempDir, "state");
