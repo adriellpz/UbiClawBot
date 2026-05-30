@@ -158,6 +158,7 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ./trello-pipeline:/opt/trello-pipeline:ro
+      - ./shared:/opt/shared:ro
       - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
     working_dir: /opt/trello-pipeline
     command: ["node", "server.mjs"]
@@ -287,6 +288,7 @@ services:
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ./trello-pipeline:/opt/trello-pipeline:ro
+      - ./shared:/opt/shared:ro
       - ${TRELLO_PIPELINE_HOST_STATE_DIR:-/home/deploy/openclaw/data/trello-pipeline}:/var/lib/trello-pipeline
     working_dir: /opt/trello-pipeline
     command: ["node", "start_queue_worker.mjs"]
