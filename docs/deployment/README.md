@@ -54,6 +54,10 @@ See [`openclaw-agents.md`](./openclaw-agents.md) for agent models and cron. Back
 
 Live droplet spot-check record: [`live-verification.md`](./live-verification.md).
 
+Wiki maintainer HITL operator checklists (WM-09, WM-11, WM-13): [`wiki-maintainer-hitl.md`](./wiki-maintainer-hitl.md).
+
+Cheryl wiki maintainer runtime (`runtime/cheryl/wiki-maintainer/` in git) deploys to `data/agent-runtime/cheryl/wiki-maintainer/` on each production deploy — not part of the Obsidian vault.
+
 ## Failure model
 
 A deploy is only healthy when the restarted services pass their health checks. If the workflow fails after file copy or image build, inspect the live compose state on the droplet first:

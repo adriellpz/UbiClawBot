@@ -15,6 +15,7 @@
     "scripts/sanitize-live-config.mjs",
     "config/live/**",
     "deploy/**",
+    "runtime/cheryl/**",
     "Caddyfile.droplet",
     ".github/workflows/deploy-droplet.yml"
   ],
@@ -97,6 +98,14 @@
         "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs",
         "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs"
       ]
+    },
+    {
+      "id": "cheryl-wiki-maintainer",
+      "scpSource": "runtime/cheryl/wiki-maintainer/**",
+      "installMarkers": [
+        "mkdir -p /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer",
+        "cp -r /home/deploy/openclaw/.deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/. /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer/"
+      ]
     }
   ],
   "gatewayFiles": [
@@ -127,7 +136,8 @@
       "docker-compose.yml",
       "deploy/manifest.json",
       "config/live/openclaw.json",
-      "scripts/sync-live-config.sh"
+      "scripts/sync-live-config.sh",
+      "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
     ],
     "httpEndpoints": [
       {

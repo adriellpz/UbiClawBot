@@ -31,9 +31,11 @@ export const REQUIRED_CANONICAL_DOC_PATHS = [
   "docs/architecture/README.md",
   "docs/adr/0001-trello-pipeline-ownership.md",
   "docs/adr/0003-raw-input-wiki-curator.md",
+  "docs/adr/0004-llm-wiki-maintainer.md",
 ];
 
 export const ADR_0003_PATH = "docs/adr/0003-raw-input-wiki-curator.md";
+export const ADR_0004_PATH = "docs/adr/0004-llm-wiki-maintainer.md";
 
 export function readRepoText(relativePath) {
   return readFileSync(path.join(repoRoot, relativePath), "utf8");

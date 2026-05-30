@@ -17,6 +17,7 @@ on:
       - "scripts/sanitize-live-config.mjs"
       - "config/live/**"
       - "deploy/**"
+      - "runtime/cheryl/**"
       - "Caddyfile.droplet"
       - ".github/workflows/deploy-droplet.yml"
   schedule:
@@ -124,8 +125,18 @@ jobs:
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
-          source: "scripts/backup-droplet.sh,scripts/monitor-github-pr-bridge.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs"
+          source: "scripts/backup-droplet.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs"
           target: "/home/deploy/openclaw/.deploy-tmp-ops-scripts"
+
+      - name: Copy Cheryl wiki maintainer runtime to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "runtime/cheryl/wiki-maintainer/**"
+          target: "/home/deploy/openclaw/.deploy-tmp-cheryl-wiki-maintainer"
 
       - name: Copy trello-gateway to droplet
         uses: appleboy/scp-action@v0.1.7
@@ -257,6 +268,9 @@ jobs:
             cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs /home/deploy/openclaw/scripts/sync-live-config.mjs
             cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs /home/deploy/openclaw/scripts/sanitize-live-config.mjs
             chmod +x /home/deploy/openclaw/scripts/backup-droplet.sh /home/deploy/openclaw/scripts/monitor-github-pr-bridge.sh /home/deploy/openclaw/scripts/sync-live-config.sh
+            mkdir -p /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer
+            cp -r /home/deploy/openclaw/.deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/. /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer/
+            chmod +x /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer/bin/*.mjs
 
             # Ensure the github-pr-bridge runtime watchdog is scheduled. This deploy runs
             # as the deploy user (in the docker group), so the cron entry runs as deploy
@@ -281,6 +295,7 @@ jobs:
             smoke_required_file "config/live/openclaw.json"
             smoke_required_file "scripts/sync-live-config.sh"
             smoke_required_file "scripts/monitor-github-pr-bridge.sh"
+            smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 
             cd "${OPENCLAW_ROOT}"
             bash scripts/sync-live-config.sh

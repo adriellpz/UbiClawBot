@@ -15,6 +15,8 @@ import {
   ADR_0001_HISTORICAL_BANNER,
   ADR_0002_PATH,
   ADR_0002_ACCEPTED_STATUS,
+  ADR_0003_PATH,
+  ADR_0004_PATH,
   FORBIDDEN_POINTER_DOC_PATHS,
   readSiblingText,
   siblingPathExists,
@@ -191,4 +193,31 @@ test("ADR-0002 accepted documents node:test migration", () => {
     adr.includes("two tests per implement phase"),
     `${ADR_0002_PATH}: should document two-tests-per-phase Ralph TDD`,
   );
+});
+
+test("ADR 0004 LLM wiki maintainer doc exists", () => {
+  assert.equal(repoPathExists(ADR_0004_PATH), true);
+});
+
+test("ADR 0004 references ADR 0003 and maintainer shift", () => {
+  const adr = readRepoText(ADR_0004_PATH);
+  assert.match(adr, /0003-raw-input-wiki-curator/i);
+  assert.match(adr, /wiki maintainer/i);
+  assert.match(adr, /sources\//);
+  assert.match(adr, /wiki log/i);
+});
+
+test("CONTEXT.md maintainer glossary batch 1", () => {
+  const ctx = readRepoText("CONTEXT.md");
+  assert.match(ctx, /\*\*raw sources\*\*/i);
+  assert.match(ctx, /\*\*wiki log\*\*/i);
+  assert.match(ctx, /\*\*page format contract\*\*/i);
+  assert.match(ctx, /\*\*wiki publishing schema\*\*/i);
+  assert.match(ctx, /\*\*wiki curator schema\*\*/i);
+});
+
+test("CONTEXT.md maintainer glossary batch 2", () => {
+  const ctx = readRepoText("CONTEXT.md");
+  assert.match(ctx, /\*\*wiki maintainer\*\*|\*\*wiki curator\*\*/i);
+  assert.match(ctx, /sources\/ingested\.log/i);
 });
