@@ -602,8 +602,9 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if ((url.pathname === "/health" || url.pathname === "/healthz") && req.method === "GET") {
+    const pollFallback = { enabled: Boolean(TRELLO_API_KEY && TRELLO_API_TOKEN) };
     checkGatewayHealth()
-      .then((trello) => send(res, 200, JSON.stringify({ status: "ok", uptime: process.uptime(), port: PORT, trello })))
+      .then((trello) => send(res, 200, JSON.stringify({ status: "ok", uptime: process.uptime(), port: PORT, trello, pollFallback })))
       .catch((error) =>
         send(
           res,
@@ -690,7 +691,15 @@ server.listen(PORT, "0.0.0.0", () => {
       );
     }, 60_000).unref();
   } else {
-    console.log("trello fallback poll disabled: missing Trello API credentials");
+    console.warn(
+      "WARNING: trello fallback poll DISABLED — missing TRELLO_API_KEY/TRELLO_API_TOKEN. " +
+        "Webhook misses will not be recovered (cards can get stuck mid-transition). Check /home/deploy/openclaw/.env.",
+    );
+    appendJsonl("errors.jsonl", {
+      at: new Date().toISOString(),
+      source: "trello-bridge-startup",
+      error: "fallback poll disabled: missing Trello API credentials",
+    });
   }
 
   if (process.env.GOG_KEYRING_PASSWORD) {

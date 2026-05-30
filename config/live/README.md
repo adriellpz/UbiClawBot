@@ -21,3 +21,17 @@ ssh myserver 'cat /root/openclaw/data/config/cron/jobs.json' \
 ```
 
 Commit, merge to `main`, deploy applies via `scripts/sync-live-config.sh`.
+
+## Secrets live only in the droplet `.env` — do not strip them
+
+This workflow tracks **structure**, never secrets. The real tokens live solely in
+`/home/deploy/openclaw/.env` on the droplet, which **nothing here syncs or backs up
+automatically**. When hand-editing that file (e.g. during a migration), keep every
+secret the services need — `.env.example` is the source of truth for which keys are
+required and why.
+
+In particular `TRELLO_API_KEY` / `TRELLO_API_TOKEN` are **required by the trello-bridge**
+(its webhook-miss fallback poll calls the Trello API directly; `TRELLO_GATEWAY_*` does
+not cover it). Dropping them disables the poll silently and strands cards mid-transition
+(this happened once — cards stuck in Reschedule). The deploy now smoke-checks these are
+present on `trello-bridge` and `trello-gateway` and fails loudly if not.

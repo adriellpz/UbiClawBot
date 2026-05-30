@@ -172,6 +172,22 @@ jobs:
               done
             }
 
+            # Assert a running compose service has the listed env vars set non-empty.
+            # Guards against an edited .env silently dropping a secret a service needs
+            # (e.g. the trello-bridge fallback poll going dark on missing Trello creds).
+            smoke_required_env() {
+              local svc="$1"
+              shift
+              local var val
+              for var in "$@"; do
+                val="$(docker compose exec -T "$svc" sh -c "printenv ${var} || true" 2>/dev/null | tr -d '\r\n')"
+                if [ -z "$val" ]; then
+                  echo "smoke failed: service ${svc} is missing required env ${var} — check /home/deploy/openclaw/.env" >&2
+                  exit 1
+                fi
+              done
+            }
+
             write_deployed_revision() {
               local deployed_at
               deployed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -235,6 +251,11 @@ jobs:
             smoke_http "http://127.0.0.1:18792/healthz" "trello-gateway"
             smoke_http "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" "github-pr-bridge"
             smoke_http "http://127.0.0.1:18990/health" "trello-bridge"
+
+            # Trello credentials power the bridge webhook-miss fallback poll and the
+            # gateway's API calls. A missing key degrades silently, so fail the deploy.
+            smoke_required_env trello-bridge TRELLO_API_KEY TRELLO_API_TOKEN
+            smoke_required_env trello-gateway TRELLO_API_KEY TRELLO_API_TOKEN
 
             write_deployed_revision
             cat "${OPENCLAW_ROOT}/deployed-revision.json"
