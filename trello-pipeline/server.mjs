@@ -404,7 +404,7 @@ async function wakeOpenClaw(actionable, targetAgent) {
   const token = hookToken();
   if (!token) return { woke: false, reason: "missing-hook-token" };
   const mentionCommentRule =
-    "- Mention wakes (a card comment @you triggered this hook): reply on the card tagging the commenter. Still need their input to finish the card's work? @ them with the specific ask. Otherwise verify the outcome against the card, post a brief verification comment, then move to Done only when the work is actually complete. Strict: when moving to Done after a mention wake, DO NOT @ the person who @mentioned you — comment @adriellopez1 with your verification so Adriel is notified the card is complete.";
+    "- Mention wakes (a card comment @you triggered this hook): Still need their input to finish the card's work? @ them with the specific ask. Otherwise verify the outcome against the card, post a brief verification comment, then move to Done only when the work is actually complete. Strict: when moving to Done after a mention wake, DO NOT @ the person who @mentioned you — comment @adriellopez1 with your verification so Adriel is notified the card is complete.";
   const marcosHookRules = [
     "- Do not merely acknowledge/queue; work to complete the task or raise a comment to @adriellopez1",
     "- For calendar event creation or reschedule, move the card directly to the Reschedule list and scheduling will happen automatically.",
