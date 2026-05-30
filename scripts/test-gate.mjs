@@ -81,6 +81,7 @@ function validateJsonFiles() {
     "package.json",
     "package-lock.json",
     "config/openclaw.example.json",
+    "config/live/openclaw.json",
     "deploy/manifest.json",
   ];
 
