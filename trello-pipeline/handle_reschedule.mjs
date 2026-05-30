@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import process from "node:process";
 
 import { findAllLinkedEvents } from "./calendar_lookup.mjs";
+import { shouldRoutineMissedDuplicate } from "./handle_reschedule_logic.mjs";
 import {
   eventHtmlLink,
   formatCalendarTimeRange,
@@ -499,7 +500,7 @@ async function main() {
       return startMs >= tomorrowStart.getTime() && startMs < tomorrowEnd.getTime();
     });
 
-    if (tomorrowEvent) {
+    if (tomorrowEvent && shouldRoutineMissedDuplicate(card)) {
       if (!missedList) throw new Error("Missed list not found");
       targetList = missedList;
       action = "missed_duplicate";

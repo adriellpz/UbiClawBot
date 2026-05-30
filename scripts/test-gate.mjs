@@ -351,6 +351,8 @@ function validateTrelloPipelineDir() {
     "smoke.test.mjs",
     "start_queue_worker.mjs",
     "handle_reschedule.mjs",
+    "handle_reschedule_logic.mjs",
+    "handle_reschedule_logic.test.mjs",
     "trello_done_adjust_calendar.mjs",
     "trello_missed_adjust_calendar.mjs",
     "calendar_lookup.mjs",
