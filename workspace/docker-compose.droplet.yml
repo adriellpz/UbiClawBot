@@ -283,6 +283,61 @@ services:
       trello-gateway:
         condition: service_healthy
 
+  gog-canary-bridge:
+    image: openclaw-with-gog:local
+    network_mode: "service:openclaw-gateway"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: ${OPENCLAW_TZ:-UTC}
+      GOG_CANARY_BRIDGE_PORT: ${GOG_CANARY_BRIDGE_PORT:-19093}
+      GOG_CANARY_CHECK_MS: ${GOG_CANARY_CHECK_MS:-300000}
+      GOG_KEYRING_BACKEND: ${GOG_KEYRING_BACKEND:-file}
+      GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-}
+      GOG_ACCOUNT: ${GOG_ACCOUNT:-}
+      TRELLO_GATEWAY_URL: ${TRELLO_GATEWAY_URL:-http://trello-gateway:18792}
+      TRELLO_GATEWAY_KEY: ${TRELLO_GATEWAY_KEY:-}
+      TRELLO_GATEWAY_AGENT_ID: ${TRELLO_GATEWAY_AGENT_ID:-main}
+      TRELLO_BOARD_ID: ${TRELLO_BOARD_ID:-}
+      TRELLO_INTAKE_LIST_ID: ${TRELLO_INTAKE_LIST_ID:-}
+      TRELLO_DONE_LIST_NAMES: ${TRELLO_DONE_LIST_NAMES:-Done}
+      OPENCLAW_HOOK_URL: ${GOG_CANARY_OPENCLAW_HOOK_URL:-http://127.0.0.1:18789/hooks/agent}
+      OPENCLAW_HOOK_TOKEN: ${OPENCLAW_HOOK_TOKEN:-}
+      OPENCLAW_HOOK_AGENT_ID: ${GOG_CANARY_HOOK_AGENT_ID:-main}
+      OPENCLAW_HOOK_SESSION_PREFIX: ${GOG_CANARY_HOOK_SESSION_PREFIX:-hook:gog-canary:}
+      GOG_CANARY_STATE_DIR: ${GOG_CANARY_STATE_DIR:-/var/lib/gog-canary-bridge}
+      XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-/home/node/.openclaw}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
+      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
+      - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
+      - ./gog-canary-bridge:/opt/gog-canary-bridge:ro
+      - ${GOG_CANARY_HOST_STATE_DIR:-/home/deploy/openclaw/data/gog-canary-bridge}:/var/lib/gog-canary-bridge
+    working_dir: /opt/gog-canary-bridge
+    command: ["node", "server.mjs"]
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:19093/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      openclaw-gateway:
+        condition: service_started
+      trello-gateway:
+        condition: service_healthy
+
   trello-gateway:
     build:
       context: ./trello-gateway

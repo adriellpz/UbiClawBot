@@ -470,6 +470,96 @@ test("repo-owned trello bridge skips Ubi wake for email hook cards created in Ba
   assert.equal(hookBodies.length, 0, "email hook cards should not wake Ubi for backlog intake");
 });
 
+test("repo-owned trello bridge skips Ubi wake for gog canary cards created in Backlog", async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-pipeline-gog-canary-skip-"));
+  const stateDir = path.join(tempDir, "state");
+  const hookConfigDir = path.join(tempDir, "openclaw");
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.mkdirSync(hookConfigDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(hookConfigDir, "openclaw.json"),
+    JSON.stringify({ hooks: { token: "hook-test-token" } }),
+  );
+
+  const hookBodies = [];
+  const hookServer = await listen(
+    http.createServer(async (req, res) => {
+      hookBodies.push(JSON.parse((await getTextBody(req)) || "{}"));
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const gateway = await listen(
+    http.createServer((req, res) => {
+      if (req.method === "GET" && req.url === "/healthz") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ success: true, boardId: "board-1", agents: ["system"], transitions: 1 }));
+    }),
+  );
+
+  let stdout = "";
+  let stderr = "";
+  const port = 19203;
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      TRELLO_BRIDGE_TOKEN: "bridge-test",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_PIPELINE_STATE_DIR: stateDir,
+      OPENCLAW_CONFIG: path.join(hookConfigDir, "openclaw.json"),
+      OPENCLAW_HOOK_URL: `${hookServer.url}/hooks/agent`,
+      TRELLO_API_KEY: "",
+      TRELLO_API_TOKEN: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  bridge.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  bridge.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hookServer.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${port}/health`);
+
+  const response = await fetch(`http://127.0.0.1:${port}/trello?token=bridge-test`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      action: {
+        id: "action-gog-canary-backlog-create",
+        type: "createCard",
+        memberCreator: { username: "systemworker" },
+        data: {
+          card: {
+            id: "card-gog-canary-1",
+            name: "P1 - GOG Auth: re-auth needed",
+            shortLink: "gog-canary-1",
+          },
+          list: { name: "Backlog" },
+          text: "P1 - GOG Auth: re-auth needed",
+        },
+      },
+    }),
+  });
+
+  assert.equal(response.status, 200, `bridge stdout:\n${stdout}\nbridge stderr:\n${stderr}`);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(hookBodies.length, 0, "gog canary cards should not wake Ubi for backlog intake");
+});
+
 test("repo-owned trello bridge retries a wake that first failed with HTTP 502", async (t) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-pipeline-wake-retry-"));
   const stateDir = path.join(tempDir, "state");

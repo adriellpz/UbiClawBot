@@ -4,10 +4,11 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { isEmailHookCard } from "../shared/email_hook_card.mjs";
+import { isGogCanaryCard } from "../shared/gog_canary_card.mjs";
 import { isPrReviewCard } from "../shared/pr_review_card.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,8 +51,6 @@ const processedActionsFile = path.join(STATE, "processed_actions.json");
 // Failed wakes are re-attempted on the poll interval, up to this many tries.
 const MAX_WAKE_ATTEMPTS = Number(process.env.TRELLO_BRIDGE_MAX_WAKE_ATTEMPTS || 6);
 
-const GOG_HEALTH_CHECK_MS = 300_000;
-const GOG_ACCOUNT = process.env.GOG_ACCOUNT || "ubitheai@gmail.com";
 
 function safeJsonParse(value) {
   try {
@@ -141,7 +140,10 @@ function isBacklogIntake(actionable) {
 }
 
 function shouldSkipUbiWakeForBridgeOwnedCard(actionable) {
-  return isBacklogIntake(actionable) && (isPrReviewCard(actionable) || isEmailHookCard(actionable));
+  return (
+    isBacklogIntake(actionable) &&
+    (isPrReviewCard(actionable) || isEmailHookCard(actionable) || isGogCanaryCard(actionable))
+  );
 }
 
 function actionableFromAction(action) {
@@ -602,58 +604,6 @@ async function pollTrelloFallback() {
   return unseen.length;
 }
 
-let gogHealthOk = true;
-let gogHealthInterval = null;
-
-function gogAuthHealthCheck() {
-  if (!gogHealthOk || !process.env.GOG_KEYRING_PASSWORD) return;
-  const gogBin = process.env.GOG_BIN || "gog";
-  execFile(
-    gogBin,
-    ["auth", "list", "--no-input"],
-    {
-      env: {
-        ...process.env,
-        GOG_KEYRING_BACKEND: process.env.GOG_KEYRING_BACKEND || "file",
-        GOG_KEYRING_PASSWORD: process.env.GOG_KEYRING_PASSWORD || "",
-        GOG_ACCOUNT,
-      },
-      timeout: 15_000,
-    },
-    (error, stdout, stderr) => {
-      if (!error) {
-        appendJsonl("gog-health.jsonl", { at: new Date().toISOString(), ok: true });
-        return;
-      }
-
-      gogHealthOk = false;
-      if (gogHealthInterval) clearInterval(gogHealthInterval);
-      const detail = String(stderr || error?.message || "unknown").slice(0, 500);
-      appendJsonl("gog-health.jsonl", { at: new Date().toISOString(), ok: false, error: detail });
-      const token = hookToken();
-      if (!token) return;
-
-      const text = [
-        "GOG Auth Health Canary - FAILED",
-        "",
-        "The periodic gog auth health check detected an authentication failure.",
-        "Create a Trello card on the Ubi Command Board to track re-auth.",
-        "Tag @adriellopez1 on the card so it gets eyes.",
-        "",
-        `Account: ${GOG_ACCOUNT}`,
-        `Error: ${detail}`,
-        `Timestamp: ${new Date().toISOString()}`,
-      ].join("\n");
-
-      fetch(OPENCLAW_HOOK_URL, {
-        method: "POST",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ text, message: text, mode: "now", agentId: "main" }),
-      }).catch(() => {});
-    },
-  );
-}
-
 async function checkGatewayHealth() {
   const health = await fetch(`${GATEWAY_URL}/healthz`, { signal: AbortSignal.timeout(5000) });
   if (!health.ok) throw new Error(`gateway healthz HTTP ${health.status}`);
@@ -805,11 +755,6 @@ server.listen(PORT, "0.0.0.0", () => {
       appendJsonl("errors.jsonl", { at: new Date().toISOString(), source: "wake-retry", error: error?.message || String(error) }),
     );
   }, wakeRetryMs).unref();
-
-  if (process.env.GOG_KEYRING_PASSWORD) {
-    gogAuthHealthCheck();
-    gogHealthInterval = setInterval(gogAuthHealthCheck, GOG_HEALTH_CHECK_MS).unref();
-  }
 
   const watcherPath = process.env.TRELLO_PIPELINE_DRIVE_SYNC_WATCHER || path.join(__dirname, "drive_sync_watcher.mjs");
   if (fs.existsSync(watcherPath)) {

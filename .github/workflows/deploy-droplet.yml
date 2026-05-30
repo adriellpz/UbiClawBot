@@ -7,6 +7,7 @@ on:
       - "workspace/**"
       - "github-pr-bridge/**"
       - "gmail-hook-bridge/**"
+      - "gog-canary-bridge/**"
       - "trello-pipeline/**"
       - "trello-routines/**"
       - "trello-gateway/**"
@@ -80,6 +81,16 @@ jobs:
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
           source: "gmail-hook-bridge/*"
           target: "/home/deploy/openclaw/.deploy-tmp-gmail-hook-bridge"
+
+      - name: Copy GOG canary bridge to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "gog-canary-bridge/*"
+          target: "/home/deploy/openclaw/.deploy-tmp-gog-canary-bridge"
 
       - name: Copy trello-routines to droplet
         uses: appleboy/scp-action@v0.1.7
