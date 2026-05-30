@@ -27,7 +27,11 @@ const DONE_LIST_NAMES = (process.env.TRELLO_DONE_LIST_NAMES || "Done")
 const LIST_CACHE_TTL_MS = Number(process.env.TRELLO_LIST_CACHE_TTL_MS ?? 5 * 60 * 1000);
 const HAS_TRELLO_GATEWAY = Boolean(TRELLO_GATEWAY_URL && TRELLO_GATEWAY_KEY);
 
-fs.mkdirSync(STATE_DIR, { recursive: true });
+try {
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+} catch (error) {
+  console.warn(`gog-canary-bridge: could not ensure state dir ${STATE_DIR}: ${error?.message || error}`);
+}
 
 const wakeDeduper = new Map();
 let listNameByIdCache = null;
@@ -41,7 +45,11 @@ function sendJson(res, statusCode, payload) {
 }
 
 function appendJsonl(fileName, entry) {
-  fs.appendFileSync(path.join(STATE_DIR, fileName), `${JSON.stringify(entry)}\n`);
+  try {
+    fs.appendFileSync(path.join(STATE_DIR, fileName), `${JSON.stringify(entry)}\n`);
+  } catch (error) {
+    console.warn(`gog-canary-bridge: could not append ${fileName}: ${error?.message || error}`);
+  }
 }
 
 function shouldWake(dedupeKey) {
@@ -299,8 +307,12 @@ export function runAuthHealthCheck() {
 
 function scheduleHealthChecks() {
   if (SKIP_SCHEDULE || !process.env.GOG_KEYRING_PASSWORD) return;
-  runAuthHealthCheck();
-  healthInterval = setInterval(runAuthHealthCheck, CHECK_MS).unref();
+  const start = () => {
+    runAuthHealthCheck();
+    healthInterval = setInterval(runAuthHealthCheck, CHECK_MS).unref();
+  };
+  // Let /healthz come up before the first gog auth probe during deploy smoke.
+  setTimeout(start, Number(process.env.GOG_CANARY_STARTUP_DELAY_MS || 5_000)).unref();
 }
 
 const server = http.createServer(async (req, res) => {
@@ -335,6 +347,10 @@ const server = http.createServer(async (req, res) => {
 });
 
 if (process.env.GOG_CANARY_AUTOSTART !== "0") {
+  server.on("error", (error) => {
+    console.error(`gog-canary-bridge listen failed on ${PORT}: ${error?.message || error}`);
+    process.exit(1);
+  });
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`gog-canary-bridge listening on ${PORT}`);
     scheduleHealthChecks();
