@@ -51,9 +51,22 @@ The workflow updates tracked files only. It does not overwrite:
 
 - `/home/deploy/openclaw/.env`
 - `/home/deploy/openclaw/trello-gateway/.env`
-- `/home/deploy/openclaw/data/*`
+- `/root/openclaw/data/config/*` — live OpenClaw config (`OPENCLAW_CONFIG_DIR`)
+- `/home/deploy/openclaw/data/*` — agent vault, agent runtime, trello service state
 
 See [`secrets.md`](./secrets.md) for the secret contract.
+
+### Droplet path model
+
+The production droplet uses three host roots (supersedes the pre-vault `/home/deploy/openclaw/data/config` layout):
+
+| Path | Role |
+|------|------|
+| `/home/deploy/openclaw` | CI-deployed artifact tree: `docker-compose.yml`, bridges, `trello-gateway/`, `.env` — not a git checkout |
+| `/root/openclaw/data` | Authoritative OpenClaw config mounted into containers (`OPENCLAW_CONFIG_DIR`, cron, `openclaw.json`) |
+| `/home/deploy/openclaw/data` | Live agent vault, agent runtime, and trello routines/pipeline host state |
+
+**Stale (do not edit):** `/home/deploy/openclaw/data/config/` — leftover from an old layout; compose does not mount it. See [`openclaw-agents.md`](./openclaw-agents.md).
 
 ### Agent workspace vault (compose)
 
