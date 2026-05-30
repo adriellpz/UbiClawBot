@@ -604,7 +604,7 @@ async function handleRequest(req, res) {
         const searchResult = await trelloApi('GET', '/search', { 
           query, 
           modelTypes: 'cards',
-          card_fields: 'name,id,due,labels,shortUrl,desc,idList',
+          card_fields: 'name,id,due,labels,shortUrl,desc,idList,closed',
           cards_limit: 50 
         });
         result = { cards: searchResult.cards || [] };
