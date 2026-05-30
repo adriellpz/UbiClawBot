@@ -7,6 +7,7 @@ import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { isEmailHookCard } from "../shared/email_hook_card.mjs";
 import { isPrReviewCard } from "../shared/pr_review_card.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -139,8 +140,8 @@ function isBacklogIntake(actionable) {
   return false;
 }
 
-function shouldSkipUbiWakeForPrReviewCard(actionable) {
-  return isBacklogIntake(actionable) && isPrReviewCard(actionable);
+function shouldSkipUbiWakeForBridgeOwnedCard(actionable) {
+  return isBacklogIntake(actionable) && (isPrReviewCard(actionable) || isEmailHookCard(actionable));
 }
 
 function actionableFromAction(action) {
@@ -397,7 +398,7 @@ function wakeTarget(actionable) {
     if (/@cheryltheai\b/i.test(text)) return "scheduler";
     return null;
   }
-  if (shouldSkipUbiWakeForPrReviewCard(actionable)) return null;
+  if (shouldSkipUbiWakeForBridgeOwnedCard(actionable)) return null;
   return "main";
 }
 
@@ -407,10 +408,13 @@ async function wakeOpenClaw(actionable, targetAgent) {
   if (wokeIds.has(actionable.actionId)) return { woke: false, reason: "duplicate" };
   const token = hookToken();
   if (!token) return { woke: false, reason: "missing-hook-token" };
+  const mentionCommentRule =
+    "- Mention wakes (a card comment @you triggered this hook): reply on the card tagging the commenter. Still need their input to finish the card's work? @ them with the specific ask. Otherwise verify the outcome against the card, post a brief verification comment, then move to Done only when the work is actually complete. Strict: when moving to Done after a mention wake, DO NOT @ the person who @mentioned you — comment @adriellopez1 with your verification so Adriel is notified the card is complete.";
   const marcosHookRules = [
     "- Do not merely acknowledge/queue; work to complete the task or raise a comment to @adriellopez1",
     "- For calendar event creation or reschedule, move the card directly to the Reschedule list and scheduling will happen automatically.",
     "- Prefer Trello-only delivery for routine Trello housekeeping updates.",
+    mentionCommentRule,
   ];
   const backlogIntakeRules = [
     "- Do not merely acknowledge or queue. Work to complete the task, or move the card to the Blocked list with a comment that explains exactly why you are blocked. Order is mandatory: comment first, then move.",
@@ -425,6 +429,7 @@ async function wakeOpenClaw(actionable, targetAgent) {
     "- For calendar reschedules, move existing events rather than creating duplicates.",
     "- If Adriel says Trello/Ubi-only, do not create calendar events.",
     "- Prefer Trello-only delivery for routine Trello housekeeping updates.",
+    mentionCommentRule,
   ];
   const backlogIntakeProcedure = [
     "0. Style the card (cover, priority tag).",

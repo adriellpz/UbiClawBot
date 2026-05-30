@@ -241,7 +241,7 @@
       "topic": "projects/YOUR_GCP_PROJECT/topics/YOUR_TOPIC",
       "subscription": "your-subscription-name",
       "pushToken": "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN",
-      "hookUrl": "http://127.0.0.1:18789/hooks/gmail",
+      "hookUrl": "http://127.0.0.1:19092/hooks/gmail",
       "includeBody": true,
       "maxBytes": 20000,
       "renewEveryMinutes": 720,
