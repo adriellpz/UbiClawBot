@@ -10,6 +10,7 @@
  */
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const REPO_ROOT = process.env.OPENCLAW_DEPLOY_ROOT ?? "/home/deploy/openclaw";
 const LIVE_CONFIG_ROOT = process.env.OPENCLAW_CONFIG_DIR ?? "/root/openclaw/data/config";
@@ -78,11 +79,10 @@ function mergeCron(livePath, templatePath, outPath) {
     if (!prev) return job;
     return { ...job, state: prev.state ?? job.state };
   });
-  for (const job of live.jobs ?? []) {
-    if (!jobs.some((j) => j.id === job.id)) jobs.push(job);
-  }
   writeFileSync(outPath, `${JSON.stringify({ ...template, jobs }, null, 2)}\n`);
 }
+
+export { mergeCron, deepMerge };
 
 function main() {
   if (!existsSync(LIVE_DIR)) {
@@ -114,4 +114,6 @@ function main() {
   }
 }
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main();
+}

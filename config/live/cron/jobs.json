@@ -111,56 +111,6 @@
       }
     },
     {
-      "id": "245f6438-d5d5-4dd0-9d0b-60d6d8c91b6a",
-      "name": "Nightly ensure routines",
-      "description": "4:30 AM MT: materialize 14 days of R - routine cards + calendar events (host cron is primary; this is backup visibility).",
-      "enabled": false,
-      "createdAtMs": 1779558466649,
-      "schedule": {
-        "kind": "cron",
-        "expr": "30 4 * * *",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Host cron runs ensure_routines at 4:30 AM MT via /root/openclaw/bin/run-workspace-node.sh. Reply NO_REPLY unless /var/log/openclaw-ensure-routines.log shows errors from the last run.",
-        "timeoutSeconds": 60,
-        "toolsAllow": [
-          "read"
-        ]
-      },
-      "delivery": {
-        "mode": "none"
-      }
-    },
-    {
-      "id": "d057b55f-8184-4cd9-9f9b-bf26446ec860",
-      "name": "Weekly routine 1:1 audit",
-      "description": "Sunday 5 AM MT: routine list 1:1 audit (host cron primary).",
-      "enabled": false,
-      "createdAtMs": 1779558466650,
-      "schedule": {
-        "kind": "cron",
-        "expr": "0 5 * * 0",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Host cron runs trello_routine_1to1_audit Sundays 5 AM MT. Check /var/log/openclaw-routine-audit.log for issueCount. Reply NO_REPLY if clean.",
-        "timeoutSeconds": 60,
-        "toolsAllow": [
-          "read"
-        ]
-      },
-      "delivery": {
-        "mode": "none"
-      }
-    },
-    {
       "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
       "agentId": "scheduler",
       "name": "Cheryl wiki maintainer",
