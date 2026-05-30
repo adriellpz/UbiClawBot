@@ -152,7 +152,8 @@
       "config/live/openclaw.json",
       "scripts/sync-live-config.sh",
       "scripts/monitor-github-pr-bridge.sh",
-      "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
+      "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs",
+      "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
     ],
     "httpEndpoints": [
       {

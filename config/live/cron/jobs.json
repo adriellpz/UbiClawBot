@@ -111,56 +111,6 @@
       }
     },
     {
-      "id": "245f6438-d5d5-4dd0-9d0b-60d6d8c91b6a",
-      "name": "Nightly ensure routines",
-      "description": "4:30 AM MT: materialize 14 days of R - routine cards + calendar events (host cron is primary; this is backup visibility).",
-      "enabled": false,
-      "createdAtMs": 1779558466649,
-      "schedule": {
-        "kind": "cron",
-        "expr": "30 4 * * *",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Host cron runs ensure_routines at 4:30 AM MT via /root/openclaw/bin/run-workspace-node.sh. Reply NO_REPLY unless /var/log/openclaw-ensure-routines.log shows errors from the last run.",
-        "timeoutSeconds": 60,
-        "toolsAllow": [
-          "read"
-        ]
-      },
-      "delivery": {
-        "mode": "none"
-      }
-    },
-    {
-      "id": "d057b55f-8184-4cd9-9f9b-bf26446ec860",
-      "name": "Weekly routine 1:1 audit",
-      "description": "Sunday 5 AM MT: routine list 1:1 audit (host cron primary).",
-      "enabled": false,
-      "createdAtMs": 1779558466650,
-      "schedule": {
-        "kind": "cron",
-        "expr": "0 5 * * 0",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Host cron runs trello_routine_1to1_audit Sundays 5 AM MT. Check /var/log/openclaw-routine-audit.log for issueCount. Reply NO_REPLY if clean.",
-        "timeoutSeconds": 60,
-        "toolsAllow": [
-          "read"
-        ]
-      },
-      "delivery": {
-        "mode": "none"
-      }
-    },
-    {
       "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
       "agentId": "scheduler",
       "name": "Cheryl wiki maintainer",
@@ -176,8 +126,8 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Wiki maintainer **curator cron tick** — run cheryl-vault-inbox skill.\n\n1. Exec preflight: `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs /home/node/.openclaw/agent-vault`\n2. Follow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` (locked pipeline order).\n3. Ingest all `raw-input/` drops (honor `update:` frontmatter); then one pending `wiki/sources/` clip; then up to five maintenance backlog pages.\n4. Regenerate indexes for touched folders; call qmd reindex when available.\n5. Idle: read scheduler `wikiMaintainer.curatorIdleStreak` in openclaw.json (or `/home/node/.openclaw/config/live/wiki-maintainer.json`) — ticks 1–3 with empty queues + complete registry → NO_REPLY; tick 4 → full wiki lint.\n6. Append wiki log chronicle when work ran.\n\nVault: `/home/node/.openclaw/agent-vault/`. Apply page format contract. Reply NO_REPLY only when idle rules satisfied.",
-        "timeoutSeconds": 300
+        "message": "Wiki maintainer **curator cron tick** — run cheryl-vault-inbox skill.\n\n1. Exec preflight: `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs /home/node/.openclaw/agent-vault`\n2. Follow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` (locked pipeline order).\n3. Ingest all `raw-input/` drops (honor `update:` frontmatter); then one pending `wiki/sources/` clip; then up to five maintenance backlog pages.\n4. Regenerate indexes for touched folders; call qmd reindex when available.\n5. Register every touched wiki page (never hand-write registry timestamps): `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs /home/node/.openclaw/agent-vault wiki/path1.md ...`\n6. Idle: read scheduler `wikiMaintainer.curatorIdleStreak` in openclaw.json (or `/home/node/.openclaw/config/live/wiki-maintainer.json`) — ticks 1–3 with empty queues + complete registry → NO_REPLY; tick 4 → full wiki lint.\n7. Append wiki log chronicle when work ran.\n\nVault: `/home/node/.openclaw/agent-vault/`. Apply page format contract. Reply NO_REPLY only when idle rules satisfied.",
+        "timeoutSeconds": 600
       },
       "delivery": {
         "mode": "none",
@@ -185,7 +135,7 @@
       }
     },
     {
-      "id": "a3c8f1e2-9b4d-4a7c-8e6f-1d2c3b4a5e6f",
+      "id": "10b7d135-2b7f-4196-88fb-dcff702b8cfb",
       "agentId": "scheduler",
       "name": "Cheryl wiki contradiction review",
       "description": "Daily 08:00 MT: list open wiki/contradictions/ records; Telegram when count > 0; NO_REPLY when empty.",

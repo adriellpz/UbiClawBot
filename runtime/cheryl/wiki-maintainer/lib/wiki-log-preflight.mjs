@@ -99,7 +99,8 @@ export async function invalidateStaleLogEntries(logPath, vaultRoot) {
   }
 
   const newRegistryIntro = rebuildRegistryIntro(registryIntro, kept);
-  const rebuilt = `${prefix}## Completion registry${newRegistryIntro}${chronicleAndRest}`;
+  const registryGap = newRegistryIntro.endsWith("\n") ? "" : "\n";
+  const rebuilt = `${prefix}## Completion registry${newRegistryIntro}${registryGap}${chronicleAndRest}`;
   await writeFile(logPath, rebuilt, "utf8");
   return { removed };
 }
