@@ -2,6 +2,7 @@
 # Remote deploy body — copied to droplet by deploy-droplet.yml and executed over SSH.
 # Kept out of inline workflow YAML so appleboy/ssh-action does not mangle multiline bash.
 set -eu
+: "${HOME:?}"
 OPENCLAW_ROOT="${HOME}/openclaw"
 
 smoke_required_file() {
