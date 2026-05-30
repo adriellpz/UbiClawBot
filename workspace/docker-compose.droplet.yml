@@ -60,6 +60,8 @@ services:
       - "127.0.0.1:${OPENCLAW_BRIDGE_PORT:-18790}:18790"
       - "127.0.0.1:${TRELLO_BRIDGE_PORT:-18990}:18990"
       - "127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}:${GITHUB_PR_BRIDGE_PORT:-19091}"
+      - "127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}:${GMAIL_HOOK_BRIDGE_PORT:-19092}"
+      - "127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}:${GOG_CANARY_BRIDGE_PORT:-19093}"
       # gog gmail watch serve (hooks.gmail) — Caddy on host proxies /gmail-pubsub here
       - "127.0.0.1:${OPENCLAW_GMAIL_WATCH_PORT:-8788}:8788"
     init: true

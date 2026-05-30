@@ -183,6 +183,9 @@ function validateCompose(workflows) {
     `${composePath}: gateway must not mount legacy workspace after vault phase 7`,
   );
   assert(gateway.healthcheck?.test, `${composePath}: gateway should keep a healthcheck`);
+  const gatewayPorts = JSON.stringify(gateway.ports ?? []);
+  assert(gatewayPorts.includes("19092"), `${composePath}: gateway should publish gmail-hook-bridge port 19092`);
+  assert(gatewayPorts.includes("19093"), `${composePath}: gateway should publish gog-canary-bridge port 19093`);
 
   const cli = services["openclaw-cli"] ?? {};
   assert(cli.network_mode === "service:openclaw-gateway", `${composePath}: cli should share gateway network namespace`);
