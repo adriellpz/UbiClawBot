@@ -22,3 +22,11 @@
 - **Scheduled Trello/calendar job**: an unattended Trello/calendar automation job triggered by time or cron rather than by an incoming webhook event.
 - **Pipeline state**: durable operational state used by the Trello production pipeline, such as queue records, handled-action tracking, retry tracking, and similar service state. This is distinct from agent memory or taskflow state.
 - **Documentation contract test**: a `node:test` case in `UbiClawBot` that asserts a structural or cross-repo documentation invariant (for example, a forbidden duplicate path is absent or a required canonical page exists). These tests may read sibling agent repositories; they are not tests of runtime Trello behavior.
+
+## Trello board language
+
+- **open-card contract**: the gateway-enforced shape of cards on scoped lists—four description sections in fixed order (`Original Request`, `Research`, `Peer Review`, `Work completed`) plus section mutation rules (e.g. Marcos-only `Peer Review`). Distinct from agent prompts and skills.
+- **backlog intake**: the procedure Ubi runs when a new or moved card enters **Backlog**—style the card, fill the open-card contract sections, then execute, block, or hand off. Not applied to **PR review cards**.
+- **peer review**: optional feedback from Marcos on a backlog card Ubi judges technical (code, infra, deploy, security, architecture). Ubi @mentions Marcos and leaves the card in **Backlog** until he replies; not a **Blocked** state.
+- **PR review card**: a Trello card created by `github-pr-bridge` for an open pull request (title pattern like `Review PR #N`). Lands in **Backlog**; owned by Marcos for the GitHub review; Ubi backlog intake is skipped.
+- **Next steps checklist** *(retired)*: a native Trello checklist formerly required by the open-card contract. No longer enforced; open cards may still carry legacy copies pending a one-time cleanup sweep (skip **Done** and Trello-closed cards).

@@ -263,6 +263,7 @@ test("repo-owned trello bridge wakes Ubi with backlog intake procedure for new B
   assert.match(hookText, /Original Request:/);
   assert.match(hookText, /Peer Review:/);
   assert.match(hookText, /peer review is optional/i);
+  assert.match(hookText, /leave the card in Backlog until he replies/i);
   assert.match(hookText, /PR review is a Marcos task/i);
   assert.doesNotMatch(hookText, /native Trello checklist named `Next steps`/);
   assert.equal(hookBodies[0].agentId, "main");
@@ -276,6 +277,107 @@ test("repo-owned trello bridge wakes Ubi with backlog intake procedure for new B
   assert.equal(pendingEntries.length, 1);
   assert.equal(pendingEntries[0].kind, "trello_card_created");
   assert.equal(pendingEntries[0].listName, "Backlog");
+});
+
+test("repo-owned trello bridge skips Ubi wake for PR review cards created in Backlog", async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-pipeline-pr-review-skip-"));
+  const stateDir = path.join(tempDir, "state");
+  const hookConfigDir = path.join(tempDir, "openclaw");
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.mkdirSync(hookConfigDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(hookConfigDir, "openclaw.json"),
+    JSON.stringify({ hooks: { token: "hook-test-token" } }),
+  );
+
+  const hookBodies = [];
+  const hookServer = await listen(
+    http.createServer(async (req, res) => {
+      const body = JSON.parse((await getTextBody(req)) || "{}");
+      hookBodies.push(body);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const gateway = await listen(
+    http.createServer((req, res) => {
+      if (req.method === "GET" && req.url === "/healthz") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ success: true, boardId: "board-1", agents: ["system"], transitions: 1 }));
+    }),
+  );
+
+  let stdout = "";
+  let stderr = "";
+  const port = 19201;
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      PORT: String(port),
+      TRELLO_BRIDGE_TOKEN: "bridge-test",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_PIPELINE_STATE_DIR: stateDir,
+      OPENCLAW_CONFIG: path.join(hookConfigDir, "openclaw.json"),
+      OPENCLAW_HOOK_URL: `${hookServer.url}/hooks/agent`,
+      TRELLO_API_KEY: "",
+      TRELLO_API_TOKEN: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  bridge.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  bridge.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hookServer.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${port}/health`);
+
+  const response = await fetch(`http://127.0.0.1:${port}/trello?token=bridge-test`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      action: {
+        id: "action-pr-backlog-create",
+        type: "createCard",
+        memberCreator: { username: "adriellopez1" },
+        data: {
+          card: {
+            id: "card-pr-backlog-1",
+            name: "P2 - Review PR 52",
+            shortLink: "pr-backlog-1",
+          },
+          list: { name: "Backlog" },
+          text: "P2 - Review PR 52",
+        },
+      },
+    }),
+  });
+
+  assert.equal(response.status, 200, `bridge stdout:\n${stdout}\nbridge stderr:\n${stderr}`);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(hookBodies.length, 0, "PR review cards should not wake Ubi for backlog intake");
+
+  const wakeEntries = fs
+    .readFileSync(path.join(stateDir, "wakes.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+  assert.equal(wakeEntries.length, 1);
+  assert.equal(wakeEntries[0].target, null);
+  assert.equal(wakeEntries[0].wake.reason, "silent_move");
 });
 
 test("repo-owned trello bridge retries a wake that first failed with HTTP 502", async (t) => {

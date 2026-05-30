@@ -209,7 +209,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
 
   assert.equal(hookCalls.length, 1);
   assert.equal(hookCalls[0].authorization, "Bearer hook-test");
-  assert.equal(hookCalls[0].body.agentId, "main");
+  assert.equal(hookCalls[0].body.agentId, "marcos");
   assert.equal(hookCalls[0].body.sessionKey, "hook:github-pr:14");
   assert.match(hookCalls[0].body.message, /github_pr_review_requested/);
   assert.match(hookCalls[0].body.message, /https:\/\/trello\.com\/c\/card-123/);

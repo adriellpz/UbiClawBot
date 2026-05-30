@@ -22,10 +22,13 @@ Optional but normally useful:
 - `TRELLO_DONE_LIST_NAMES`
 - `OPENCLAW_HOOK_URL`
 - `OPENCLAW_HOOK_TOKEN`
-- `OPENCLAW_HOOK_AGENT_ID`
+- `OPENCLAW_HOOK_AGENT_ID` (defaults to `marcos` — Marcos owns GitHub PR review)
 
 ## Behavior
 
+- creates or updates **PR review cards** in the configured intake list (typically **Backlog**)
+- wakes **Marcos** (`OPENCLAW_HOOK_AGENT_ID`) to leave the GitHub review and update the Trello card
+- `trello-pipeline` skips Ubi backlog intake when it detects a PR review card title (`Review PR #N`)
 - ignores unsupported webhook action types
 - treats Trello search results as candidates only, then exact-matches the PR number or PR URL before updating an existing card
 - ignores historical cards in configured done lists during dedupe
