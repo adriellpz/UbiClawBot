@@ -3,7 +3,9 @@ import path from "node:path";
 import { shouldSkipWikiPage } from "./wiki-log-registry.mjs";
 
 export function shouldSkipIndexTree(relPath) {
-  return relPath === "raw-input" || relPath.startsWith("raw-input/");
+  if (relPath === "raw-input" || relPath.startsWith("raw-input/")) return true;
+  if (relPath === "sources" || relPath.startsWith("sources/")) return true;
+  return false;
 }
 
 export function extractBlurb(markdown) {

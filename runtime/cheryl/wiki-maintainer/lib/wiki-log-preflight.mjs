@@ -9,6 +9,7 @@ export function isExcludedRegistryPath(wikiRelPath) {
   const normalized = wikiRelPath.replace(/\\/g, "/");
   if (normalized === "wiki/log.md" || normalized === "wiki/index.md") return true;
   if (normalized.startsWith("wiki/openclaw-docs/")) return true;
+  if (normalized.startsWith("wiki/sources/")) return true;
   if (/-index\.md$/i.test(normalized)) return true;
   return false;
 }

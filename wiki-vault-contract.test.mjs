@@ -51,12 +51,12 @@ import { reindexWikiSearch } from "./runtime/cheryl/wiki-maintainer/lib/wiki-sea
 import { runFullWikiLint, runLightWikiLint } from "./runtime/cheryl/wiki-maintainer/lib/wiki-lint.mjs";
 import { runCuratorCronTick } from "./runtime/cheryl/wiki-maintainer/lib/curator-cron-tick.mjs";
 
-test("wikiLayoutPaths includes sources/, sources/assets/, wiki/log.md, sources/ingested.log", () => {
+test("wikiLayoutPaths includes wiki/sources/, wiki/sources/assets/, wiki/log.md, wiki/sources/ingested.log", () => {
   const paths = new Set(wikiLayoutPaths());
-  assert.ok(paths.has("sources"));
-  assert.ok(paths.has("sources/assets"));
+  assert.ok(paths.has("wiki/sources"));
+  assert.ok(paths.has("wiki/sources/assets"));
   assert.ok(paths.has("wiki/log.md"));
-  assert.ok(paths.has("sources/ingested.log"));
+  assert.ok(paths.has("wiki/sources/ingested.log"));
 });
 
 test("ensureWikiLayout creates wiki top-level folders and raw-input inbox", async () => {
@@ -99,15 +99,15 @@ test("seeds wiki/log.md with completion registry + chronicle sections", async ()
   assert.equal(await readFile(logPath, "utf8"), customLog);
 });
 
-test("seeds empty sources/ingested.log", async () => {
+test("seeds empty wiki/sources/ingested.log", async () => {
   const vaultRoot = await mkdtemp(path.join(os.tmpdir(), "wiki-layout-ingested-"));
   await ensureWikiLayout(vaultRoot);
 
-  const ingestedPath = path.join(vaultRoot, "sources", "ingested.log");
+  const ingestedPath = path.join(vaultRoot, "wiki", "sources", "ingested.log");
   await access(ingestedPath);
   assert.equal(await readFile(ingestedPath, "utf8"), "");
 
-  const customIngested = "sources/raw/drop.md\n";
+  const customIngested = "wiki/sources/raw/drop.md\n";
   await writeFile(ingestedPath, customIngested, "utf8");
   await ensureWikiLayout(vaultRoot);
   assert.equal(await readFile(ingestedPath, "utf8"), customIngested);
@@ -125,7 +125,7 @@ test("ensureWikiLayout is idempotent on second call", async () => {
     await access(path.join(vaultRoot, rel));
   }
 
-  const maintainerPaths = ["sources", "sources/assets", "wiki/log.md", "sources/ingested.log"];
+  const maintainerPaths = ["wiki/sources", "wiki/sources/assets", "wiki/log.md", "wiki/sources/ingested.log"];
   for (const rel of maintainerPaths) {
     await access(path.join(vaultRoot, rel));
   }
@@ -135,7 +135,7 @@ test("ensureWikiLayout on sibling vault creates maintainer scaffold", async () =
   const vaultRoot = path.resolve(import.meta.dirname, "../agent-workspace-vault");
   await ensureWikiLayout(vaultRoot);
 
-  const maintainerPaths = ["sources", "sources/assets", "wiki/log.md", "sources/ingested.log"];
+  const maintainerPaths = ["wiki/sources", "wiki/sources/assets", "wiki/log.md", "wiki/sources/ingested.log"];
   for (const rel of maintainerPaths) {
     await access(path.join(vaultRoot, rel));
   }
@@ -159,10 +159,10 @@ test("wiki-publishing schema exists with required headings", () => {
   assert.match(doc, /## Producer rules/i);
 });
 
-test("wiki-publishing documents RAG exclusion for sources/ and raw-input/", () => {
+test("wiki-publishing documents RAG exclusion for wiki/sources/ and raw-input/", () => {
   const doc = readSiblingText(WIKI_PUBLISHING_PATH);
   assert.match(doc, /RAG/i);
-  assert.match(doc, /sources\//);
+  assert.match(doc, /wiki\/sources\//);
   assert.match(doc, /raw-input\//);
 });
 
@@ -550,6 +550,7 @@ test("isExcludedRegistryPath skips openclaw-docs, index pages, and log", () => {
   assert.equal(isExcludedRegistryPath("wiki/log.md"), true);
   assert.equal(isExcludedRegistryPath("wiki/index.md"), true);
   assert.equal(isExcludedRegistryPath("wiki/runbooks/playbook.md"), false);
+  assert.equal(isExcludedRegistryPath("wiki/sources/clipped-article.md"), true);
 });
 
 function wikiLogWithRegistryLines(registryLines, chronicleExtra = "") {
@@ -747,10 +748,10 @@ test("generate-vault-indexes CLI --folders mode skips untouched directories", as
 
 test("downloadSourceAssets writes images without mutating source md", async () => {
   const vaultRoot = await mkdtemp(path.join(os.tmpdir(), "source-asset-dl-"));
-  await mkdir(path.join(vaultRoot, "sources"), { recursive: true });
+  await mkdir(path.join(vaultRoot, "wiki", "sources"), { recursive: true });
   const imageUrl = "https://example.com/images/diagram.png";
   const sourceMarkdown = `# Clipped article\n\n![](${imageUrl})\n\nBody text unchanged.\n`;
-  const sourcePath = path.join(vaultRoot, "sources", "clipped-article.md");
+  const sourcePath = path.join(vaultRoot, "wiki", "sources", "clipped-article.md");
   await writeFile(sourcePath, sourceMarkdown, "utf8");
 
   const fetchCalls = [];
@@ -767,7 +768,7 @@ test("downloadSourceAssets writes images without mutating source md", async () =
   assert.equal(fetchCalls.length, 1);
   assert.equal(fetchCalls[0], imageUrl);
   assert.equal(result.downloaded.length, 1);
-  assert.match(result.downloaded[0], /^sources\/assets\/clipped-article\/.+\.png$/);
+  assert.match(result.downloaded[0], /^wiki\/sources\/assets\/clipped-article\/.+\.png$/);
 
   const assetPath = path.join(vaultRoot, result.downloaded[0]);
   await access(assetPath);
@@ -780,10 +781,10 @@ test("downloadSourceAssets writes images without mutating source md", async () =
 
 test("downloadSourceAssets skips already-downloaded assets", async () => {
   const vaultRoot = await mkdtemp(path.join(os.tmpdir(), "source-asset-skip-"));
-  await mkdir(path.join(vaultRoot, "sources"), { recursive: true });
+  await mkdir(path.join(vaultRoot, "wiki", "sources"), { recursive: true });
   const imageUrl = "https://example.com/images/chart.jpg";
   const sourceMarkdown = `# Second clip\n\n![](${imageUrl})\n`;
-  const sourcePath = path.join(vaultRoot, "sources", "second-clip.md");
+  const sourcePath = path.join(vaultRoot, "wiki", "sources", "second-clip.md");
   await writeFile(sourcePath, sourceMarkdown, "utf8");
 
   let fetchCount = 0;
@@ -807,45 +808,45 @@ test("downloadSourceAssets skips already-downloaded assets", async () => {
   assert.equal(fetchCount, 1);
 });
 
-test("markSourceIngested appends source path to sources/ingested.log", async () => {
+test("markSourceIngested appends source path to wiki/sources/ingested.log", async () => {
   const vaultRoot = await mkdtemp(path.join(os.tmpdir(), "ingested-registry-mark-"));
-  await mkdir(path.join(vaultRoot, "sources"), { recursive: true });
-  await writeFile(path.join(vaultRoot, "sources", "ingested.log"), "", "utf8");
+  await mkdir(path.join(vaultRoot, "wiki", "sources"), { recursive: true });
+  await writeFile(path.join(vaultRoot, "wiki", "sources", "ingested.log"), "", "utf8");
 
-  await markSourceIngested(vaultRoot, "sources/clipped-article.md");
-  const afterFirst = await readFile(path.join(vaultRoot, "sources", "ingested.log"), "utf8");
-  assert.match(afterFirst, /^sources\/clipped-article\.md\n$/);
+  await markSourceIngested(vaultRoot, "wiki/sources/clipped-article.md");
+  const afterFirst = await readFile(path.join(vaultRoot, "wiki", "sources", "ingested.log"), "utf8");
+  assert.match(afterFirst, /^wiki\/sources\/clipped-article\.md\n$/);
 
-  await markSourceIngested(vaultRoot, "sources/raw/drop.md");
-  const afterSecond = await readFile(path.join(vaultRoot, "sources", "ingested.log"), "utf8");
+  await markSourceIngested(vaultRoot, "wiki/sources/raw/drop.md");
+  const afterSecond = await readFile(path.join(vaultRoot, "wiki", "sources", "ingested.log"), "utf8");
   assert.equal(
     afterSecond,
-    "sources/clipped-article.md\nsources/raw/drop.md\n",
+    "wiki/sources/clipped-article.md\nwiki/sources/raw/drop.md\n",
     "paths sorted and idempotent append",
   );
 
-  await markSourceIngested(vaultRoot, "sources/clipped-article.md");
-  const afterDuplicate = await readFile(path.join(vaultRoot, "sources", "ingested.log"), "utf8");
+  await markSourceIngested(vaultRoot, "wiki/sources/clipped-article.md");
+  const afterDuplicate = await readFile(path.join(vaultRoot, "wiki", "sources", "ingested.log"), "utf8");
   assert.equal(afterDuplicate, afterSecond, "duplicate mark is idempotent");
 });
 
-test("listPendingSources returns un-ingested markdown under sources/", async () => {
+test("listPendingSources returns un-ingested markdown under wiki/sources/", async () => {
   const vaultRoot = await mkdtemp(path.join(os.tmpdir(), "ingested-registry-pending-"));
-  await mkdir(path.join(vaultRoot, "sources", "raw"), { recursive: true });
-  await mkdir(path.join(vaultRoot, "sources", "assets", "clipped-article"), { recursive: true });
-  await writeFile(path.join(vaultRoot, "sources", "pending-clip.md"), "# pending\n", "utf8");
-  await writeFile(path.join(vaultRoot, "sources", "raw", "drop.md"), "# drop\n", "utf8");
-  await writeFile(path.join(vaultRoot, "sources", "done-clip.md"), "# done\n", "utf8");
-  await writeFile(path.join(vaultRoot, "sources", "assets", "clipped-article", "diagram.png"), "png", "utf8");
+  await mkdir(path.join(vaultRoot, "wiki", "sources", "raw"), { recursive: true });
+  await mkdir(path.join(vaultRoot, "wiki", "sources", "assets", "clipped-article"), { recursive: true });
+  await writeFile(path.join(vaultRoot, "wiki", "sources", "pending-clip.md"), "# pending\n", "utf8");
+  await writeFile(path.join(vaultRoot, "wiki", "sources", "raw", "drop.md"), "# drop\n", "utf8");
+  await writeFile(path.join(vaultRoot, "wiki", "sources", "done-clip.md"), "# done\n", "utf8");
+  await writeFile(path.join(vaultRoot, "wiki", "sources", "assets", "clipped-article", "diagram.png"), "png", "utf8");
   await writeFile(
-    path.join(vaultRoot, "sources", "ingested.log"),
-    "sources/done-clip.md\n",
+    path.join(vaultRoot, "wiki", "sources", "ingested.log"),
+    "wiki/sources/done-clip.md\n",
     "utf8",
   );
 
   const pending = await listPendingSources(vaultRoot);
 
-  assert.deepEqual(pending, ["sources/pending-clip.md", "sources/raw/drop.md"]);
+  assert.deepEqual(pending, ["wiki/sources/pending-clip.md", "wiki/sources/raw/drop.md"]);
 });
 
 test("listRawInputDrops returns flat markdown files in raw-input/", async () => {
@@ -1341,11 +1342,11 @@ test("runCuratorCronTick ingests one pending raw source per tick", async () => {
   const imageUrl = "https://example.com/images/alpha-diagram.png";
   const alphaMarkdown = `# Alpha clip\n\n![](${imageUrl})\n\nClipped body stays on disk.\n`;
   const betaMarkdown = "# Beta clip\n\nSecond pending source.\n";
-  const alphaPath = path.join(vaultRoot, "sources", "alpha-clip.md");
-  const betaPath = path.join(vaultRoot, "sources", "beta-clip.md");
+  const alphaPath = path.join(vaultRoot, "wiki", "sources", "alpha-clip.md");
+  const betaPath = path.join(vaultRoot, "wiki", "sources", "beta-clip.md");
   await writeFile(alphaPath, alphaMarkdown, "utf8");
   await writeFile(betaPath, betaMarkdown, "utf8");
-  await writeFile(path.join(vaultRoot, "sources", "ingested.log"), "", "utf8");
+  await writeFile(path.join(vaultRoot, "wiki", "sources", "ingested.log"), "", "utf8");
 
   const alphaBefore = await readFile(alphaPath, "utf8");
 
@@ -1370,15 +1371,15 @@ test("runCuratorCronTick ingests one pending raw source per tick", async () => {
   assert.equal(result.didWork, true);
   assert.ok(result.touched.some((p) => p.startsWith("wiki/")));
 
-  const ingestedLog = await readFile(path.join(vaultRoot, "sources", "ingested.log"), "utf8");
-  assert.equal(ingestedLog, "sources/alpha-clip.md\n");
-  assert.deepEqual(await listPendingSources(vaultRoot), ["sources/beta-clip.md"]);
+  const ingestedLog = await readFile(path.join(vaultRoot, "wiki", "sources", "ingested.log"), "utf8");
+  assert.equal(ingestedLog, "wiki/sources/alpha-clip.md\n");
+  assert.deepEqual(await listPendingSources(vaultRoot), ["wiki/sources/beta-clip.md"]);
 
   assert.equal(await readFile(alphaPath, "utf8"), alphaBefore);
 
   assert.equal(fetchCalls.length, 1);
   assert.equal(fetchCalls[0], imageUrl);
-  const assetDir = path.join(vaultRoot, "sources", "assets", "alpha-clip");
+  const assetDir = path.join(vaultRoot, "wiki", "sources", "assets", "alpha-clip");
   const assetEntries = await readdir(assetDir);
   assert.equal(assetEntries.length, 1);
   assert.match(assetEntries[0], /\.png$/);

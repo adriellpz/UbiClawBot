@@ -1,7 +1,8 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { WIKI_SOURCES_REL, WIKI_SOURCES_INGESTED_LOG_REL } from "./wiki-layout.mjs";
 
-const INGESTED_LOG = "sources/ingested.log";
+const INGESTED_LOG = WIKI_SOURCES_INGESTED_LOG_REL;
 
 function normalizeSourcePath(relPath) {
   return relPath.replace(/\\/g, "/").replace(/^\.\//, "");
@@ -30,7 +31,7 @@ export async function markSourceIngested(vaultRoot, sourceRelPath) {
 
 export async function listPendingSources(vaultRoot) {
   const ingested = new Set(await readIngestedPaths(vaultRoot));
-  const sourcesDir = path.join(vaultRoot, "sources");
+  const sourcesDir = path.join(vaultRoot, WIKI_SOURCES_REL);
   const pending = [];
 
   async function walk(dir, relBase) {
@@ -49,7 +50,7 @@ export async function listPendingSources(vaultRoot) {
   }
 
   try {
-    await walk(sourcesDir, "sources");
+    await walk(sourcesDir, WIKI_SOURCES_REL);
   } catch {
     // no sources tree
   }

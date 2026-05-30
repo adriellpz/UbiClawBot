@@ -11,11 +11,15 @@ const WIKI_TOP_LEVEL = [
   "wiki/contradictions",
 ];
 
+export const WIKI_SOURCES_REL = "wiki/sources";
+export const WIKI_SOURCES_ASSETS_REL = "wiki/sources/assets";
+export const WIKI_SOURCES_INGESTED_LOG_REL = "wiki/sources/ingested.log";
+
 const MAINTAINER_SCAFFOLD = [
-  "sources",
-  "sources/assets",
+  WIKI_SOURCES_REL,
+  WIKI_SOURCES_ASSETS_REL,
   "wiki/log.md",
-  "sources/ingested.log",
+  WIKI_SOURCES_INGESTED_LOG_REL,
 ];
 
 /** Empty combined wiki log: completion registry + chronicle (REQ-P0-002). */

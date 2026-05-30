@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { WIKI_SOURCES_ASSETS_REL } from "./wiki-layout.mjs";
 
 const IMAGE_URL_RE = /!\[[^\]]*]\((https?:\/\/[^)]+)\)/g;
 
@@ -19,7 +20,7 @@ export async function downloadSourceAssets(sourcePath, vaultRoot, { fetchImpl = 
   const sourceRel = path.relative(vaultRoot, sourcePath).replace(/\\/g, "/");
   const markdown = await readFile(sourcePath, "utf8");
   const slug = sourceSlug(sourceRel);
-  const assetDir = path.join(vaultRoot, "sources", "assets", slug);
+  const assetDir = path.join(vaultRoot, WIKI_SOURCES_ASSETS_REL, slug);
   await mkdir(assetDir, { recursive: true });
 
   const downloaded = [];

@@ -44,7 +44,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 
    - Include: integrated pages under `wiki/` (reports, runbooks, workflows, job-search, personal, projects, contradictions, etc.)
    - Exclude: `wiki/openclaw-docs/**`, `**/*-index.md`, `wiki/log.md`, `wiki/index.md`
-   - Exclude from index: `sources/**`, `raw-input/**` (not integrated wiki until ingested)
+   - Exclude from index: `wiki/sources/**`, `raw-input/**` (not integrated wiki until ingested)
 
 4. Document invocation in Ubi **AGENTS.md** (read path + example `qmd query`) once smoke passes.
 
@@ -135,11 +135,11 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 
 **Prep**
 
-1. Note starting state: `wiki/log.md` completion registry line count, `sources/ingested.log` lines, `raw-input/` file count, `wikiMaintainer.curatorIdleStreak` in scheduler config (`openclaw.json` or `wiki-maintainer.json`).
+1. Note starting state: `wiki/log.md` completion registry line count, `wiki/sources/ingested.log` lines, `raw-input/` file count, `wikiMaintainer.curatorIdleStreak` in scheduler config (`openclaw.json` or `wiki-maintainer.json`).
 
 2. **Raw input drop:** place `{agent}-YYYY-MM-DD-smoke-raw.md` in `raw-input/` (simple note, no `update:`). Wait **≥1** curator tick (15 min) or trigger cron manually if your ops process allows.
 
-3. **Source clip:** place `sources/smoke-clip-YYYY-MM-DD.md` with at least one remote image URL. Wait **≥1** tick for one-source ingest (test 29 path: stub summary under `wiki/reports/`).
+3. **Source clip:** place `wiki/sources/smoke-clip-YYYY-MM-DD.md` with at least one remote image URL. Wait **≥1** tick for one-source ingest (test 29 path: stub summary under `wiki/reports/`).
 
 4. Allow **additional ticks** for maintenance backlog (up to five pages/tick) if registry incomplete.
 
@@ -148,7 +148,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 | # | Observation | Pass criteria |
 |---|-------------|----------------|
 | A | Raw input | Drop removed or filed; new/updated `wiki/**` page with page format contract (frontmatter, title, blurb, `## Related`) |
-| B | Source | `sources/ingested.log` contains clip path; assets under `sources/assets/<slug>/`; summary page exists; source `.md` unchanged |
+| B | Source | `wiki/sources/ingested.log` contains clip path; assets under `wiki/sources/assets/<slug>/`; summary page exists; source `.md` unchanged |
 | C | Log | Completion registry lines for touched pages; chronicle entry when work ran |
 | D | Indexes | Touched `{folder}-index.md` and `wiki/index.md` updated |
 | E | qmd | `qmd query` hits a phrase from a page touched in this smoke |

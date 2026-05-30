@@ -10,6 +10,8 @@
     "trello-gateway/**",
     "scripts/manual/**",
     "scripts/backup-droplet.sh",
+    "scripts/deploy-droplet-remote.sh",
+    "scripts/monitor-github-pr-bridge.sh",
     "scripts/sync-live-config.sh",
     "scripts/sync-live-config.mjs",
     "scripts/sanitize-live-config.mjs",
@@ -24,87 +26,89 @@
       "id": "workspace",
       "scpSource": "workspace/Dockerfile.gog,workspace/docker-compose.droplet.yml",
       "installMarkers": [
-        "cp /home/deploy/openclaw/.deploy-tmp/Dockerfile.gog",
-        "cp /home/deploy/openclaw/.deploy-tmp/docker-compose.droplet.yml"
+        ".deploy-tmp/Dockerfile.gog",
+        ".deploy-tmp/docker-compose.droplet.yml"
       ]
     },
     {
       "id": "caddyfile",
       "scpSource": "Caddyfile.droplet",
-      "installMarkers": ["cp /home/deploy/openclaw/.deploy-tmp-root/Caddyfile.droplet"]
+      "installMarkers": [".deploy-tmp-root/Caddyfile.droplet"]
     },
     {
       "id": "github-pr-bridge",
       "scpSource": "github-pr-bridge/*",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/github-pr-bridge",
-        "cp /home/deploy/openclaw/.deploy-tmp-github-pr-bridge/github-pr-bridge/*"
+        "mkdir -p \"${OPENCLAW_ROOT}/github-pr-bridge\"",
+        ".deploy-tmp-github-pr-bridge/github-pr-bridge/"
       ]
     },
     {
       "id": "trello-routines",
       "scpSource": "trello-routines/*",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/trello-routines",
-        "cp /home/deploy/openclaw/.deploy-tmp-trello-routines/trello-routines/*"
+        "mkdir -p \"${OPENCLAW_ROOT}/trello-routines\"",
+        ".deploy-tmp-trello-routines/trello-routines/"
       ]
     },
     {
       "id": "trello-pipeline",
       "scpSource": "trello-pipeline/*",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/trello-pipeline",
-        "cp /home/deploy/openclaw/.deploy-tmp-trello-pipeline/trello-pipeline/*"
+        "mkdir -p \"${OPENCLAW_ROOT}/trello-pipeline\"",
+        ".deploy-tmp-trello-pipeline/trello-pipeline/"
       ]
     },
     {
       "id": "scripts-manual",
       "scpSource": "scripts/manual/*",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/scripts/manual",
-        "cp /home/deploy/openclaw/.deploy-tmp-scripts-manual/scripts/manual/*"
+        "mkdir -p \"${OPENCLAW_ROOT}/scripts/manual\"",
+        ".deploy-tmp-scripts-manual/scripts/manual/"
       ]
     },
     {
       "id": "trello-gateway",
       "scpSource": "trello-gateway/*",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/trello-gateway",
-        "cp \"/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f\""
+        "mkdir -p \"${OPENCLAW_ROOT}/trello-gateway\"",
+        ".deploy-tmp-trello-gateway/trello-gateway/$f"
       ]
     },
     {
       "id": "deploy-manifest",
       "scpSource": "deploy/manifest.json",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/deploy",
-        "cp /home/deploy/openclaw/.deploy-tmp-deploy/deploy/manifest.json"
+        "mkdir -p \"${OPENCLAW_ROOT}/deploy\"",
+        ".deploy-tmp-deploy/deploy/manifest.json"
       ]
     },
     {
       "id": "live-config",
       "scpSource": "config/live/**",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/config/live",
-        "cp -r /home/deploy/openclaw/.deploy-tmp-live-config/config/live/. /home/deploy/openclaw/config/live/"
+        "mkdir -p \"${OPENCLAW_ROOT}/config/live\"",
+        ".deploy-tmp-live-config/config/live/."
       ]
     },
     {
       "id": "ops-scripts",
-      "scpSource": "scripts/backup-droplet.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs",
+      "scpSource": "scripts/backup-droplet.sh,scripts/deploy-droplet-remote.sh,scripts/monitor-github-pr-bridge.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs",
       "installMarkers": [
-        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/backup-droplet.sh",
-        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.sh",
-        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs",
-        "cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs"
+        ".deploy-tmp-ops-scripts/scripts/backup-droplet.sh",
+        ".deploy-tmp-ops-scripts/scripts/deploy-droplet-remote.sh",
+        ".deploy-tmp-ops-scripts/scripts/monitor-github-pr-bridge.sh",
+        ".deploy-tmp-ops-scripts/scripts/sync-live-config.sh",
+        ".deploy-tmp-ops-scripts/scripts/sync-live-config.mjs",
+        ".deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs"
       ]
     },
     {
       "id": "cheryl-wiki-maintainer",
       "scpSource": "runtime/cheryl/wiki-maintainer/**",
       "installMarkers": [
-        "mkdir -p /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer",
-        "cp -r /home/deploy/openclaw/.deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/. /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer/"
+        "mkdir -p \"${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer\"",
+        ".deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/."
       ]
     }
   ],
@@ -137,6 +141,7 @@
       "deploy/manifest.json",
       "config/live/openclaw.json",
       "scripts/sync-live-config.sh",
+      "scripts/monitor-github-pr-bridge.sh",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
     ],
     "httpEndpoints": [
