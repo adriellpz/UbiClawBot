@@ -159,7 +159,7 @@ test("gog auth failure creates a Trello card and wakes Ubi", async (t) => {
   assert.ok(gatewayCalls.some((call) => call.operation === "search"));
   const createCardCall = gatewayCalls.find((call) => call.operation === "create_card");
   assert.ok(createCardCall);
-  assert.match(createCardCall.params.name, /GOG Auth: re-auth needed/);
+  assert.match(createCardCall.params.name, /GOG Auth: ubitheai re-auth needed/);
   assert.match(createCardCall.params.desc, /GOG canary account: ubitheai@gmail.com/);
   assert.match(createCardCall.params.desc, /invalid_grant: token revoked/);
 

@@ -254,6 +254,7 @@
         "mode": "off",
         "path": "/gmail-pubsub"
       }
-    }
+    },
+    "mappings": []
   }
 }

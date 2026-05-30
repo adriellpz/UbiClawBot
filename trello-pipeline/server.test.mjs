@@ -545,7 +545,7 @@ test("repo-owned trello bridge skips Ubi wake for gog canary cards created in Ba
         data: {
           card: {
             id: "card-gog-canary-1",
-            name: "P1 - GOG Auth: re-auth needed",
+            name: "P1 - GOG Auth: ubitheai re-auth needed",
             shortLink: "gog-canary-1",
           },
           list: { name: "Backlog" },

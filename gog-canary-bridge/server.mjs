@@ -53,8 +53,9 @@ function shouldWake(dedupeKey) {
   return true;
 }
 
-function buildCardTitle() {
-  return "P1 - GOG Auth: re-auth needed";
+function buildCardTitle(account = GOG_ACCOUNT) {
+  const local = String(account || "unknown").split("@")[0] || "unknown";
+  return `P1 - GOG Auth: ${local} re-auth needed`;
 }
 
 function buildCardDescription({ account, error, checkedAt }) {
@@ -191,7 +192,7 @@ async function upsertCanaryCard(failure) {
   const created = await trelloGatewayRequest("create_card", {
     params: {
       listName: intakeList.name,
-      name: buildCardTitle(),
+      name: buildCardTitle(account),
       desc: buildCardDescription(failure),
       pos: "top",
     },
