@@ -18,15 +18,16 @@
 
 Optional but normally useful:
 
+- `TRELLO_GATEWAY_AGENT_ID` (defaults to `system` — hook bridge card/comment authorship as systemworker)
 - `TRELLO_INTAKE_LIST_ID`
 - `TRELLO_DONE_LIST_NAMES`
 - `OPENCLAW_HOOK_URL`
 - `OPENCLAW_HOOK_TOKEN`
-- `OPENCLAW_HOOK_AGENT_ID` (defaults to `marcos` — Marcos owns GitHub PR review)
+- `OPENCLAW_HOOK_AGENT_ID` (defaults to `marcos` — Marcos owns GitHub PR review; do not set to `main` on the droplet)
 
 ## Behavior
 
-- creates or updates **PR review cards** in the configured intake list (typically **Backlog**)
+- creates or updates **PR review cards** in the configured intake list (typically **Backlog**) as **systemworker** (`TRELLO_GATEWAY_AGENT_ID`)
 - wakes **Marcos** (`OPENCLAW_HOOK_AGENT_ID`) to leave the GitHub review and update the Trello card
 - `trello-pipeline` skips Ubi backlog intake when it detects a PR review card title (`Review PR #N`)
 - ignores unsupported webhook action types

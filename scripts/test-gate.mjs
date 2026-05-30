@@ -222,6 +222,14 @@ function validateCompose(workflows) {
   assert(githubBridgeEnv.TRELLO_GATEWAY_URL !== undefined, `${composePath}: github-pr-bridge should use TRELLO_GATEWAY_URL`);
   assert(githubBridgeEnv.TRELLO_GATEWAY_KEY !== undefined, `${composePath}: github-pr-bridge should use TRELLO_GATEWAY_KEY`);
   assert(githubBridgeEnv.TRELLO_GATEWAY_AGENT_ID !== undefined, `${composePath}: github-pr-bridge should set TRELLO_GATEWAY_AGENT_ID`);
+  assert(
+    String(githubBridgeEnv.TRELLO_GATEWAY_AGENT_ID).includes("system"),
+    `${composePath}: github-pr-bridge TRELLO_GATEWAY_AGENT_ID default should be system`,
+  );
+  assert(
+    String(githubBridgeEnv.OPENCLAW_HOOK_AGENT_ID).includes("marcos"),
+    `${composePath}: github-pr-bridge OPENCLAW_HOOK_AGENT_ID default should be marcos`,
+  );
   assert(githubBridgeEnv.TRELLO_API_KEY === undefined, `${composePath}: github-pr-bridge should not receive raw TRELLO_API_KEY`);
   assert(githubBridgeEnv.TRELLO_API_TOKEN === undefined, `${composePath}: github-pr-bridge should not receive raw TRELLO_API_TOKEN`);
   assert(githubPrBridge.depends_on?.["trello-gateway"]?.condition === "service_healthy", `${composePath}: github-pr-bridge should wait for trello-gateway health`);

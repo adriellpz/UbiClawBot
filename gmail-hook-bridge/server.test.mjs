@@ -121,7 +121,7 @@ test("Adriel gmail hook creates a Trello card and wakes Ubi", async (t) => {
       GMAIL_HOOK_BRIDGE_PORT: String(bridgePort),
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
-      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_GATEWAY_AGENT_ID: "system",
       TRELLO_INTAKE_LIST_ID: "list-backlog",
       OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
       OPENCLAW_HOOK_TOKEN: "hook-test",
