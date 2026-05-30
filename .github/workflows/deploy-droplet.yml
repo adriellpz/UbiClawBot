@@ -11,6 +11,7 @@ on:
       - "trello-gateway/**"
       - "scripts/manual/**"
       - "scripts/backup-droplet.sh"
+      - "scripts/monitor-github-pr-bridge.sh"
       - "scripts/sync-live-config.sh"
       - "scripts/sync-live-config.mjs"
       - "scripts/sanitize-live-config.mjs"
@@ -123,7 +124,7 @@ jobs:
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
-          source: "scripts/backup-droplet.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs"
+          source: "scripts/backup-droplet.sh,scripts/monitor-github-pr-bridge.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs"
           target: "/home/deploy/openclaw/.deploy-tmp-ops-scripts"
 
       - name: Copy trello-gateway to droplet
@@ -251,10 +252,17 @@ jobs:
             mkdir -p /home/deploy/openclaw/config/live
             cp -r /home/deploy/openclaw/.deploy-tmp-live-config/config/live/. /home/deploy/openclaw/config/live/
             cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/backup-droplet.sh /home/deploy/openclaw/scripts/backup-droplet.sh
+            cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/monitor-github-pr-bridge.sh /home/deploy/openclaw/scripts/monitor-github-pr-bridge.sh
             cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.sh /home/deploy/openclaw/scripts/sync-live-config.sh
             cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs /home/deploy/openclaw/scripts/sync-live-config.mjs
             cp /home/deploy/openclaw/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs /home/deploy/openclaw/scripts/sanitize-live-config.mjs
-            chmod +x /home/deploy/openclaw/scripts/backup-droplet.sh /home/deploy/openclaw/scripts/sync-live-config.sh
+            chmod +x /home/deploy/openclaw/scripts/backup-droplet.sh /home/deploy/openclaw/scripts/monitor-github-pr-bridge.sh /home/deploy/openclaw/scripts/sync-live-config.sh
+
+            # Ensure the github-pr-bridge runtime watchdog is scheduled. This deploy runs
+            # as the deploy user (in the docker group), so the cron entry runs as deploy
+            # with no root/socket needed. Idempotent: replace only our own line.
+            ( crontab -l 2>/dev/null | grep -v "monitor-github-pr-bridge.sh"; \
+              echo "*/3 * * * * /home/deploy/openclaw/scripts/monitor-github-pr-bridge.sh >/dev/null 2>&1" ) | crontab -
             mkdir -p /home/deploy/openclaw/trello-gateway
             for f in Dockerfile deploy.sh trello_card_contract.mjs trello_gateway.mjs trello_transition_matrix.csv .env.example; do
               cp "/home/deploy/openclaw/.deploy-tmp-trello-gateway/trello-gateway/$f" "/home/deploy/openclaw/trello-gateway/$f"
@@ -272,6 +280,7 @@ jobs:
             smoke_required_file "deploy/manifest.json"
             smoke_required_file "config/live/openclaw.json"
             smoke_required_file "scripts/sync-live-config.sh"
+            smoke_required_file "scripts/monitor-github-pr-bridge.sh"
 
             cd "${OPENCLAW_ROOT}"
             bash scripts/sync-live-config.sh
