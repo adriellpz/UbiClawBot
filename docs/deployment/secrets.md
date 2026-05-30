@@ -24,6 +24,8 @@ Live runtime secrets/config stay here:
 
 **Do not edit** `/home/deploy/openclaw/data/config/openclaw.json` — stale copy from an old layout; not used by compose. See [`openclaw-agents.md`](./openclaw-agents.md).
 
+Live agent vault and runtime trees stay under `/home/deploy/openclaw/data/` (`OPENCLAW_AGENT_VAULT_DIR`, `OPENCLAW_AGENT_RUNTIME_DIR`). Full three-root layout: [`README.md` — Droplet path model](./README.md#droplet-path-model).
+
 The deploy workflow does not overwrite those files.
 
 ## Operational rules
