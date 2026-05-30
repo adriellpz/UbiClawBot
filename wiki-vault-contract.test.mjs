@@ -194,7 +194,7 @@ test("wiki-curator schema exists with required headings", () => {
 
 test("wiki-curator supersedes legacy raw-input.md filing-clerk pointer", () => {
   const rawInput = readSiblingText(RAW_INPUT_PATH);
-  assert.match(rawInput, /Superseded for maintainer semantics/i);
+  assert.match(rawInput, /Superseded for filing semantics/i);
   assert.match(rawInput, /\[\[wiki-publishing\]\]/);
   assert.match(rawInput, /\[\[wiki-curator\]\]/);
 });
