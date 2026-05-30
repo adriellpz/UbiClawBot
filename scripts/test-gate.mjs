@@ -409,7 +409,7 @@ function validateGithubPrBridge() {
   const source = readText(serverPath);
   assert(source.includes('"closed"'), `${serverPath}: pull_request.closed should be treated as a relevant action`);
   assert(source.includes('"github_pr_closed"'), `${serverPath}: closed PR hooks should wake OpenClaw with a close-specific event kind`);
-  assert(source.includes("Do not move to Done unless already in Done or Archived"), `${serverPath}: closed PR hook should guard Done moves`);
+  assert(source.includes("Move to Done unless already in Done or Archived"), `${serverPath}: closed PR hook should move closed PR cards to Done`);
   assert(source.includes("Do not reopen"), `${serverPath}: closed PR hook instructions should not ask agents to reopen PRs`);
   pass(`${serverPath}: closed PR handling checks completed`);
 }

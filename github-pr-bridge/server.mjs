@@ -321,7 +321,7 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
   const isClosed = payload.action === "closed";
   const instructionLines = isClosed
     ? [
-        "PR closed; update Trello with the current GitHub outcome. Do not move to Done unless already in Done or Archived. Do not reopen.",
+        "PR closed; update Trello with the current GitHub outcome. Move to Done unless already in Done or Archived. Do not reopen.",
       ]
     : [
         "Step 0: Style the card (cover, priority tag).",
