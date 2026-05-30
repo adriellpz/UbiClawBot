@@ -36,16 +36,28 @@ log() {
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$SERVICE" "$1" >> "$LOG" 2>/dev/null || true
 }
 
-# Single-flight: never let two runs recreate the bridge at once.
+# Single-flight: never let two runs recreate the bridge at once. The lock lives in
+# STATE_DIR (a persistent data dir, not /tmp) so it isn't subject to tmpwatch; flock
+# holds the lock on the open fd, not the inode, so a stale lock file is harmless.
 LOCKFILE="$STATE_DIR/github-pr-bridge-monitor.lock"
 if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCKFILE" || true
   flock -n 9 || exit 0
 fi
 
-# Site host comes from the Caddyfile so we never hardcode the domain.
-host="$(awk '!/^#/ && /\{[ \t]*$/ {sub(/[ \t]*\{[ \t]*$/,""); print; exit}' "$CADDYFILE" 2>/dev/null || true)"
-host="${host:-ai.sonofwolf.org}"
+# Site host comes from the Caddyfile so we never hardcode the domain. If the Caddyfile
+# is missing/unreadable or yields no site label we still proceed with a sensible
+# default (early-exit would make the watchdog silently stop), but we log the fallback
+# so a moved/renamed Caddyfile doesn't turn into an invisible blind spot.
+DEFAULT_HOST="${DEFAULT_HOST:-ai.sonofwolf.org}"
+host=""
+if [ -r "$CADDYFILE" ]; then
+  host="$(awk '!/^#/ && /\{[ \t]*$/ {sub(/[ \t]*\{[ \t]*$/,""); print; exit}' "$CADDYFILE" 2>/dev/null || true)"
+fi
+if [ -z "$host" ]; then
+  log "\"action\":\"caddyfile_host_fallback\",\"caddyfile\":\"${CADDYFILE}\",\"host\":\"${DEFAULT_HOST}\""
+  host="$DEFAULT_HOST"
+fi
 
 probe() {
   # --resolve pins SNI to loopback so we exercise Caddy -> docker-proxy -> bridge
