@@ -128,7 +128,7 @@ test("gog auth failure creates a Trello card and wakes Ubi", async (t) => {
       GOG_CANARY_STATE_DIR: stateDir,
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
-      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_GATEWAY_AGENT_ID: "system",
       TRELLO_INTAKE_LIST_ID: "list-backlog",
       OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
       OPENCLAW_HOOK_TOKEN: "hook-test",

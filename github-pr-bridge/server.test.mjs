@@ -130,7 +130,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
       GITHUB_PR_WEBHOOK_SECRET: "test-secret",
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
-      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_GATEWAY_AGENT_ID: "system",
       TRELLO_BOARD_ID: "board123",
       OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
       OPENCLAW_HOOK_TOKEN: "hook-test",
@@ -194,7 +194,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
     gatewayCalls.map((call) => call.operation),
     ["search", "board_lists", "board_lists", "create_card"],
   );
-  assert.equal(gatewayCalls[0].agentId, "main");
+  assert.equal(gatewayCalls[0].agentId, "system");
   assert.match(gatewayCalls[0].params.query, /\/pull\/14/);
   assert.match(gatewayCalls[0].params.query, /board:board123/);
   const createCardCall = gatewayCalls.find((call) => call.operation === "create_card");
@@ -287,7 +287,7 @@ test("gateway search normalizes shortUrl when updating an existing PR card", asy
       GITHUB_PR_WEBHOOK_SECRET: "test-secret",
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
-      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_GATEWAY_AGENT_ID: "system",
       TRELLO_BOARD_ID: "board123",
       OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
       OPENCLAW_HOOK_TOKEN: "hook-test",
@@ -427,7 +427,7 @@ test("concurrent webhook deliveries for the same PR create exactly one card", as
       GITHUB_PR_WEBHOOK_SECRET: "test-secret",
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
-      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_GATEWAY_AGENT_ID: "system",
       TRELLO_BOARD_ID: "board123",
       OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
       OPENCLAW_HOOK_TOKEN: "hook-test",
@@ -565,7 +565,7 @@ test("the board list-name cache honours a configurable TTL", async (t) => {
       GITHUB_PR_WEBHOOK_SECRET: "test-secret",
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
-      TRELLO_GATEWAY_AGENT_ID: "main",
+      TRELLO_GATEWAY_AGENT_ID: "system",
       TRELLO_BOARD_ID: "board123",
       TRELLO_LIST_CACHE_TTL_MS: "0",
       OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,

@@ -13,7 +13,7 @@ const SKIP_SCHEDULE = process.env.GOG_CANARY_SKIP_SCHEDULE === "1";
 
 const TRELLO_GATEWAY_URL = process.env.TRELLO_GATEWAY_URL || "";
 const TRELLO_GATEWAY_KEY = process.env.TRELLO_GATEWAY_KEY || "";
-const TRELLO_GATEWAY_AGENT_ID = process.env.TRELLO_GATEWAY_AGENT_ID || "main";
+const TRELLO_GATEWAY_AGENT_ID = process.env.TRELLO_GATEWAY_AGENT_ID || "system";
 const TRELLO_BOARD_ID = process.env.TRELLO_BOARD_ID || "";
 const TRELLO_INTAKE_LIST_ID = process.env.TRELLO_INTAKE_LIST_ID || "";
 const OPENCLAW_HOOK_URL = process.env.OPENCLAW_HOOK_URL || "";
