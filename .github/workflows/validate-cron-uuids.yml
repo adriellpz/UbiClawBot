@@ -1,0 +1,32 @@
+name: Validate cron UUIDs
+
+on:
+  pull_request:
+    paths:
+      - "config/live/cron/jobs.json"
+      - "scripts/validate-cron-uuids.mjs"
+      - ".github/workflows/validate-cron-uuids.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/live/cron/jobs.json"
+      - "scripts/validate-cron-uuids.mjs"
+      - ".github/workflows/validate-cron-uuids.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate format and uniqueness
+        run: node scripts/validate-cron-uuids.mjs
+
+      - name: Guard against accidental UUID regeneration
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/validate-cron-uuids.mjs --compare-ref "$BASE_REF"
