@@ -32,5 +32,6 @@ The deploy workflow does not overwrite those files.
 
 - keep `TRELLO_API_KEY` and `TRELLO_API_TOKEN` only in `trello-gateway/.env`
 - give the rest of the stack only `TRELLO_GATEWAY_URL` and `TRELLO_GATEWAY_KEY`
+- `trello-bridge` loads `trello-gateway/.env` read-only via `TRELLO_PIPELINE_ENV_FILE` for the optional fallback poll only; do not put raw Trello creds in `/home/deploy/openclaw/.env`
 - keep webhook secrets such as `GITHUB_PR_WEBHOOK_SECRET` in `/home/deploy/openclaw/.env`
 - recreate only the affected services after rotating env values
