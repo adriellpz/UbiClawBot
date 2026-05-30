@@ -56,12 +56,15 @@ ssh myserver 'cd /home/deploy/openclaw && bash scripts/sync-live-config.sh'
 
 Authoritative config: **`/root/openclaw/data/config/`** (`OPENCLAW_CONFIG_DIR`).
 
-## Vault tools
+## Cheryl wiki maintainer runtime
 
-`agent-workspace-vault` tooling is rsynced separately today:
+Wiki maintainer `lib/` + `bin/` live in git at `UbiClawBot/runtime/cheryl/wiki-maintainer/`. Production deploy copies them to:
 
-```bash
-rsync -av --delete ../agent-workspace-vault/ myserver:/home/deploy/openclaw/tools/agent-workspace-vault/
+```text
+/home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer/
+  → /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/  (container)
 ```
+
+Bundled in `deploy/manifest.json` (`cheryl-wiki-maintainer`) — no manual rsync. Legacy path `/home/deploy/openclaw/tools/agent-workspace-vault/` may still exist from pre-cutover migrations; safe to remove after deploy verifies.
 
 See [`live-verification.md`](./live-verification.md) for migration notes.

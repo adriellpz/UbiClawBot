@@ -15,6 +15,10 @@ tar -czf "$BACKUP_ROOT/openclaw-config-no-browser.tgz" \
 tar -czf "$BACKUP_ROOT/agent-vault.tgz" \
   -C /home/deploy/openclaw/data agent-vault
 
+if [[ -d /home/deploy/openclaw/data/agent-runtime/cheryl/wiki-maintainer ]]; then
+  tar -czf "$BACKUP_ROOT/cheryl-wiki-maintainer-runtime.tgz" \
+    -C /home/deploy/openclaw/data/agent-runtime/cheryl wiki-maintainer
+fi
 if [[ -d /home/deploy/openclaw/tools/agent-workspace-vault ]]; then
   tar -czf "$BACKUP_ROOT/tools-agent-workspace-vault.tgz" \
     -C /home/deploy/openclaw/tools agent-workspace-vault
@@ -30,7 +34,8 @@ Droplet backup $STAMP
 Files:
 - openclaw-config-no-browser.tgz  → /root/openclaw/data/config (no browser profile)
 - agent-vault.tgz                 → /home/deploy/openclaw/data/agent-vault
-- tools-agent-workspace-vault.tgz → vault helper scripts (if present)
+- cheryl-wiki-maintainer-runtime.tgz → data/agent-runtime/cheryl/wiki-maintainer (if present)
+- tools-agent-workspace-vault.tgz → legacy vault tools path (deprecated; if present)
 - deploy.env, trello-gateway.env  → secrets (private)
 
 Restore:

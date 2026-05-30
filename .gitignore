@@ -26,6 +26,8 @@ workspace/**
 do-droplet-bundle/
 openclaw-droplet-bundle.zip
 bin/
+!runtime/cheryl/wiki-maintainer/bin/
+!runtime/cheryl/wiki-maintainer/bin/**
 node_modules/
 
 # --- OS / tooling ---

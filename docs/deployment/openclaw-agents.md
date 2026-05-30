@@ -37,7 +37,8 @@ Cheryl’s **wiki inbox cron** is an AI agent turn (`agentTurn` in `jobs.json`):
 - **Agent:** `scheduler`  
 - **Empty inbox:** reply exactly `NO_REPLY`  
 - **Skill:** `cheryl/skills/cheryl-vault-inbox/SKILL.md`  
-- **Inbox:** `/home/node/.openclaw/agent-vault/raw-input/`
+- **Inbox:** `/home/node/.openclaw/agent-vault/raw-input/`  
+- **Runtime tools:** `/home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/` (preflight, index generator)
 
 ## Changing a model
 

@@ -61,6 +61,9 @@
         "workspace": "/home/node/.openclaw/agent-vault/cheryl",
         "model": "opencode-go/deepseek-v4-flash",
         "thinkingDefault": "medium",
+        "wikiMaintainer": {
+          "curatorIdleStreak": 0
+        },
         "tools": {
           "alsoAllow": [
             "exec",
