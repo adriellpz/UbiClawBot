@@ -9,6 +9,7 @@ on:
       - "trello-pipeline/**"
       - "trello-routines/**"
       - "trello-gateway/**"
+      - "shared/**"
       - "scripts/manual/**"
       - "scripts/backup-droplet.sh"
       - "scripts/deploy-droplet-remote.sh"
@@ -138,6 +139,16 @@ jobs:
           port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
           source: "runtime/cheryl/wiki-maintainer/**"
           target: "/home/deploy/openclaw/.deploy-tmp-cheryl-wiki-maintainer"
+
+      - name: Copy shared modules to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "shared/*"
+          target: "/home/deploy/openclaw/.deploy-tmp-shared"
 
       - name: Copy trello-gateway to droplet
         uses: appleboy/scp-action@v0.1.7

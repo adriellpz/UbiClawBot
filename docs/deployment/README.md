@@ -31,6 +31,20 @@ Manual ops scripts (for example routine due backfill) live at `/home/deploy/open
 
 CI enforces that `.github/workflows/deploy-droplet.yml` stays in sync with `deploy/manifest.json` via `deploy-contract.test.mjs`.
 
+### Deploy user sudo (one-time droplet setup)
+
+`scripts/sync-live-config.sh` writes under `/root/openclaw/data/config/`. The deploy user must be able to re-exec that script as root without a password. On the droplet (once):
+
+```bash
+cat > /etc/sudoers.d/deploy-sync-live-config <<'EOF'
+deploy ALL=(root) NOPASSWD: /usr/bin/bash /home/deploy/openclaw/scripts/sync-live-config.sh
+EOF
+chmod 440 /etc/sudoers.d/deploy-sync-live-config
+visudo -cf /etc/sudoers.d/deploy-sync-live-config
+```
+
+Manual `rsync` from a laptop can leave `config/live/` owned by uid 501 — fix with `chown -R deploy:deploy /home/deploy/openclaw/config/live` before deploy if CI reports permission denied.
+
 ## What stays on the droplet
 
 The workflow updates tracked files only. It does not overwrite:

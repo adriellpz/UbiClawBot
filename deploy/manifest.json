@@ -8,6 +8,7 @@
     "trello-routines/**",
     "trello-pipeline/**",
     "trello-gateway/**",
+    "shared/**",
     "scripts/manual/**",
     "scripts/backup-droplet.sh",
     "scripts/deploy-droplet-remote.sh",
@@ -57,6 +58,14 @@
       "installMarkers": [
         "mkdir -p \"${OPENCLAW_ROOT}/trello-pipeline\"",
         ".deploy-tmp-trello-pipeline/trello-pipeline/"
+      ]
+    },
+    {
+      "id": "shared",
+      "scpSource": "shared/*",
+      "installMarkers": [
+        "mkdir -p \"${OPENCLAW_ROOT}/shared\"",
+        ".deploy-tmp-shared/shared/"
       ]
     },
     {
@@ -135,6 +144,7 @@
       "scripts/manual/backfill_calendar_links_to_description.mjs",
       "trello-routines/ensure_routines.mjs",
       "trello-pipeline/server.mjs",
+      "shared/pr_review_card.mjs",
       "trello-gateway/trello_gateway.mjs",
       "github-pr-bridge/server.mjs",
       "docker-compose.yml",
