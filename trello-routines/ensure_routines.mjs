@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { buildNoSlotComment, findRoutinePreferSlot } from "./ensure_routines_logic.mjs";
 import { buildDescription, eventHtmlLink, formatCalendarTimeRange } from "./trello_card_calendar_desc.mjs";
-import { buildNextStepsChecklist, buildOpenCardDescription } from "./trello_open_card_contract.mjs";
+import { buildOpenCardDescription } from "./trello_open_card_contract.mjs";
 import { eventToTrelloCard, parseRoutineTags } from "./routine_calendar_lookup.mjs";
 import { boardOpenCards, comment, createCard, getCard, moveCard, styleCard, updateCard } from "./trello_gateway_module.mjs";
 
@@ -119,13 +119,6 @@ function fetchCalendarEvents(from, to) {
   } catch {
     return [];
   }
-}
-
-function buildRoutineChecklist() {
-  const lines = [
-    "Complete this routine during the scheduled block.",
-  ];
-  return [buildNextStepsChecklist(lines)];
 }
 
 function descHasTags(desc, habitId, period) {
@@ -250,7 +243,6 @@ async function main() {
           {
             listName: habit.trello_list || "Routine",
             desc: buildCardDescription(habit, period),
-            checklists: buildRoutineChecklist(),
           },
           AGENT_ID,
         );
@@ -294,7 +286,6 @@ async function main() {
         {
           listName: habit.trello_list || "Routine",
           desc: buildCardDescription(habit, period),
-          checklists: buildRoutineChecklist(),
           due,
         },
         AGENT_ID,

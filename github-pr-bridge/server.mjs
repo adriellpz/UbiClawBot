@@ -12,7 +12,7 @@ const TRELLO_BOARD_ID = process.env.TRELLO_BOARD_ID || "";
 const TRELLO_INTAKE_LIST_ID = process.env.TRELLO_INTAKE_LIST_ID || "";
 const OPENCLAW_HOOK_URL = process.env.OPENCLAW_HOOK_URL || "";
 const OPENCLAW_HOOK_TOKEN = process.env.OPENCLAW_HOOK_TOKEN || "";
-const OPENCLAW_HOOK_AGENT_ID = process.env.OPENCLAW_HOOK_AGENT_ID || "main";
+const OPENCLAW_HOOK_AGENT_ID = process.env.OPENCLAW_HOOK_AGENT_ID || "marcos";
 const OPENCLAW_HOOK_SESSION_PREFIX = process.env.OPENCLAW_HOOK_SESSION_PREFIX || "hook:github-pr:";
 const MAX_BODY_BYTES = Number(process.env.GITHUB_PR_MAX_BODY_BYTES || 1024 * 1024);
 const DONE_LIST_NAMES = (process.env.TRELLO_DONE_LIST_NAMES || "Done")
@@ -72,17 +72,6 @@ function priorityForEvent(action, pullRequest) {
 
 function buildCardTitle(priority, prNumber) {
   return `${priority} - Review PR ${prNumber}`;
-}
-
-function buildNextStepsChecklist() {
-  return {
-    name: "Next steps",
-    items: [
-      { name: "Review the pull request in GitHub." },
-      { name: "Leave a GitHub review with concrete feedback or approval." },
-      { name: "Update the Trello card after the review is complete." },
-    ],
-  };
 }
 
 function buildCardDescription(payload) {
@@ -239,34 +228,12 @@ async function addCardComment(cardId, text) {
   });
 }
 
-async function createDirectChecklist(cardId, checklist) {
-  const createdChecklist = await trelloFetch(`/cards/${encodeURIComponent(cardId)}/checklists`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: checklist.name }),
-  });
-
-  for (const item of checklist.items || []) {
-    await trelloFetch(`/checklists/${encodeURIComponent(createdChecklist.id)}/checkItems`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: item.name,
-        state: item.checked ? "complete" : "incomplete",
-      }),
-    });
-  }
-
-  return createdChecklist;
-}
-
 async function upsertReviewCard(payload) {
   const pr = payload.pull_request;
   const prNumber = pr.number;
   const priority = priorityForEvent(payload.action, pr);
   const cardTitle = buildCardTitle(priority, prNumber);
   const description = buildCardDescription(payload);
-  const checklist = buildNextStepsChecklist();
   const existing = await findExistingOpenCard(pr);
 
   if (existing) {
@@ -287,7 +254,6 @@ async function upsertReviewCard(payload) {
         listName: intakeList.name,
         name: cardTitle,
         desc: description,
-        checklists: [checklist],
         pos: "top",
       },
     });
@@ -308,7 +274,6 @@ async function upsertReviewCard(payload) {
       pos: "top",
     }),
   });
-  await createDirectChecklist(created.id, checklist);
   return { mode: "created", cardId: created.id, cardUrl: created.url };
 }
 
@@ -327,7 +292,8 @@ async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
     `branches: ${pr.head?.ref || "?"} -> ${pr.base?.ref || "?"}`,
     `trello: ${cardResult.mode} ${cardResult.cardUrl}`,
     "",
-    "Please review this PR and leave a GitHub review. Adriel is final merge gate.",
+    "Leave a GitHub review on this PR, copy findings into the card Peer Review section, then move the card to Done when complete.",
+    "Adriel is the final merge gate — do not merge.",
   ].join("\n");
 
   // /hooks/agent expects a message body; keep the payload shape compatible.

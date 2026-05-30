@@ -42,8 +42,7 @@ Creates a card in a target list (`params.listName`, default `Backlog`).
 Lists in the transition matrix (except exempt lists like `Done`) require the open-card contract at creation time. Because Trello creates the card shell before checklists exist, the gateway validates a **planned snapshot** and then creates any requested checklists immediately after `POST /cards`.
 
 - **`params.desc`**: must include the four description sections in order (`Original Request`, `Research`, `Peer Review`, `Work completed`). `Peer Review` must be blank on create.
-- **`params.checklists`** (optional): array of checklist specs to create with the card. Each entry may be a string checklist name or `{ name, items?: [{ name, state? }] }`.
-- **Auto-inject**: when `params.checklists` is omitted and the target list is contract-scoped, the gateway injects a native `Next steps` checklist so agents can create directly in `Backlog` (and other scoped lists) without staging in `Done` first.
+- **`params.checklists`** (optional): array of checklist specs to create with the card. Each entry may be a string checklist name or `{ name, items?: [{ name, state? }] }`. Checklists are optional; the contract no longer requires a native `Next steps` checklist.
 
 Example:
 
@@ -54,8 +53,7 @@ Example:
   "params": {
     "listName": "Backlog",
     "name": "New intake card",
-    "desc": "Original Request:\n...\n\nResearch:\n...\n\nPeer Review:\n\nWork completed:\n\n",
-    "checklists": [{ "name": "Next steps", "items": [{ "name": "First action" }] }]
+    "desc": "Original Request:\n...\n\nResearch:\n...\n\nPeer Review:\n\nWork completed:\n\n"
   }
 }
 ```

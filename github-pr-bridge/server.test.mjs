@@ -205,20 +205,11 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
   assert.match(createCardCall?.params.desc, /Research:/);
   assert.match(createCardCall?.params.desc, /Peer Review:\n\nWork completed:/);
   assert.match(createCardCall?.params.desc, /https:\/\/github\.com\/adriellpz\/UbiClawBot\/pull\/14/);
-  assert.deepEqual(createCardCall?.params.checklists, [
-    {
-      name: "Next steps",
-      items: [
-        { name: "Review the pull request in GitHub." },
-        { name: "Leave a GitHub review with concrete feedback or approval." },
-        { name: "Update the Trello card after the review is complete." },
-      ],
-    },
-  ]);
+  assert.equal(createCardCall?.params.checklists, undefined);
 
   assert.equal(hookCalls.length, 1);
   assert.equal(hookCalls[0].authorization, "Bearer hook-test");
-  assert.equal(hookCalls[0].body.agentId, "main");
+  assert.equal(hookCalls[0].body.agentId, "marcos");
   assert.equal(hookCalls[0].body.sessionKey, "hook:github-pr:14");
   assert.match(hookCalls[0].body.message, /github_pr_review_requested/);
   assert.match(hookCalls[0].body.message, /https:\/\/trello\.com\/c\/card-123/);

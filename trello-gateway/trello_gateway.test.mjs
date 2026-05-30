@@ -342,7 +342,7 @@ async function gatewayRequest(port, body) {
   };
 }
 
-test("create_card enforces a compliant body and creates the native Next steps checklist", async (t) => {
+test("create_card enforces a compliant body and optional checklists", async (t) => {
   const trello = createStubTrelloServer();
   const trelloListener = await listen(trello.server);
   const gateway = await startGateway(trelloListener.url, trello.boardId);
@@ -369,16 +369,16 @@ test("create_card enforces a compliant body and creates the native Next steps ch
         "Work completed:",
         "",
       ].join("\n"),
-      checklists: [{ name: "Next steps" }],
+      checklists: [{ name: "Follow-up" }],
     },
   });
 
   assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
   assert.equal(response.json.success, true);
-  assert.equal(trello.getChecklists(response.json.cardId)[0]?.name, "Next steps");
+  assert.equal(trello.getChecklists(response.json.cardId)[0]?.name, "Follow-up");
 });
 
-test("create_card auto-injects Next steps when creating in a scoped list without checklists", async (t) => {
+test("create_card succeeds in a scoped list without checklists", async (t) => {
   const trello = createStubTrelloServer();
   const trelloListener = await listen(trello.server);
   const gateway = await startGateway(trelloListener.url, trello.boardId);
@@ -392,13 +392,13 @@ test("create_card auto-injects Next steps when creating in a scoped list without
     operation: "create_card",
     params: {
       listName: "Backlog",
-      name: "Create with auto checklist",
+      name: "Create without checklist",
       desc: [
         "Original Request:",
         "Create directly in Backlog.",
         "",
         "Research:",
-        "Omit checklists param; gateway should inject Next steps.",
+        "Checklists are optional under the open-card contract.",
         "",
         "Peer Review:",
         "",
@@ -410,7 +410,7 @@ test("create_card auto-injects Next steps when creating in a scoped list without
 
   assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
   assert.equal(response.json.success, true);
-  assert.equal(trello.getChecklists(response.json.cardId)[0]?.name, "Next steps");
+  assert.equal(trello.getChecklists(response.json.cardId).length, 0);
 });
 
 test("create_card rejects scoped creates with an invalid description even when checklists are omitted", async (t) => {
@@ -464,7 +464,6 @@ test("create_card rejects cards that prefill Peer Review content", async (t) => 
         "Work completed:",
         "",
       ].join("\n"),
-      checklists: [{ name: "Next steps" }],
     },
   });
 
@@ -498,6 +497,25 @@ test("update rejects structural writes that violate Original Request immutabilit
   assert.equal(response.status, 403, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
   assert.equal(response.json.blocked, true);
   assert.match(response.json.reason, /Original Request/);
+});
+
+test("move allows compliant cards without a checklist", async (t) => {
+  const trello = createStubTrelloServer();
+  const trelloListener = await listen(trello.server);
+  const gateway = await startGateway(trelloListener.url, trello.boardId);
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
+  });
+
+  const move = await gatewayRequest(gateway.port, {
+    agentId: "main",
+    operation: "move",
+    cardId: "card-missing-checklist",
+    params: { targetList: "Done" },
+  });
+  assert.equal(move.status, 200, JSON.stringify({ move, output: gateway.getOutput() }, null, 2));
+  assert.equal(move.json.moved, true);
 });
 
 test("update allows compliant structural rewrites to Research", async (t) => {
@@ -574,56 +592,6 @@ test("move blocks structural non-repair writes on a drifted card", async (t) => 
   assert.match(response.json.reason, /repair/i);
 });
 
-test("create_checklist repair unlocks move to Done on a compliant card missing Next steps", async (t) => {
-  const trello = createStubTrelloServer();
-  const trelloListener = await listen(trello.server);
-  const gateway = await startGateway(trelloListener.url, trello.boardId);
-
-  t.after(async () => {
-    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
-  });
-
-  const repair = await gatewayRequest(gateway.port, {
-    agentId: "main",
-    operation: "create_checklist",
-    cardId: "card-missing-checklist",
-    params: { name: "Next steps" },
-  });
-  assert.equal(repair.status, 200, JSON.stringify({ repair, output: gateway.getOutput() }, null, 2));
-
-  const move = await gatewayRequest(gateway.port, {
-    agentId: "main",
-    operation: "move",
-    cardId: "card-missing-checklist",
-    params: { targetList: "Done" },
-  });
-  assert.equal(move.status, 200, JSON.stringify({ move, output: gateway.getOutput() }, null, 2));
-  assert.equal(move.json.moved, true);
-});
-
-test("create_checklist can repair a compliant body that is only missing Next steps", async (t) => {
-  const trello = createStubTrelloServer();
-  const trelloListener = await listen(trello.server);
-  const gateway = await startGateway(trelloListener.url, trello.boardId);
-
-  t.after(async () => {
-    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
-  });
-
-  const response = await gatewayRequest(gateway.port, {
-    agentId: "main",
-    operation: "create_checklist",
-    cardId: "card-missing-checklist",
-    params: {
-      name: "Next steps",
-    },
-  });
-
-  assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
-  assert.equal(response.json.success, true);
-  assert.equal(trello.getChecklists("card-missing-checklist")[0]?.name, "Next steps");
-});
-
 test("update can repair a drifted card by replacing the body with a compliant description", async (t) => {
   const trello = createStubTrelloServer();
   const trelloListener = await listen(trello.server);
@@ -659,7 +627,7 @@ test("update can repair a drifted card by replacing the body with a compliant de
   assert.equal(response.json.updated, true);
 });
 
-test("update allows description-only repair on an empty intake card missing Next steps", async (t) => {
+test("update allows description-only repair on an empty intake card", async (t) => {
   const trello = createStubTrelloServer();
   const trelloListener = await listen(trello.server);
   const gateway = await startGateway(trelloListener.url, trello.boardId);
@@ -692,27 +660,4 @@ test("update allows description-only repair on an empty intake card missing Next
 
   assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
   assert.equal(response.json.updated, true);
-});
-
-test("create_checklist allows Next steps repair on an empty intake card missing sections", async (t) => {
-  const trello = createStubTrelloServer();
-  const trelloListener = await listen(trello.server);
-  const gateway = await startGateway(trelloListener.url, trello.boardId);
-
-  t.after(async () => {
-    await Promise.allSettled([stopChild(gateway.child), closeServer(trelloListener.server)]);
-  });
-
-  const response = await gatewayRequest(gateway.port, {
-    agentId: "main",
-    operation: "create_checklist",
-    cardId: "card-empty-intake",
-    params: {
-      name: "Next steps",
-    },
-  });
-
-  assert.equal(response.status, 200, JSON.stringify({ response, output: gateway.getOutput() }, null, 2));
-  assert.equal(response.json.success, true);
-  assert.equal(trello.getChecklists("card-empty-intake")[0]?.name, "Next steps");
 });
