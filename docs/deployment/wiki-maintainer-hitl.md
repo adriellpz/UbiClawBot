@@ -129,6 +129,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 - Cheryl wiki maintainer cron enabled (`*/15 * * * *`, America/Denver) — see `config/live/cron/jobs.json` job **Cheryl wiki maintainer**
 - `cheryl-vault-inbox` skill + `wiki/workflows/wiki-curator.md` deployed to vault
 - Preflight CLI: `node …/bin/wiki-log-preflight.mjs <vault-root>`
+- Register CLI (after edits): `node …/bin/wiki-log-register.mjs <vault-root> wiki/path1.md …`
 - Obsidian or SSH access to inspect vault files
 
 ### Smoke runbook (clip → cron → wiki + log + indexes + qmd + idle)

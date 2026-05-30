@@ -141,6 +141,7 @@ smoke_required_file "config/live/openclaw.json"
 smoke_required_file "scripts/sync-live-config.sh"
 smoke_required_file "scripts/monitor-github-pr-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
+smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
 
 cd "${OPENCLAW_ROOT}"
 bash scripts/sync-live-config.sh

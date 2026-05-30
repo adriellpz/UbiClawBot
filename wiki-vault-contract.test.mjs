@@ -33,6 +33,7 @@ import {
   invalidateStaleLogEntries,
   isExcludedRegistryPath,
 } from "./runtime/cheryl/wiki-maintainer/lib/wiki-log-preflight.mjs";
+import { upsertCompletionRegistryEntries } from "./runtime/cheryl/wiki-maintainer/lib/wiki-log-registry.mjs";
 import { spawn } from "node:child_process";
 import { extractBlurb } from "./runtime/cheryl/wiki-maintainer/lib/vault-index-generator.mjs";
 import { markSourceIngested, listPendingSources } from "./runtime/cheryl/wiki-maintainer/lib/ingested-sources-registry.mjs";
@@ -139,6 +140,18 @@ test("ensureWikiLayout on sibling vault creates maintainer scaffold", async () =
   for (const rel of maintainerPaths) {
     await access(path.join(vaultRoot, rel));
   }
+});
+
+test("sibling vault has no legacy vault-root sources/ trees", async () => {
+  const vaultRoot = path.resolve(import.meta.dirname, "../agent-workspace-vault");
+  const legacyRootSources = path.join(vaultRoot, "sources");
+  let legacyExists = true;
+  try {
+    await access(legacyRootSources);
+  } catch {
+    legacyExists = false;
+  }
+  assert.equal(legacyExists, false);
 });
 
 const WIKI_PUBLISHING_PATH = "agent-workspace-vault/wiki/workflows/wiki-publishing.md";
@@ -617,6 +630,65 @@ test("invalidateStaleLogEntries ignores excluded registry paths", async () => {
   assert.deepEqual(removed, []);
 });
 
+test("upsertCompletionRegistryEntries uses file mtime so preflight keeps entry", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wiki-log-register-"));
+  await mkdir(path.join(root, "wiki", "runbooks"), { recursive: true });
+  const page = path.join(root, "wiki", "runbooks", "playbook.md");
+  await writeFile(page, "# play\n");
+  const logPath = path.join(root, "wiki", "log.md");
+  await writeFile(logPath, wikiLogWithRegistryLines([]), "utf8");
+
+  const { updated } = await upsertCompletionRegistryEntries(logPath, root, ["wiki/runbooks/playbook.md"]);
+  assert.deepEqual(updated, ["wiki/runbooks/playbook.md"]);
+
+  const { removed } = await invalidateStaleLogEntries(logPath, root);
+  assert.deepEqual(removed, []);
+});
+
+test("upsertCompletionRegistryEntries replaces hand-written touch with file mtime", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wiki-log-register-replace-"));
+  await mkdir(path.join(root, "wiki", "workflows"), { recursive: true });
+  const page = path.join(root, "wiki", "workflows", "wiki-curator.md");
+  await writeFile(page, "# curator\n");
+  const logPath = path.join(root, "wiki", "log.md");
+  await writeFile(
+    logPath,
+    wikiLogWithRegistryLines(["wiki/workflows/wiki-curator.md\t2026-05-30T14:45:00Z"]),
+    "utf8",
+  );
+
+  await upsertCompletionRegistryEntries(logPath, root, ["wiki/workflows/wiki-curator.md"]);
+  const { removed } = await invalidateStaleLogEntries(logPath, root);
+  assert.deepEqual(removed, []);
+});
+
+test("wiki-log-register CLI upserts registry from file mtime", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wiki-log-register-cli-"));
+  await mkdir(path.join(root, "wiki", "runbooks"), { recursive: true });
+  await writeFile(path.join(root, "wiki", "runbooks", "playbook.md"), "# play\n", "utf8");
+  await ensureWikiLayout(root);
+  const cli = path.resolve(import.meta.dirname, "runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs");
+  const output = await new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      [cli, root, "wiki/runbooks/playbook.md"],
+      { encoding: "utf8" },
+    );
+    let stdout = "";
+    child.stdout.on("data", (c) => {
+      stdout += c;
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) reject(new Error(`exit ${code}: ${stdout}`));
+      else resolve(stdout);
+    });
+  });
+  assert.match(output, /updated 1 entries/);
+  const log = await readFile(path.join(root, "wiki", "log.md"), "utf8");
+  assert.match(log, /wiki\/runbooks\/playbook\.md\t/);
+});
+
 test("wiki-log-preflight CLI runs against empty registry log", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wiki-log-cli-"));
   await ensureWikiLayout(root);
@@ -877,6 +949,7 @@ test("cheryl-vault-inbox skill is thin wrapper over wiki-curator schema", () => 
   assert.match(skill, /wiki-curator\.md/i);
   assert.match(skill, /wiki curator schema/i);
   assert.match(skill, /wiki-log-preflight/i);
+  assert.match(skill, /wiki-log-register/i);
   assert.match(skill, /NO_REPLY/i);
 
   assert.doesNotMatch(skill, /wiki\/workflows\/raw-input\.md/i);
@@ -887,6 +960,8 @@ test("cheryl-vault-inbox skill is thin wrapper over wiki-curator schema", () => 
   assert.match(jobs, /cheryl-vault-inbox/i);
   assert.match(jobs, /wiki-curator\.md/i);
   assert.match(jobs, /wiki ingest|raw-input\/.*drops/i);
+  assert.match(jobs, /wiki-log-register/i);
+  assert.match(jobs, /"timeoutSeconds": 600/);
   assert.doesNotMatch(jobs, /wiki\/workflows\/raw-input\.md/i);
   assert.doesNotMatch(jobs, /filing-clerk|Filing buckets/i);
 });
@@ -950,7 +1025,7 @@ test("assessIdleConditions reports idle when queues empty and registry complete"
   await writeFile(path.join(vaultRoot, "wiki", "runbooks", "playbook.md"), "# play\n", "utf8");
   await writeFile(
     path.join(vaultRoot, "wiki", "log.md"),
-    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2026-05-30T12:00:00Z`]),
+    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2099-01-01T00:00:00.000Z`]),
     "utf8",
   );
 
@@ -1093,7 +1168,7 @@ test("runCuratorCronTick resets idle streak when any work runs", async () => {
   await writeFile(path.join(vaultRoot, "wiki", "runbooks", "playbook.md"), "# play\n", "utf8");
   await writeFile(
     path.join(vaultRoot, "wiki", "log.md"),
-    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2026-05-30T12:00:00Z`]),
+    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2099-01-01T00:00:00.000Z`]),
     "utf8",
   );
 
@@ -1130,7 +1205,7 @@ test("runCuratorCronTick returns NO_REPLY on idle ticks 1–3", async () => {
   await writeFile(path.join(vaultRoot, "wiki", "runbooks", "playbook.md"), "# play\n", "utf8");
   await writeFile(
     path.join(vaultRoot, "wiki", "log.md"),
-    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2026-05-30T12:00:00Z`]),
+    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2099-01-01T00:00:00.000Z`]),
     "utf8",
   );
 
@@ -1172,7 +1247,7 @@ test("runCuratorCronTick runs full wiki lint on idle tick 4 then resets streak",
   await writeFile(path.join(vaultRoot, "wiki", "runbooks", "playbook.md"), "# play\n", "utf8");
   await writeFile(
     path.join(vaultRoot, "wiki", "log.md"),
-    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2026-05-30T12:00:00Z`]),
+    wikiLogWithRegistryLines([`wiki/runbooks/playbook.md\t2099-01-01T00:00:00.000Z`]),
     "utf8",
   );
 

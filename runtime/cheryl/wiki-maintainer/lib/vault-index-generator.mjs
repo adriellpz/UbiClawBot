@@ -4,7 +4,9 @@ import { shouldSkipWikiPage } from "./wiki-log-registry.mjs";
 
 export function shouldSkipIndexTree(relPath) {
   if (relPath === "raw-input" || relPath.startsWith("raw-input/")) return true;
+  // Legacy vault-root sources/ (superseded by wiki/sources/) — never index.
   if (relPath === "sources" || relPath.startsWith("sources/")) return true;
+  if (relPath.startsWith("_superseded-sources-")) return true;
   return false;
 }
 
