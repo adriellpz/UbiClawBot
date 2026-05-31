@@ -11,6 +11,13 @@
 # next scheduled run. This exists because the in-tick reindex hook
 # (reindexWikiSearch) is currently a no-op stub, so nothing else keeps
 # the index fresh as Cheryl files new wiki pages.
+#
+# Cache path dependency: the container path /home/node/.cache/qmd is
+# bind-mounted from the host via $OPENCLAW_QMD_CACHE_DIR (default:
+# /home/deploy/openclaw/data/qmd-cache) in docker-compose.yml. If that
+# default changes, this script's embed output will land in the old location
+# and the index will appear empty. Keep the compose default and this note
+# in sync.
 
 CONTAINER=openclaw-openclaw-gateway-1
 LOCKFILE=/var/run/openclaw-qmd-reindex.lock
