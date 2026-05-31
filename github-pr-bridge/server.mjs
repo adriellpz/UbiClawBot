@@ -36,6 +36,7 @@ const RELEVANT_ACTIONS = new Set([
   "closed",
 ]);
 const wakeDeduper = new Map();
+// In-memory only: a bridge restart mid-burst can allow duplicate Marcos wakes until the window expires.
 const LIST_CACHE_TTL_MS = Number(
   process.env.TRELLO_LIST_CACHE_TTL_MS ?? 5 * 60 * 1000,
 );
@@ -369,7 +370,12 @@ async function wakeOpenClaw(payload, cardResult) {
   if (!OPENCLAW_HOOK_URL || !OPENCLAW_HOOK_TOKEN) return { skipped: "openclaw_hook_not_configured" };
   const pr = payload.pull_request;
   const dedupeKey = wakeDedupeKey(payload);
-  if (!shouldWake(dedupeKey)) return { skipped: "deduped_recently" };
+  if (!shouldWake(dedupeKey)) {
+    console.log(
+      `github-pr-bridge: skipped duplicate Marcos wake for ${dedupeKey} (action=${payload.action}, pr=#${pr.number})`,
+    );
+    return { skipped: "deduped_recently" };
+  }
 
   const isClosed = payload.action === "closed";
   const instructionLines = isClosed

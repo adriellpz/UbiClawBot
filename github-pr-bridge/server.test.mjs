@@ -1053,6 +1053,7 @@ test("concurrent webhook deliveries for the same PR head SHA wake Marcos at most
   );
 
   const bridgePort = await allocatePort();
+  let bridgeLog = "";
   const bridge = spawn(process.execPath, ["server.mjs"], {
     cwd: new URL(".", import.meta.url),
     env: {
@@ -1067,6 +1068,9 @@ test("concurrent webhook deliveries for the same PR head SHA wake Marcos at most
       OPENCLAW_HOOK_TOKEN: "hook-test",
     },
     stdio: ["ignore", "pipe", "pipe"],
+  });
+  bridge.stdout.on("data", (chunk) => {
+    bridgeLog += chunk.toString();
   });
 
   t.after(async () => {
@@ -1123,6 +1127,11 @@ test("concurrent webhook deliveries for the same PR head SHA wake Marcos at most
   assert.equal(woke.length, 1, `expected one Marcos wake, got ${woke.length}`);
   assert.equal(deduped.length, 3, `expected three deduped wakes, got ${deduped.length}`);
   assert.equal(hookCalls.length, 1);
+  assert.equal(
+    (bridgeLog.match(/skipped duplicate Marcos wake for 84:e983d19a614b0caae27c05827a9b9267484b9f48/g) || []).length,
+    3,
+    `expected three dedupe log lines, bridge log:\n${bridgeLog}`,
+  );
 });
 
 test("a new push with a different head SHA wakes Marcos again", async (t) => {
