@@ -124,6 +124,8 @@ chmod +x "${OPENCLAW_ROOT}/scripts/backup-droplet.sh" "${OPENCLAW_ROOT}/scripts/
 mkdir -p "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer"
 cp -r "${OPENCLAW_ROOT}/.deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/." "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer/"
 find "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer/bin" -name '*.mjs' -exec chmod +x {} + 2>/dev/null || true
+mkdir -p "${OPENCLAW_ROOT}/data/config/qmd"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.yml" "${OPENCLAW_ROOT}/data/config/qmd/index.yml"
 
 install_bridge_watchdog_cron
 

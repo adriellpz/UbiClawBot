@@ -137,6 +137,14 @@
         "mkdir -p \"${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer\"",
         ".deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/."
       ]
+    },
+    {
+      "id": "qmd-host-config",
+      "scpSource": "deploy/host-config/qmd/index.yml",
+      "installMarkers": [
+        "mkdir -p \"${OPENCLAW_ROOT}/data/config/qmd\"",
+        ".deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.yml"
+      ]
     }
   ],
   "gatewayFiles": [

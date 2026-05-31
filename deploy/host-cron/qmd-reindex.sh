@@ -23,7 +23,7 @@ if ! flock -n 9; then
 fi
 
 echo "[$(date -u +%FT%TZ)] qmd reindex start"
-docker exec "$CONTAINER" sh -lc 'cd /home/node/.openclaw/qmd && qmd update && qmd embed'
+docker exec "$CONTAINER" sh -lc 'cd /home/node/.openclaw/qmd && qmd update && qmd embed --max-docs-per-batch 100'
 rc=$?
 echo "[$(date -u +%FT%TZ)] qmd reindex done rc=$rc"
 exit "$rc"
