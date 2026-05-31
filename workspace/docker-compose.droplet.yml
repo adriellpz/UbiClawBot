@@ -53,6 +53,7 @@ services:
       - ${OPENCLAW_CONFIG_DIR:-${HOME:-/tmp}/.openclaw}:/home/node/.openclaw
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
       - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
+      - ${OPENCLAW_QMD_CACHE_DIR:-/home/deploy/openclaw/data/qmd-cache}:/home/node/.cache/qmd
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

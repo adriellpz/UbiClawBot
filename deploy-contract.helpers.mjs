@@ -7,6 +7,7 @@ import { loadDeployManifest } from "./deploy/manifest.mjs";
 
 export const DEPLOY_WORKFLOW_PATH = ".github/workflows/deploy-droplet.yml";
 export const DEPLOY_REMOTE_SCRIPT_PATH = "scripts/deploy-droplet-remote.sh";
+export const COMPOSE_DROPLET_PATH = "workspace/docker-compose.droplet.yml";
 export const GITHUB_PR_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz";
 export const GMAIL_HOOK_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz";
 export const GOG_CANARY_BRIDGE_HEALTH_URL = "http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz";
@@ -60,6 +61,26 @@ export function getDeployPathFilters() {
 export function deployWorkflowHasPushTrigger() {
   const workflow = getDeployWorkflowYaml();
   return Boolean(workflow?.on?.push);
+}
+
+export const QMD_INDEX_PATH = "deploy/host-config/qmd/index.yml";
+
+export function getQmdIndexYaml() {
+  const text = readFileSync(path.join(repoRoot, QMD_INDEX_PATH), "utf8");
+  const doc = parseDocument(text, { prettyErrors: true, uniqueKeys: true });
+  if (doc.errors.length > 0) {
+    throw new Error(`${QMD_INDEX_PATH}: YAML parse failed: ${doc.errors.map((e) => e.message).join("; ")}`);
+  }
+  return doc.toJSON();
+}
+
+export function getComposeDropletYaml() {
+  const text = readFileSync(path.join(repoRoot, COMPOSE_DROPLET_PATH), "utf8");
+  const doc = parseDocument(text, { prettyErrors: true, uniqueKeys: true });
+  if (doc.errors.length > 0) {
+    throw new Error(`${COMPOSE_DROPLET_PATH}: YAML parse failed: ${doc.errors.map((e) => e.message).join("; ")}`);
+  }
+  return doc.toJSON();
 }
 
 export { loadDeployManifest };
