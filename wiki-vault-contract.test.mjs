@@ -24,7 +24,7 @@ import {
   DEFAULT_PATH_MAPPINGS,
   WIKI_PUBLISH_PATH_MAPPINGS,
 } from "./runtime/cheryl/wiki-maintainer/lib/path-mappings.mjs";
-import { readRepoText, repoPathExists, ADR_0003_PATH, readSiblingText, siblingPathExists } from "./docs-contract.helpers.mjs";
+import { readRepoText, repoPathExists, ADR_0003_PATH, readSiblingText, siblingPathExists, siblingVaultTestOptions } from "./docs-contract.helpers.mjs";
 import { generateWikiReadme } from "./runtime/cheryl/wiki-maintainer/lib/hub-generator.mjs";
 import { OBSIDIAN_IGNORE_CONTENT } from "./runtime/cheryl/wiki-maintainer/lib/hygiene-rules.mjs";
 import { shouldSkipIndexTree } from "./runtime/cheryl/wiki-maintainer/lib/vault-index-generator.mjs";
@@ -132,7 +132,7 @@ test("ensureWikiLayout is idempotent on second call", async () => {
   }
 });
 
-test("ensureWikiLayout on sibling vault creates maintainer scaffold", async () => {
+test("ensureWikiLayout on sibling vault creates maintainer scaffold", siblingVaultTestOptions(), async () => {
   const vaultRoot = path.resolve(import.meta.dirname, "../agent-workspace-vault");
   await ensureWikiLayout(vaultRoot);
 
@@ -142,7 +142,7 @@ test("ensureWikiLayout on sibling vault creates maintainer scaffold", async () =
   }
 });
 
-test("sibling vault has no legacy vault-root sources/ trees", async () => {
+test("sibling vault has no legacy vault-root sources/ trees", siblingVaultTestOptions(), async () => {
   const vaultRoot = path.resolve(import.meta.dirname, "../agent-workspace-vault");
   const legacyRootSources = path.join(vaultRoot, "sources");
   let legacyExists = true;
@@ -161,7 +161,7 @@ const CHERYL_VAULT_INBOX_SKILL_PATH =
   "agent-workspace-vault/cheryl/skills/cheryl-vault-inbox/SKILL.md";
 const WIKI_CURATOR_CRON_JOBS_PATH = "config/live/cron/jobs.json";
 
-test("wiki-publishing schema exists with required headings", () => {
+test("wiki-publishing schema exists with required headings", siblingVaultTestOptions(), () => {
   assert.equal(siblingPathExists(WIKI_PUBLISHING_PATH), true);
   const doc = readSiblingText(WIKI_PUBLISHING_PATH);
   assert.match(doc, /## Interaction capture/i);
@@ -172,14 +172,14 @@ test("wiki-publishing schema exists with required headings", () => {
   assert.match(doc, /## Producer rules/i);
 });
 
-test("wiki-publishing documents RAG exclusion for wiki/sources/ and raw-input/", () => {
+test("wiki-publishing documents RAG exclusion for wiki/sources/ and raw-input/", siblingVaultTestOptions(), () => {
   const doc = readSiblingText(WIKI_PUBLISHING_PATH);
   assert.match(doc, /RAG/i);
   assert.match(doc, /wiki\/sources\//);
   assert.match(doc, /raw-input\//);
 });
 
-test("wiki-curator schema exists with required headings", () => {
+test("wiki-curator schema exists with required headings", siblingVaultTestOptions(), () => {
   assert.equal(siblingPathExists(WIKI_CURATOR_PATH), true);
   const doc = readSiblingText(WIKI_CURATOR_PATH);
   assert.match(doc, /## Curator cron tick/i);
@@ -192,7 +192,7 @@ test("wiki-curator schema exists with required headings", () => {
   assert.match(doc, /## NO_REPLY rules/i);
 });
 
-test("wiki-curator supersedes legacy raw-input.md filing-clerk pointer", () => {
+test("wiki-curator supersedes legacy raw-input.md filing-clerk pointer", siblingVaultTestOptions(), () => {
   const rawInput = readSiblingText(RAW_INPUT_PATH);
   assert.match(rawInput, /Superseded for filing semantics/i);
   assert.match(rawInput, /\[\[wiki-publishing\]\]/);
@@ -940,7 +940,7 @@ test("listRawInputDrops returns flat markdown files in raw-input/", async () => 
   ]);
 });
 
-test("cheryl-vault-inbox skill is thin wrapper over wiki-curator schema", () => {
+test("cheryl-vault-inbox skill is thin wrapper over wiki-curator schema", siblingVaultTestOptions(), () => {
   assert.equal(siblingPathExists(CHERYL_VAULT_INBOX_SKILL_PATH), true);
   assert.equal(siblingPathExists(WIKI_CURATOR_PATH), true);
 
@@ -1384,7 +1384,7 @@ const PRODUCER_AGENTS_PATHS = [
   "agent-workspace-vault/marcos/AGENTS.md",
 ];
 
-test("producer AGENTS.md include interaction capture contract", () => {
+test("producer AGENTS.md include interaction capture contract", siblingVaultTestOptions(), () => {
   const publishing = readSiblingText(WIKI_PUBLISHING_PATH);
   assert.match(publishing, /## Interaction capture/i);
   assert.match(publishing, /raw-input\//i);
