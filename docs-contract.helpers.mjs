@@ -111,6 +111,18 @@ export function siblingPathExists(relativePath) {
   return existsSync(path.join(workspaceRoot, relativePath));
 }
 
+export const AGENT_WORKSPACE_VAULT_ROOT = "agent-workspace-vault";
+
+export function agentWorkspaceVaultAvailable() {
+  return siblingPathExists(AGENT_WORKSPACE_VAULT_ROOT);
+}
+
+/** Skip options for tests that require the optional sibling vault checkout. */
+export function siblingVaultTestOptions() {
+  if (agentWorkspaceVaultAvailable()) return {};
+  return { skip: "agent-workspace-vault sibling repo not present (optional in CI)" };
+}
+
 export function readSiblingText(relativePath) {
   const absolute = path.join(workspaceRoot, relativePath);
   if (!existsSync(absolute)) return null;

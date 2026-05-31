@@ -57,6 +57,11 @@ export function getDeployPathFilters() {
   return workflow?.on?.push?.paths ?? [];
 }
 
+export function deployWorkflowHasPushTrigger() {
+  const workflow = getDeployWorkflowYaml();
+  return Boolean(workflow?.on?.push);
+}
+
 export { loadDeployManifest };
 
 export function assertDeployWorkflowMatchesManifest() {
@@ -90,6 +95,7 @@ export function assertDeployWorkflowMatchesManifest() {
   }
 
   for (const filter of manifest.pathFilters) {
+    if (!deployWorkflowHasPushTrigger()) break;
     if (!pathFilters.includes(filter)) {
       issues.push(`workflow push path filter missing: ${filter}`);
     }

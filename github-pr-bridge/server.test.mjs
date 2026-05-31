@@ -33,6 +33,13 @@ async function listen(server) {
   };
 }
 
+async function allocatePort() {
+  const server = http.createServer();
+  const { port, server: listeningServer } = await listen(server);
+  await closeServer(listeningServer);
+  return port;
+}
+
 async function closeServer(server) {
   if (!server.listening) return;
   server.close();
@@ -121,7 +128,7 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
 
   let stdout = "";
   let stderr = "";
-  const bridgePort = 19192;
+  const bridgePort = await allocatePort();
   const bridge = spawn(process.execPath, ["server.mjs"], {
     cwd: new URL(".", import.meta.url),
     env: {
@@ -278,7 +285,7 @@ test("gateway search normalizes shortUrl when updating an existing PR card", asy
 
   let stdout = "";
   let stderr = "";
-  const bridgePort = 19193;
+  const bridgePort = await allocatePort();
   const bridge = spawn(process.execPath, ["server.mjs"], {
     cwd: new URL(".", import.meta.url),
     env: {
@@ -418,7 +425,7 @@ test("concurrent webhook deliveries for the same PR create exactly one card", as
 
   let stdout = "";
   let stderr = "";
-  const bridgePort = 19194;
+  const bridgePort = await allocatePort();
   const bridge = spawn(process.execPath, ["server.mjs"], {
     cwd: new URL(".", import.meta.url),
     env: {
@@ -556,7 +563,7 @@ test("the board list-name cache honours a configurable TTL", async (t) => {
   );
 
   let stderr = "";
-  const bridgePort = 19195;
+  const bridgePort = await allocatePort();
   const bridge = spawn(process.execPath, ["server.mjs"], {
     cwd: new URL(".", import.meta.url),
     env: {

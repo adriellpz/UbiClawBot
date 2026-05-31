@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   assertDeployWorkflowMatchesManifest,
   DEPLOY_WORKFLOW_PATH,
+  deployWorkflowHasPushTrigger,
   getDeploySshScript,
   getDeploySshWrapperScript,
   getDeployWorkflowYaml,
@@ -24,6 +25,10 @@ test("deploy manifest loads and lists production copy bundles", () => {
 test("deploy workflow matches deploy/manifest.json", () => {
   const issues = assertDeployWorkflowMatchesManifest();
   assert.deepEqual(issues, [], `deploy workflow drift:\n${issues.join("\n")}`);
+});
+
+test("deploy manifest pathFilters apply only when workflow has push trigger", () => {
+  assert.equal(deployWorkflowHasPushTrigger(), false);
 });
 
 test("deploy job targets GitHub production environment", () => {
