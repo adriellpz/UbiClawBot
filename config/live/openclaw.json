@@ -81,7 +81,10 @@
         "name": "marcos",
         "workspace": "/home/node/.openclaw/agent-vault/marcos",
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
-        "model": "opencode-go/deepseek-v4-pro"
+        "model": "opencode-go/deepseek-v4-pro",
+        "heartbeat": {
+          "model": "opencode-go/deepseek-v4-flash"
+        }
       }
     ]
   },
