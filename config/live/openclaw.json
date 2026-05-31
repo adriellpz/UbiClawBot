@@ -293,7 +293,7 @@
         "enabled": true
       },
       "duckduckgo": {
-        "enabled": true
+        "enabled": false
       },
       "brave": {
         "enabled": false,
