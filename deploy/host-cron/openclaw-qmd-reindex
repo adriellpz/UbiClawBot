@@ -1,0 +1,12 @@
+# qmd wiki search reindex (host cron). Times are UTC — the cron daemon
+# runs in UTC (Etc/UTC); America/Denver is UTC-6 (MDT) / UTC-7 (MST).
+# Slots chosen to avoid the nightly LLM cluster (08:30-14:00 UTC) and the
+# every-15-min Cheryl wiki maintainer ticks (run at :08).
+#   05:08 UTC = 23:08 MT   16:08 UTC = 10:08 MT   22:08 UTC = 16:08 MT
+# Install to /etc/cron.d/openclaw-qmd-reindex (root:root, mode 644).
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+8 5 * * *  root /root/openclaw/bin/qmd-reindex.sh >> /var/log/openclaw-qmd-reindex.log 2>&1
+8 16 * * * root /root/openclaw/bin/qmd-reindex.sh >> /var/log/openclaw-qmd-reindex.log 2>&1
+8 22 * * * root /root/openclaw/bin/qmd-reindex.sh >> /var/log/openclaw-qmd-reindex.log 2>&1
