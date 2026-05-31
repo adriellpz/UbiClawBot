@@ -216,6 +216,7 @@ services:
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/home/node/.openclaw/agent-vault
       - ${OPENCLAW_AGENT_RUNTIME_DIR:-/home/deploy/openclaw/data/agent-runtime}:/home/node/.openclaw/agent-runtime
       - ./github-pr-bridge:/opt/github-pr-bridge:ro
+      - ./shared:/opt/shared:ro
     working_dir: /opt/github-pr-bridge
     command: ["node", "server.mjs"]
     init: true
