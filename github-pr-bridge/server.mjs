@@ -1,6 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import http from "node:http";
 
+import {
+  buildPrReviewSearchQuery,
+  cardExactlyMatchesPr,
+  duplicateReviewCardComment,
+  selectCanonicalPrReviewCard,
+} from "../shared/pr_review_card.mjs";
+
 const PORT = Number(process.env.GITHUB_PR_BRIDGE_PORT || 19091);
 const WEBHOOK_SECRET = process.env.GITHUB_PR_WEBHOOK_SECRET || "";
 const TRELLO_GATEWAY_URL = process.env.TRELLO_GATEWAY_URL || "";
@@ -177,47 +184,29 @@ async function getIntakeList() {
   return intakeList;
 }
 
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function cardExactlyMatchesPr(card, prNumber, prUrl) {
-  const name = String(card?.name || "");
-  const desc = String(card?.desc || "");
-  const hasExactPrName = new RegExp(`\\bPR\\s*#?${prNumber}\\b`, "i").test(name);
-  const hasExactPrReference =
-    new RegExp(`${escapeRegExp(prUrl)}([^0-9]|$)`).test(desc) ||
-    new RegExp(`(^|[^0-9])/pull/${prNumber}([^0-9]|$)`).test(desc);
-  return hasExactPrName || hasExactPrReference;
-}
-
-function buildCardSearchQuery(prNumber) {
-  return TRELLO_BOARD_ID ? `/pull/${prNumber} board:${TRELLO_BOARD_ID}` : `/pull/${prNumber}`;
-}
-
 function cardUrl(shortUrl) {
   if (!shortUrl) return undefined;
   return String(shortUrl).startsWith("http") ? shortUrl : `https://trello.com/c/${shortUrl}`;
 }
 
-async function findExistingOpenCard(pullRequest) {
+async function findMatchingReviewCards(pullRequest) {
   const prNumber = pullRequest.number;
   const prUrl = pullRequest.html_url;
-  const query = buildCardSearchQuery(prNumber);
+  const query = buildPrReviewSearchQuery(prNumber, TRELLO_BOARD_ID);
   const data = HAS_TRELLO_GATEWAY
     ? await trelloGatewayRequest("search", { params: { query } })
-    : await trelloFetch(`/search?modelTypes=cards&cards_limit=20&cards_page=0&card_fields=id,name,desc,closed,idList,url,shortUrl&query=${encodeURIComponent(query)}`);
+    : await trelloFetch(`/search?modelTypes=cards&cards_limit=50&cards_page=0&card_fields=id,name,desc,closed,idList,url,shortUrl&query=${encodeURIComponent(query)}`);
   const cards = (Array.isArray(data.cards) ? data.cards : []).map((card) => ({
     ...card,
     url: card.url || cardUrl(card.shortUrl),
   }));
   const listNameById = await getBoardListNameById();
-  return cards.find((card) => {
-    if (card.closed) return false;
-    const listName = String(listNameById.get(card.idList) || "").trim().toLowerCase();
-    if (DONE_LIST_NAMES.includes(listName)) return false;
-    return cardExactlyMatchesPr(card, prNumber, prUrl);
-  }) || null;
+  return cards
+    .filter((card) => cardExactlyMatchesPr(card, prNumber, prUrl))
+    .map((card) => ({
+      ...card,
+      listName: String(listNameById.get(card.idList) || "").trim(),
+    }));
 }
 
 async function addCardComment(cardId, text) {
@@ -275,11 +264,21 @@ async function doUpsertReviewCard(payload) {
   const priority = priorityForEvent(payload.action, pr);
   const cardTitle = buildCardTitle(priority, prNumber);
   const description = buildCardDescription(payload);
-  const existing = await findExistingOpenCard(pr);
+  const matches = await findMatchingReviewCards(pr);
+  const { canonical, duplicates } = selectCanonicalPrReviewCard(matches, { doneListNames: DONE_LIST_NAMES });
 
-  if (existing) {
-    await addCardComment(existing.id, buildUpdateComment(payload));
-    return { mode: "updated", cardId: existing.id, cardUrl: existing.url };
+  if (canonical) {
+    const updateComment = buildUpdateComment(payload);
+    await addCardComment(canonical.id, updateComment);
+    for (const duplicate of duplicates) {
+      await addCardComment(duplicate.id, duplicateReviewCardComment(canonical.url));
+    }
+    return {
+      mode: "updated",
+      cardId: canonical.id,
+      cardUrl: canonical.url,
+      duplicatesNotified: duplicates.length,
+    };
   }
 
   const intakeList = await getIntakeList();

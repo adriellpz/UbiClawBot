@@ -32,4 +32,6 @@ Optional but normally useful:
 - `trello-pipeline` skips Ubi backlog intake when it detects a PR review card title (`Review PR #N`)
 - ignores unsupported webhook action types
 - treats Trello search results as candidates only, then exact-matches the PR number or PR URL before updating an existing card
-- ignores historical cards in configured done lists during dedupe
+- reuses the canonical card for a PR when a matching card is already in **Done** (avoids duplicate cards on webhook re-delivery)
+- when multiple open cards match the same PR, updates the canonical card and comments on duplicates pointing at it
+- `TRELLO_DONE_LIST_NAMES` still marks Done-list cards as lower priority than active review cards during dedupe
