@@ -44,8 +44,7 @@ export function selectCanonicalPrReviewCard(cards, { doneListNames = ["done"] } 
   const active = open.filter((card) => !isDoneListName(card.listName, doneListNames));
   const pool = active.length > 0 ? active : open;
   const canonical = pool[0];
-  const duplicates =
-    active.length > 0 ? open.filter((card) => card.id !== canonical.id) : open.filter((card) => card.id !== canonical.id);
+  const duplicates = open.filter((card) => card.id !== canonical.id);
 
   return { canonical, duplicates };
 }
