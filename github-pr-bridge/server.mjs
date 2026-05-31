@@ -193,6 +193,8 @@ async function findMatchingReviewCards(pullRequest) {
   const prNumber = pullRequest.number;
   const prUrl = pullRequest.html_url;
   const query = buildPrReviewSearchQuery(prNumber, TRELLO_BOARD_ID);
+  // cards_limit 50: a PR rarely has more than a few matching cards; headroom catches
+  // duplicate Done + active cards without hitting Trello's 1000 cap on narrow queries.
   const data = HAS_TRELLO_GATEWAY
     ? await trelloGatewayRequest("search", { params: { query } })
     : await trelloFetch(`/search?modelTypes=cards&cards_limit=50&cards_page=0&card_fields=id,name,desc,closed,idList,url,shortUrl&query=${encodeURIComponent(query)}`);
@@ -240,6 +242,8 @@ async function upsertReviewCard(payload) {
 
   // If another delivery for this PR is mid-flight, wait for it and comment on the
   // card it produced instead of racing a duplicate through the dedup check.
+  // Note: coalesced waiters only get the update comment; duplicate-card notices
+  // run inside the leader's doUpsertReviewCard (pre-existing dupes are rare here).
   const inFlight = inFlightUpserts.get(prNumber);
   if (inFlight) {
     const prior = await inFlight.catch(() => null);

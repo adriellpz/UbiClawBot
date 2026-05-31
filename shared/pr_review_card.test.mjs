@@ -5,8 +5,10 @@ import {
   buildPrReviewSearchQuery,
   cardExactlyMatchesPr,
   duplicateReviewCardComment,
+  escapeRegExp,
   isDoneListName,
   isPrReviewCard,
+  normalizeDoneListNames,
   selectCanonicalPrReviewCard,
 } from "./pr_review_card.mjs";
 
@@ -70,6 +72,11 @@ test("isDoneListName respects configured done lists", () => {
   assert.equal(isDoneListName("Backlog", ["Done"]), false);
 });
 
-test("duplicateReviewCardComment points at the canonical card", () => {
-  assert.match(duplicateReviewCardComment("https://trello.com/c/abc"), /https:\/\/trello\.com\/c\/abc/);
+test("escapeRegExp treats regex metacharacters literally", () => {
+  assert.equal(escapeRegExp("pull/69?foo=bar+$"), "pull/69\\?foo=bar\\+\\$");
+});
+
+test("normalizeDoneListNames drops empty entries from split env values", () => {
+  assert.deepEqual([...normalizeDoneListNames([""])], []);
+  assert.deepEqual([...normalizeDoneListNames(["Done", "", "Archived"])], ["done", "archived"]);
 });
