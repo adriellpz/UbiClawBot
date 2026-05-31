@@ -44,6 +44,12 @@ let listNameByIdCacheTs = 0;
 // Coalesces concurrent webhook deliveries for the same PR so the check-then-create
 // dedup cannot race two cards into existence (e.g. multiple review_requested events).
 const inFlightUpserts = new Map();
+// Trello /search can lag behind create_card; remember recent creates so sequential
+// deliveries reuse the card before search indexes it.
+const recentUpsertByPr = new Map();
+const RECENT_UPSERT_TTL_MS = Number(
+  process.env.GITHUB_PR_RECENT_UPSERT_TTL_MS ?? 5 * 60 * 1000,
+);
 const HAS_TRELLO_GATEWAY = Boolean(TRELLO_GATEWAY_URL && TRELLO_GATEWAY_KEY);
 
 function sendJson(res, statusCode, payload) {
@@ -189,6 +195,32 @@ function cardUrl(shortUrl) {
   return String(shortUrl).startsWith("http") ? shortUrl : `https://trello.com/c/${shortUrl}`;
 }
 
+function rememberRecentUpsert(prNumber, result) {
+  if (!result?.cardId) return;
+  recentUpsertByPr.set(prNumber, {
+    cardId: result.cardId,
+    cardUrl: result.cardUrl,
+    ts: Date.now(),
+  });
+  if (recentUpsertByPr.size > 500) {
+    const now = Date.now();
+    for (const [key, entry] of recentUpsertByPr) {
+      if (now - entry.ts > RECENT_UPSERT_TTL_MS) recentUpsertByPr.delete(key);
+      if (recentUpsertByPr.size <= 300) break;
+    }
+  }
+}
+
+function getRecentUpsert(prNumber) {
+  const entry = recentUpsertByPr.get(prNumber);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > RECENT_UPSERT_TTL_MS) {
+    recentUpsertByPr.delete(prNumber);
+    return null;
+  }
+  return entry;
+}
+
 async function findMatchingReviewCards(pullRequest) {
   const prNumber = pullRequest.number;
   const prUrl = pullRequest.html_url;
@@ -253,10 +285,18 @@ async function upsertReviewCard(payload) {
     }
   }
 
+  const recent = getRecentUpsert(prNumber);
+  if (recent) {
+    await addCardComment(recent.cardId, buildUpdateComment(payload));
+    return { mode: "updated", cardId: recent.cardId, cardUrl: recent.cardUrl };
+  }
+
   const promise = doUpsertReviewCard(payload);
   inFlightUpserts.set(prNumber, promise);
   try {
-    return await promise;
+    const result = await promise;
+    if (result.mode === "created") rememberRecentUpsert(prNumber, result);
+    return result;
   } finally {
     if (inFlightUpserts.get(prNumber) === promise) inFlightUpserts.delete(prNumber);
   }

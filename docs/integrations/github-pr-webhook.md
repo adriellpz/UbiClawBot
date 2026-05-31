@@ -34,4 +34,5 @@ Optional but normally useful:
 - treats Trello search results as candidates only, then exact-matches the PR number or PR URL before updating an existing card
 - reuses the canonical card for a PR when a matching card is already in **Done** (avoids duplicate cards on webhook re-delivery)
 - when multiple open cards match the same PR, updates the canonical card and comments on duplicates pointing at it
+- remembers recently created cards for a short TTL so sequential webhook deliveries are not duplicated when Trello search has not indexed the new card yet
 - `TRELLO_DONE_LIST_NAMES` still marks Done-list cards as lower priority than active review cards during dedupe
