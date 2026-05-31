@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import process from "node:process";
 
 import { findAllLinkedEvents } from "./calendar_lookup.mjs";
-import { shouldRoutineMissedDuplicate } from "./handle_reschedule_logic.mjs";
+import { needsRoutineBeforeMissed, shouldRoutineMissedDuplicate } from "./handle_reschedule_logic.mjs";
 import {
   eventHtmlLink,
   formatCalendarTimeRange,
@@ -500,7 +500,7 @@ async function main() {
       return startMs >= tomorrowStart.getTime() && startMs < tomorrowEnd.getTime();
     });
 
-    if (tomorrowEvent && shouldRoutineMissedDuplicate(card)) {
+    if (shouldRoutineMissedDuplicate(fromList, Boolean(tomorrowEvent))) {
       if (!missedList) throw new Error("Missed list not found");
       targetList = missedList;
       action = "missed_duplicate";
@@ -508,6 +508,10 @@ async function main() {
       if (!dryRun) {
         if (currentEvent) {
           gog(["calendar", "delete", CALENDAR_ID, currentEvent.id, "--account", GOG_ACCOUNT, "--no-input", "--force", "--send-updates", "none"]);
+        }
+        if (needsRoutineBeforeMissed(card)) {
+          if (!routineList) throw new Error("Routine list not found");
+          await moveCard(card.id, routineList.name, card.due || undefined);
         }
         await moveCard(card.id, targetList.name, new Date().toISOString());
       }
@@ -521,6 +525,7 @@ async function main() {
           deletedEventId: currentEvent?.id || null,
           tomorrowEventId: tomorrowEvent.id,
           priority,
+          viaRoutine: needsRoutineBeforeMissed(card),
         }),
       );
       return;
