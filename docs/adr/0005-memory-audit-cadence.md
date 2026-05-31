@@ -12,4 +12,6 @@ We split memory hygiene from the Reddit OpenClaw 101 "all-in-heartbeat" model: *
 - Weekly audit: Telegram only on **drift**; monthly: always brief Telegram per agent
 - Glossary terms in `CONTEXT.md`; procedure in vault skills (`*-memory-audit`)
 
+**Deploy prerequisite:** Vault skills (`ubi-memory-audit`, `cheryl-memory-audit`, `marcos-memory-audit`) and updated `HEARTBEAT.md` files live in **agent workspace vault**, not this repo. Sync vault to the droplet before the first audit cron run; memory audit jobs are enabled at merge and will fail until skills are present.
+
 **Status:** accepted

@@ -119,7 +119,7 @@
       "createdAtMs": 1780076558866,
       "schedule": {
         "kind": "cron",
-        "expr": "0 9,12,15,18,21,0 * * *",
+        "expr": "0 0,9,12,15,18,21 * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
@@ -161,6 +161,7 @@
     },
     {
       "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
+      "agentId": "main",
       "name": "Ubi weekly memory audit",
       "description": "Monday 1:00 AM MT: audit ubi/MEMORY.md and session notes via ubi-memory-audit skill. NO_REPLY unless drift. No-op on 1st (monthly replaces).",
       "enabled": true,
@@ -192,6 +193,7 @@
     },
     {
       "id": "8b006421-8d43-49f3-a092-3c03baee10d3",
+      "agentId": "main",
       "name": "Ubi monthly memory audit",
       "description": "1st of month 1:00 AM MT: deep memory audit via ubi-memory-audit skill. Always Telegram summary.",
       "enabled": true,

@@ -33,7 +33,7 @@ Cheryl’s **wiki inbox cron** is an AI agent turn (`agentTurn` in `jobs.json`):
 ## Wiki curator cron (reference)
 
 - **Job name:** Cheryl wiki maintainer  
-- **Schedule:** `0 9,12,15,18,21,0 * * *` (six times daily), `America/Denver`  
+- **Schedule:** `0 0,9,12,15,18,21 * * *` (six times daily), `America/Denver`  
 - **Agent:** `scheduler`  
 - **Empty inbox:** reply exactly `NO_REPLY` (idle ticks 1–3; full lint on idle tick 4)  
 - **Skill:** `cheryl/skills/cheryl-vault-inbox/SKILL.md`  
@@ -42,7 +42,7 @@ Cheryl’s **wiki inbox cron** is an AI agent turn (`agentTurn` in `jobs.json`):
 
 ## Memory audit crons (reference)
 
-Six isolated jobs in `cron/jobs.json` (see ADR `0005-memory-audit-cadence`). Vault skills: `*-memory-audit` under each agent workspace. America/Denver:
+Six isolated jobs in `cron/jobs.json` (see ADR `0005-memory-audit-cadence`). Vault skills: `*-memory-audit` under each agent workspace (`agent-vault/{ubi,cheryl,marcos}/skills/`). **Deploy order:** merge this PR → sync vault to droplet → confirm skills exist before the first Monday or 1st run (jobs fail without them; `failureAlert` fires after two consecutive failures). Ubi jobs set `agentId: main` explicitly. America/Denver:
 
 | Job | Schedule | Agent |
 |-----|----------|-------|
