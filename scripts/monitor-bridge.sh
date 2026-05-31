@@ -50,8 +50,7 @@ log() {
 # Single-flight: never let two runs recreate the same bridge at once.
 LOCKFILE="$STATE_DIR/${SERVICE}-monitor.lock"
 if command -v flock >/dev/null 2>&1; then
-  exec 9>"$LOCKFILE" || true
-  flock -n 9 || exit 0
+  exec 9>"$LOCKFILE" 2>/dev/null && flock -n 9 || exit 0
 fi
 
 # --- probe helpers ---
