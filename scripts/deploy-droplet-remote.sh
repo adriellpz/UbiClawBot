@@ -81,8 +81,15 @@ write_deployed_revision() {
 install_bridge_watchdog_cron() {
   local tmp
   tmp="$(mktemp)"
-  crontab -l 2>/dev/null | grep -v "monitor-github-pr-bridge.sh" >"$tmp" || true
-  printf '%s\n' "*/3 * * * * ${OPENCLAW_ROOT}/scripts/monitor-github-pr-bridge.sh >/dev/null 2>&1" >>"$tmp"
+  crontab -l 2>/dev/null | grep -v "monitor-github-pr-bridge.sh" | grep -v "monitor-bridge.sh" >"$tmp" || true
+  # github-pr-bridge: public probe via Caddy /github-pr* route
+  printf '%s\n' "*/3 * * * * SERVICE=github-pr-bridge HEALTH_PORT=19091 PROBE_MODE=public ROUTE=/github-pr ${OPENCLAW_ROOT}/scripts/monitor-bridge.sh >/dev/null 2>&1" >>"$tmp"
+  # trello-bridge: no dedicated Caddy route (reverse_proxy is catch-all), local healthcheck
+  printf '%s\n' "*/3 * * * * SERVICE=trello-bridge HEALTH_PORT=18990 PROBE_MODE=local HEALTH_PATH=/health ${OPENCLAW_ROOT}/scripts/monitor-bridge.sh >/dev/null 2>&1" >>"$tmp"
+  # gmail-hook-bridge: public probe via Caddy /gmail-pubsub* route
+  printf '%s\n' "*/3 * * * * SERVICE=gmail-hook-bridge HEALTH_PORT=19092 PROBE_MODE=public ROUTE=/gmail-pubsub ${OPENCLAW_ROOT}/scripts/monitor-bridge.sh >/dev/null 2>&1" >>"$tmp"
+  # gog-canary-bridge: internal-only, no public Caddy route — local healthcheck probe
+  printf '%s\n' "*/3 * * * * SERVICE=gog-canary-bridge HEALTH_PORT=19093 PROBE_MODE=local ${OPENCLAW_ROOT}/scripts/monitor-bridge.sh >/dev/null 2>&1" >>"$tmp"
   crontab "$tmp"
   rm -f "$tmp"
 }
@@ -116,11 +123,12 @@ fi
 cp -r "${OPENCLAW_ROOT}/.deploy-tmp-live-config/config/live/." "${OPENCLAW_ROOT}/config/live/"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/backup-droplet.sh" "${OPENCLAW_ROOT}/scripts/backup-droplet.sh"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/monitor-github-pr-bridge.sh" "${OPENCLAW_ROOT}/scripts/monitor-github-pr-bridge.sh"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/monitor-bridge.sh" "${OPENCLAW_ROOT}/scripts/monitor-bridge.sh"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/sync-live-config.sh" "${OPENCLAW_ROOT}/scripts/sync-live-config.sh"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/sync-live-config.mjs" "${OPENCLAW_ROOT}/scripts/sync-live-config.mjs"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs" "${OPENCLAW_ROOT}/scripts/sanitize-live-config.mjs"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-ops-scripts/scripts/deploy-droplet-remote.sh" "${OPENCLAW_ROOT}/scripts/deploy-droplet-remote.sh"
-chmod +x "${OPENCLAW_ROOT}/scripts/backup-droplet.sh" "${OPENCLAW_ROOT}/scripts/monitor-github-pr-bridge.sh" "${OPENCLAW_ROOT}/scripts/sync-live-config.sh" "${OPENCLAW_ROOT}/scripts/deploy-droplet-remote.sh"
+chmod +x "${OPENCLAW_ROOT}/scripts/backup-droplet.sh" "${OPENCLAW_ROOT}/scripts/monitor-github-pr-bridge.sh" "${OPENCLAW_ROOT}/scripts/monitor-bridge.sh" "${OPENCLAW_ROOT}/scripts/sync-live-config.sh" "${OPENCLAW_ROOT}/scripts/deploy-droplet-remote.sh"
 mkdir -p "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer"
 cp -r "${OPENCLAW_ROOT}/.deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-maintainer/." "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer/"
 find "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer/bin" -name '*.mjs' -exec chmod +x {} + 2>/dev/null || true
@@ -152,6 +160,7 @@ smoke_required_file "deploy/manifest.json"
 smoke_required_file "config/live/openclaw.json"
 smoke_required_file "scripts/sync-live-config.sh"
 smoke_required_file "scripts/monitor-github-pr-bridge.sh"
+smoke_required_file "scripts/monitor-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
 
