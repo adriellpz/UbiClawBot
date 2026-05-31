@@ -36,3 +36,5 @@ Optional but normally useful:
 - when multiple open cards match the same PR, updates the canonical card and comments on duplicates pointing at it
 - remembers recently created cards for a short TTL so sequential webhook deliveries are not duplicated when Trello search has not indexed the new card yet
 - `TRELLO_DONE_LIST_NAMES` still marks Done-list cards as lower priority than active review cards during dedupe
+- dedupes **Marcos hook wakes** by PR number + head SHA (or `:closed` for close events) within a 5-minute in-memory window, so burst deliveries for the same commit coalesce to one wake; logs when a wake is skipped
+- wake dedupe is **in-memory only** — if the bridge restarts during a webhook burst, duplicate wakes are possible until the process has seen the commit once
