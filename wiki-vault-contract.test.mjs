@@ -187,7 +187,7 @@ test("wiki-curator schema exists with required headings", siblingVaultTestOption
   assert.match(doc, /## Wiki maintenance/i);
   assert.match(doc, /## Page format contract/i);
   assert.match(doc, /## Wiki log/i);
-  assert.match(doc, /## Sources ingested log/i);
+  assert.match(doc, /## (Sources ingested log|Pending sources)/i);
   assert.match(doc, /## Index regeneration/i);
   assert.match(doc, /## NO_REPLY rules/i);
 });

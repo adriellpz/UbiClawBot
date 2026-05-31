@@ -36,7 +36,9 @@
     {
       "id": "caddyfile",
       "scpSource": "Caddyfile.droplet",
-      "installMarkers": [".deploy-tmp-root/Caddyfile.droplet"]
+      "installMarkers": [
+        ".deploy-tmp-root/Caddyfile.droplet"
+      ]
     },
     {
       "id": "github-pr-bridge",
@@ -120,11 +122,12 @@
     },
     {
       "id": "ops-scripts",
-      "scpSource": "scripts/backup-droplet.sh,scripts/deploy-droplet-remote.sh,scripts/monitor-github-pr-bridge.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs",
+      "scpSource": "scripts/backup-droplet.sh,scripts/deploy-droplet-remote.sh,scripts/monitor-github-pr-bridge.sh,scripts/monitor-bridge.sh,scripts/sync-live-config.sh,scripts/sync-live-config.mjs,scripts/sanitize-live-config.mjs",
       "installMarkers": [
         ".deploy-tmp-ops-scripts/scripts/backup-droplet.sh",
         ".deploy-tmp-ops-scripts/scripts/deploy-droplet-remote.sh",
         ".deploy-tmp-ops-scripts/scripts/monitor-github-pr-bridge.sh",
+        ".deploy-tmp-ops-scripts/scripts/monitor-bridge.sh",
         ".deploy-tmp-ops-scripts/scripts/sync-live-config.sh",
         ".deploy-tmp-ops-scripts/scripts/sync-live-config.mjs",
         ".deploy-tmp-ops-scripts/scripts/sanitize-live-config.mjs"
