@@ -1001,3 +1001,240 @@ test("sequential webhook deliveries reuse recent create when search still empty"
   assert.equal(commentCalls.length, 1);
   assert.equal(commentCalls[0].cardId, body1.cardId);
 });
+
+test("concurrent webhook deliveries for the same PR head SHA wake Marcos at most once", async (t) => {
+  const hookCalls = [];
+
+  const gateway = await listen(
+    http.createServer(async (req, res) => {
+      const body = await getJsonBody(req);
+      let payload = { success: true };
+      switch (body.operation) {
+        case "search":
+          payload = {
+            success: true,
+            cards: [
+              {
+                id: "card-84",
+                name: "P2 - Review PR 84",
+                desc: "https://github.com/adriellpz/UbiClawBot/pull/84",
+                closed: false,
+                idList: "list-backlog",
+                url: "https://trello.com/c/card-84",
+              },
+            ],
+          };
+          break;
+        case "board_lists":
+          payload = {
+            success: true,
+            lists: [{ id: "list-backlog", name: "Backlog", closed: false }],
+          };
+          break;
+        case "comment":
+          payload = { success: true, commented: true };
+          break;
+        default:
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: `Unexpected operation ${body.operation}` }));
+          return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }),
+  );
+
+  const hook = await listen(
+    http.createServer(async (req, res) => {
+      hookCalls.push(await getJsonBody(req));
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const bridgePort = await allocatePort();
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      GITHUB_PR_BRIDGE_PORT: String(bridgePort),
+      GITHUB_PR_WEBHOOK_SECRET: "test-secret",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_GATEWAY_AGENT_ID: "system",
+      TRELLO_BOARD_ID: "board123",
+      OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
+      OPENCLAW_HOOK_TOKEN: "hook-test",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hook.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${bridgePort}/healthz`);
+
+  const headSha = "e983d19a614b0caae27c05827a9b9267484b9f48";
+  const post = (action, deliveryId) => {
+    const payload = {
+      action,
+      pull_request: {
+        number: 84,
+        html_url: "https://github.com/adriellpz/UbiClawBot/pull/84",
+        title: "feat: memory audit crons",
+        user: { login: "adriellpz" },
+        head: { ref: "feat/memory-audit", sha: headSha },
+        base: { ref: "main" },
+        draft: false,
+        labels: [],
+      },
+    };
+    const body = JSON.stringify(payload);
+    const signature = `sha256=${createHmac("sha256", "test-secret").update(body).digest("hex")}`;
+    return fetch(`http://127.0.0.1:${bridgePort}/github-pr`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-hub-signature-256": signature,
+        "x-github-event": "pull_request",
+        "x-github-delivery": deliveryId,
+      },
+      body,
+    });
+  };
+
+  const [resA, resB, resC, resD] = await Promise.all([
+    post("synchronize", "delivery-sync-1"),
+    post("synchronize", "delivery-sync-2"),
+    post("review_requested", "delivery-rr-1"),
+    post("review_requested", "delivery-rr-2"),
+  ]);
+
+  assert.equal(resA.status, 200);
+  assert.equal(resB.status, 200);
+  assert.equal(resC.status, 200);
+  assert.equal(resD.status, 200);
+
+  const bodies = await Promise.all([resA, resB, resC, resD].map((res) => res.json()));
+  const woke = bodies.filter((body) => body.wake?.ok);
+  const deduped = bodies.filter((body) => body.wake?.skipped === "deduped_recently");
+
+  assert.equal(woke.length, 1, `expected one Marcos wake, got ${woke.length}`);
+  assert.equal(deduped.length, 3, `expected three deduped wakes, got ${deduped.length}`);
+  assert.equal(hookCalls.length, 1);
+});
+
+test("a new push with a different head SHA wakes Marcos again", async (t) => {
+  const hookCalls = [];
+
+  const gateway = await listen(
+    http.createServer(async (req, res) => {
+      const body = await getJsonBody(req);
+      let payload = { success: true };
+      switch (body.operation) {
+        case "search":
+          payload = {
+            success: true,
+            cards: [
+              {
+                id: "card-84",
+                name: "P2 - Review PR 84",
+                desc: "https://github.com/adriellpz/UbiClawBot/pull/84",
+                closed: false,
+                idList: "list-backlog",
+                url: "https://trello.com/c/card-84",
+              },
+            ],
+          };
+          break;
+        case "board_lists":
+          payload = {
+            success: true,
+            lists: [{ id: "list-backlog", name: "Backlog", closed: false }],
+          };
+          break;
+        case "comment":
+          payload = { success: true, commented: true };
+          break;
+        default:
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: `Unexpected operation ${body.operation}` }));
+          return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }),
+  );
+
+  const hook = await listen(
+    http.createServer(async (req, res) => {
+      hookCalls.push(await getJsonBody(req));
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const bridgePort = await allocatePort();
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      GITHUB_PR_BRIDGE_PORT: String(bridgePort),
+      GITHUB_PR_WEBHOOK_SECRET: "test-secret",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_GATEWAY_AGENT_ID: "system",
+      TRELLO_BOARD_ID: "board123",
+      OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
+      OPENCLAW_HOOK_TOKEN: "hook-test",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hook.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${bridgePort}/healthz`);
+
+  const post = (headSha, deliveryId) => {
+    const payload = {
+      action: "synchronize",
+      pull_request: {
+        number: 84,
+        html_url: "https://github.com/adriellpz/UbiClawBot/pull/84",
+        title: "feat: memory audit crons",
+        user: { login: "adriellpz" },
+        head: { ref: "feat/memory-audit", sha: headSha },
+        base: { ref: "main" },
+        draft: false,
+        labels: [],
+      },
+    };
+    const body = JSON.stringify(payload);
+    const signature = `sha256=${createHmac("sha256", "test-secret").update(body).digest("hex")}`;
+    return fetch(`http://127.0.0.1:${bridgePort}/github-pr`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-hub-signature-256": signature,
+        "x-github-event": "pull_request",
+        "x-github-delivery": deliveryId,
+      },
+      body,
+    });
+  };
+
+  const res1 = await post("c4b4384593373ecce437eb666315b50c7c8f0222", "delivery-sha-a");
+  const res2 = await post("e983d19a614b0caae27c05827a9b9267484b9f48", "delivery-sha-b");
+
+  assert.equal(res1.status, 200);
+  assert.equal(res2.status, 200);
+
+  const body1 = await res1.json();
+  const body2 = await res2.json();
+  assert.deepEqual(body1.wake, { ok: true });
+  assert.deepEqual(body2.wake, { ok: true });
+  assert.equal(hookCalls.length, 2);
+});
