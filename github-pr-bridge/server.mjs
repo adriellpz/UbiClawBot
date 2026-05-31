@@ -92,9 +92,13 @@ function buildCardTitle(priority, prNumber) {
 function buildCardDescription(payload) {
   const pr = payload.pull_request;
   const requestedReviewer = payload.requested_reviewer?.login || payload.requested_team?.name || "n/a";
+  const prTitle = String(pr.title || "").trim() || `PR #${pr.number}`;
+  const prLinkLine = pr.html_url
+    ? `Review pull request: [#${pr.number} ${prTitle}](${pr.html_url})`
+    : `Review pull request: ${prTitle}`;
   return [
     "Original Request:",
-    `Review pull request: ${pr.title}`,
+    prLinkLine,
     "",
     "Research:",
     `PR: ${pr.html_url}`,

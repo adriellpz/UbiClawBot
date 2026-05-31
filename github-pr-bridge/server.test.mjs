@@ -209,6 +209,10 @@ test("gateway-backed config accepts signed PR webhook and wakes OpenClaw", async
   assert.equal(createCardCall?.params.listName, "Review");
   assert.equal(createCardCall?.params.name, "P2 - Review PR 14");
   assert.match(createCardCall?.params.desc, /Original Request:/);
+  assert.match(
+    createCardCall?.params.desc,
+    /Original Request:\nReview pull request: \[#14 Wake Ubi through gateway\]\(https:\/\/github\.com\/adriellpz\/UbiClawBot\/pull\/14\)/,
+  );
   assert.match(createCardCall?.params.desc, /Research:/);
   assert.match(createCardCall?.params.desc, /Peer Review:\n\nWork completed:/);
   assert.match(createCardCall?.params.desc, /https:\/\/github\.com\/adriellpz\/UbiClawBot\/pull\/14/);
