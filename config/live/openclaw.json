@@ -33,9 +33,12 @@
         "model": "text-embedding-3-small",
         "fallback": "none",
         "experimental": {
-          "sessionMemory": true,
-          "sources": ["memory", "sessions"]
-        }
+          "sessionMemory": true
+        },
+        "sources": [
+          "memory",
+          "sessions"
+        ]
       }
     },
     "list": [
