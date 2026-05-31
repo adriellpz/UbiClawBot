@@ -881,3 +881,123 @@ test("gateway search comments on duplicate open PR cards and creates none", asyn
   assert.equal(commentCalls[1].cardId, "card-dupe");
   assert.match(commentCalls[1].params.text, /Duplicate PR review card/);
 });
+
+test("sequential webhook deliveries reuse recent create when search still empty", async (t) => {
+  const gatewayCalls = [];
+  let createCount = 0;
+
+  const gateway = await listen(
+    http.createServer(async (req, res) => {
+      const body = await getJsonBody(req);
+      gatewayCalls.push(body);
+
+      let payload = { success: true };
+      switch (body.operation) {
+        case "search":
+          // Simulates Trello search index lag after create_card.
+          payload = { success: true, cards: [] };
+          break;
+        case "board_lists":
+          payload = {
+            success: true,
+            lists: [{ id: "list-backlog", name: "Backlog", closed: false }],
+          };
+          break;
+        case "create_card":
+          createCount += 1;
+          payload = {
+            success: true,
+            created: true,
+            cardId: `card-${createCount}`,
+            shortUrl: `card-${createCount}`,
+          };
+          break;
+        case "comment":
+          payload = { success: true, commented: true };
+          break;
+        default:
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: `Unexpected operation ${body.operation}` }));
+          return;
+      }
+
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }),
+  );
+
+  const hook = await listen(
+    http.createServer((req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const bridgePort = await allocatePort();
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      GITHUB_PR_BRIDGE_PORT: String(bridgePort),
+      GITHUB_PR_WEBHOOK_SECRET: "test-secret",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_GATEWAY_AGENT_ID: "system",
+      TRELLO_BOARD_ID: "board123",
+      OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
+      OPENCLAW_HOOK_TOKEN: "hook-test",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hook.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${bridgePort}/healthz`);
+
+  const post = async (deliveryId) => {
+    const payload = {
+      action: "review_requested",
+      pull_request: {
+        number: 99,
+        html_url: "https://github.com/adriellpz/UbiClawBot/pull/99",
+        title: "Search lag repro",
+        user: { login: "adriellpz" },
+        head: { ref: "feature/lag" },
+        base: { ref: "main" },
+        draft: false,
+        labels: [],
+      },
+    };
+    const body = JSON.stringify(payload);
+    const signature = `sha256=${createHmac("sha256", "test-secret").update(body).digest("hex")}`;
+    return fetch(`http://127.0.0.1:${bridgePort}/github-pr`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-hub-signature-256": signature,
+        "x-github-event": "pull_request",
+        "x-github-delivery": deliveryId,
+      },
+      body,
+    });
+  };
+
+  const res1 = await post("search-lag-1");
+  const res2 = await post("search-lag-2");
+  assert.equal(res1.status, 200);
+  assert.equal(res2.status, 200);
+
+  const body1 = await res1.json();
+  const body2 = await res2.json();
+  assert.equal(body1.mode, "created");
+  assert.equal(body2.mode, "updated");
+  assert.equal(body2.cardId, body1.cardId);
+
+  const createCalls = gatewayCalls.filter((call) => call.operation === "create_card");
+  assert.equal(createCalls.length, 1);
+  const commentCalls = gatewayCalls.filter((call) => call.operation === "comment");
+  assert.equal(commentCalls.length, 1);
+  assert.equal(commentCalls[0].cardId, body1.cardId);
+});
