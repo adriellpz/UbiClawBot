@@ -34,7 +34,11 @@
         "fallback": "none",
         "experimental": {
           "sessionMemory": true
-        }
+        },
+        "sources": [
+          "memory",
+          "sessions"
+        ]
       }
     },
     "list": [
