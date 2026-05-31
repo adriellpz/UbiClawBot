@@ -16,11 +16,11 @@ smoke_required_file() {
 smoke_http() {
   local url="$1"
   local label="$2"
-  for attempt in $(seq 1 30); do
+  for attempt in $(seq 1 45); do
     if curl -fsS "$url" >/dev/null; then
       return 0
     fi
-    if [ "$attempt" -eq 30 ]; then
+    if [ "$attempt" -eq 45 ]; then
       echo "smoke failed: ${label} ${url}" >&2
       exit 1
     fi
@@ -46,7 +46,7 @@ smoke_public_route() {
   local pathq="$2"
   local label="$3"
   local code
-  for attempt in $(seq 1 30); do
+  for attempt in $(seq 1 45); do
     code="$(curl -s -o /dev/null -m 8 -w '%{http_code}' \
       --resolve "${host}:443:127.0.0.1" \
       -X POST "https://${host}${pathq}" \
@@ -56,7 +56,7 @@ smoke_public_route() {
       000|5*) ;;
       *) return 0 ;;
     esac
-    if [ "$attempt" -eq 30 ]; then
+    if [ "$attempt" -eq 45 ]; then
       echo "smoke failed: ${label} https://${host}${pathq} returned ${code} (upstream unreachable — likely a stale github-pr-bridge netns; recreate it alongside openclaw-gateway)" >&2
       exit 1
     fi

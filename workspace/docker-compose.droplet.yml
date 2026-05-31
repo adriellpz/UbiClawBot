@@ -374,6 +374,10 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+      # trello-gateway builds from source and starts slower than bridge containers that depend on it;
+      # without a start_period, Docker marks it unhealthy before it has a chance to respond,
+      # causing github-pr-bridge (which depends_on trello-gateway healthy) to never start.
+      start_period: 60s
 
   # Trello queue worker monitor — respawns trello_queue_worker.mjs on crash.
   # Belt-and-suspenders with hooks/trello-queue-worker-start (gateway:startup).
