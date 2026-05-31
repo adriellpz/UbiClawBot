@@ -155,10 +155,35 @@ function validateDeployWorkflow(workflows) {
     assert(composeUpLine?.includes("trello-queue-worker"), `${workflowPath}: docker compose up should restart trello-queue-worker`);
     assert(!script.includes("trello-gateway/.env") || script.includes(".env.example"), `${workflowPath}: deploy script must not overwrite trello-gateway/.env`);
 
+    assert(typeof script === "string" && script.includes("monitor-bridge.sh"), `${workflowPath}: deploy script should copy monitor-bridge.sh`);
+    assert(typeof script === "string" && script.includes("SERVICE=github-pr-bridge"), `${workflowPath}: deploy script cron should monitor github-pr-bridge`);
+    assert(typeof script === "string" && script.includes("SERVICE=trello-bridge"), `${workflowPath}: deploy script cron should monitor trello-bridge`);
+    assert(typeof script === "string" && script.includes("SERVICE=gmail-hook-bridge"), `${workflowPath}: deploy script cron should monitor gmail-hook-bridge`);
+    assert(typeof script === "string" && script.includes("SERVICE=gog-canary-bridge"), `${workflowPath}: deploy script cron should monitor gog-canary-bridge`);
+
     const result = spawnSync("bash", ["-n"], { input: script, encoding: "utf8" });
     assert(result.status === 0, `${workflowPath}: embedded ssh script failed bash -n: ${result.stderr.trim()}`);
     if (result.status === 0) pass(`${workflowPath}: embedded ssh script passed bash -n`);
   }
+}
+
+function validateBridgeMonitor() {
+  const monitorPath = "scripts/monitor-bridge.sh";
+  if (!existsSync(path.join(repoRoot, monitorPath))) {
+    fail(`${monitorPath}: script not found`);
+    return;
+  }
+  const monitor = readText(monitorPath);
+  assert(typeof monitor === "string" && monitor.includes("SERVICE"), `${monitorPath}: should read SERVICE env var`);
+  assert(typeof monitor === "string" && monitor.includes("HEALTH_PORT"), `${monitorPath}: should read HEALTH_PORT env var`);
+  assert(typeof monitor === "string" && monitor.includes("PROBE_MODE"), `${monitorPath}: should support PROBE_MODE env var`);
+  assert(typeof monitor === "string" && monitor.includes("HEALTH_PATH"), `${monitorPath}: should support HEALTH_PATH env var`);
+  assert(typeof monitor === "string" && monitor.includes("probe_public"), `${monitorPath}: should have public probe mode`);
+  assert(typeof monitor === "string" && monitor.includes("probe_local"), `${monitorPath}: should have local probe mode`);
+  assert(typeof monitor === "string" && monitor.includes("network_mode"), `${monitorPath}: should explain network_mode context in comments`);
+  assert(typeof monitor === "string" && monitor.includes("force-recreate"), `${monitorPath}: should recreate bridge with --force-recreate`);
+  assert(typeof monitor === "string" && monitor.includes("gateway_not_running"), `${monitorPath}: should skip when gateway is not running`);
+  pass(`${monitorPath}: static checks passed`);
 }
 
 function validateCompose(workflows) {
@@ -446,6 +471,7 @@ validateJsonFiles();
 const yamlFiles = validateYamlFiles();
 validateDeployWorkflow(yamlFiles);
 validateCompose(yamlFiles);
+validateBridgeMonitor();
 validateTrelloGatewayDir();
 validateTrelloRoutinesDir();
 validateTrelloPipelineDir();
