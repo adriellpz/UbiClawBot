@@ -95,7 +95,7 @@ function buildCardDescription(payload) {
   const prTitle = String(pr.title || "").trim() || `PR #${pr.number}`;
   const prLinkLine = pr.html_url
     ? `Review pull request: [#${pr.number} ${prTitle}](${pr.html_url})`
-    : `Review pull request: ${prTitle}`;
+    : `Review pull request: PR #${pr.number} ${prTitle}`;
   return [
     "Original Request:",
     prLinkLine,
