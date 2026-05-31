@@ -84,6 +84,12 @@ function shouldWake(dedupeKey) {
   return true;
 }
 
+function wakeDedupeKey(payload) {
+  const pr = payload.pull_request;
+  if (payload.action === "closed") return `${pr.number}:closed`;
+  return `${pr.number}:${pr.head?.sha || "none"}`;
+}
+
 function priorityForEvent(action, pullRequest) {
   const labels = Array.isArray(pullRequest?.labels) ? pullRequest.labels.map((x) => (x?.name || "").toLowerCase()) : [];
   if (labels.some((name) => ["p1", "urgent", "hotfix", "sev1"].includes(name))) return "P1";
@@ -359,10 +365,10 @@ async function doUpsertReviewCard(payload) {
   return { mode: "created", cardId: created.id, cardUrl: created.url };
 }
 
-async function wakeOpenClaw(payload, cardResult, githubDeliveryId) {
+async function wakeOpenClaw(payload, cardResult) {
   if (!OPENCLAW_HOOK_URL || !OPENCLAW_HOOK_TOKEN) return { skipped: "openclaw_hook_not_configured" };
   const pr = payload.pull_request;
-  const dedupeKey = `${pr.number}:${payload.action}:${cardResult.mode}:${githubDeliveryId || "none"}`;
+  const dedupeKey = wakeDedupeKey(payload);
   if (!shouldWake(dedupeKey)) return { skipped: "deduped_recently" };
 
   const isClosed = payload.action === "closed";
@@ -486,7 +492,7 @@ const server = http.createServer(async (req, res) => {
 
   try {
     const result = await upsertReviewCard(payload);
-    const wake = await wakeOpenClaw(payload, result, req.headers["x-github-delivery"]);
+    const wake = await wakeOpenClaw(payload, result);
     return sendJson(res, 200, { ok: true, ...result, wake });
   } catch (error) {
     return sendJson(res, 500, { error: "processing_failed", message: String(error?.message || error) });
