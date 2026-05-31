@@ -42,6 +42,14 @@
       {
         "id": "main",
         "model": "opencode-go/deepseek-v4-flash",
+        "heartbeat": {
+          "every": "30m",
+          "model": "opencode-go/deepseek-v4-flash",
+          "isolatedSession": true,
+          "lightContext": true,
+          "target": "telegram",
+          "accountId": "main"
+        },
         "tools": {
           "alsoAllow": [
             "browser",
@@ -65,6 +73,14 @@
         "workspace": "/home/node/.openclaw/agent-vault/cheryl",
         "model": "opencode-go/deepseek-v4-flash",
         "thinkingDefault": "medium",
+        "heartbeat": {
+          "every": "30m",
+          "model": "opencode-go/deepseek-v4-flash",
+          "isolatedSession": true,
+          "lightContext": true,
+          "target": "telegram",
+          "accountId": "scheduler"
+        },
         "tools": {
           "alsoAllow": [
             "exec",
@@ -81,7 +97,15 @@
         "name": "marcos",
         "workspace": "/home/node/.openclaw/agent-vault/marcos",
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
-        "model": "opencode-go/deepseek-v4-pro"
+        "model": "opencode-go/deepseek-v4-pro",
+        "heartbeat": {
+          "every": "30m",
+          "model": "opencode-go/deepseek-v4-flash",
+          "isolatedSession": true,
+          "lightContext": true,
+          "target": "telegram",
+          "accountId": "marcos"
+        }
       }
     ]
   },
