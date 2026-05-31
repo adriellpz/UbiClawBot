@@ -2,7 +2,12 @@ export function cardListName(card) {
   return (card?.list?.name || "").toLowerCase();
 }
 
-/** Missed-duplicate only when the card is still on Routine (Routine→Missed is allowed). */
-export function shouldRoutineMissedDuplicate(card) {
-  return cardListName(card) === "routine";
+/** Routine skip-today path: tomorrow already has this activity on the calendar. */
+export function shouldRoutineMissedDuplicate(fromList, hasTomorrowEvent) {
+  return fromList === "routine" && hasTomorrowEvent;
+}
+
+/** Gateway allows Routine→Missed but not Reschedule→Missed; hop through Routine when needed. */
+export function needsRoutineBeforeMissed(card) {
+  return cardListName(card) === "reschedule";
 }
