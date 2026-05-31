@@ -134,33 +134,36 @@ function validateDeployWorkflow(workflows) {
   const script = sshStep?.with?.script;
   assert(sshStep?.with?.script_stop === true, `${workflowPath}: ssh deploy step should set script_stop: true`);
   assert(typeof script === "string" && script.includes("set -eu"), `${workflowPath}: ssh deploy script should use set -eu`);
-  assert(typeof script === "string" && script.includes("trello-bridge"), `${workflowPath}: deploy script should restart trello-bridge with the other services`);
-  assert(typeof script === "string" && script.includes("trello-pipeline"), `${workflowPath}: deploy script should copy trello-pipeline`);
-  assert(typeof script === "string" && script.includes("trello-routines"), `${workflowPath}: deploy script should copy and restart trello-routines`);
-  assert(typeof script === "string" && script.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
-  assert(typeof script === "string" && script.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
-  assert(typeof script === "string" && script.includes("http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"), `${workflowPath}: deploy script should verify github-pr-bridge local health after restart`);
-  assert(typeof script === "string" && script.includes("http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz"), `${workflowPath}: deploy script should verify gmail-hook-bridge local health after restart`);
-  assert(typeof script === "string" && script.includes("http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz"), `${workflowPath}: deploy script should verify gog-canary-bridge local health after restart`);
+
+  // Content assertions run against the external deploy script (workflow delegates to it)
+  const remoteScriptPath = "scripts/deploy-droplet-remote.sh";
+  const remoteScript = readText(remoteScriptPath);
+  assert(typeof remoteScript === "string" && remoteScript.includes("trello-bridge"), `${workflowPath}: deploy script should restart trello-bridge with the other services`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("trello-pipeline"), `${workflowPath}: deploy script should copy trello-pipeline`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("trello-routines"), `${workflowPath}: deploy script should copy and restart trello-routines`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("trello-gateway"), `${workflowPath}: deploy script should copy and restart trello-gateway`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("trello-queue-worker"), `${workflowPath}: deploy script should restart trello-queue-worker`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz"), `${workflowPath}: deploy script should verify github-pr-bridge local health after restart`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz"), `${workflowPath}: deploy script should verify gmail-hook-bridge local health after restart`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz"), `${workflowPath}: deploy script should verify gog-canary-bridge local health after restart`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("trello_card_contract.mjs"), `${workflowPath}: deploy script should copy trello_card_contract.mjs with the gateway artifacts`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("monitor-bridge.sh"), `${workflowPath}: deploy script should copy monitor-bridge.sh`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("SERVICE=github-pr-bridge"), `${workflowPath}: deploy script cron should monitor github-pr-bridge`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("SERVICE=trello-bridge"), `${workflowPath}: deploy script cron should monitor trello-bridge`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("SERVICE=gmail-hook-bridge"), `${workflowPath}: deploy script cron should monitor gmail-hook-bridge`);
+  assert(typeof remoteScript === "string" && remoteScript.includes("SERVICE=gog-canary-bridge"), `${workflowPath}: deploy script cron should monitor gog-canary-bridge`);
+
+  const composeUpLine = remoteScript.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
+  assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
+  assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
+  assert(composeUpLine?.includes("gmail-hook-bridge"), `${workflowPath}: docker compose up should restart gmail-hook-bridge`);
+  assert(composeUpLine?.includes("gog-canary-bridge"), `${workflowPath}: docker compose up should restart gog-canary-bridge`);
+  assert(composeUpLine?.includes("trello-routines"), `${workflowPath}: docker compose up should restart trello-routines`);
+  assert(composeUpLine?.includes("trello-gateway"), `${workflowPath}: docker compose up should restart trello-gateway`);
+  assert(composeUpLine?.includes("trello-queue-worker"), `${workflowPath}: docker compose up should restart trello-queue-worker`);
+  assert(!remoteScript.includes("trello-gateway/.env") || remoteScript.includes(".env.example"), `${workflowPath}: deploy script must not overwrite trello-gateway/.env`);
 
   if (typeof script === "string") {
-    assert(script.includes("trello_card_contract.mjs"), `${workflowPath}: deploy script should copy trello_card_contract.mjs with the gateway artifacts`);
-    const composeUpLine = script.split("\n").find((line) => /docker\s+compose\s+up\b/u.test(line));
-    assert(composeUpLine?.includes("trello-bridge"), `${workflowPath}: docker compose up should restart trello-bridge`);
-    assert(composeUpLine?.includes("github-pr-bridge"), `${workflowPath}: docker compose up should restart github-pr-bridge`);
-    assert(composeUpLine?.includes("gmail-hook-bridge"), `${workflowPath}: docker compose up should restart gmail-hook-bridge`);
-    assert(composeUpLine?.includes("gog-canary-bridge"), `${workflowPath}: docker compose up should restart gog-canary-bridge`);
-    assert(composeUpLine?.includes("trello-routines"), `${workflowPath}: docker compose up should restart trello-routines`);
-    assert(composeUpLine?.includes("trello-gateway"), `${workflowPath}: docker compose up should restart trello-gateway`);
-    assert(composeUpLine?.includes("trello-queue-worker"), `${workflowPath}: docker compose up should restart trello-queue-worker`);
-    assert(!script.includes("trello-gateway/.env") || script.includes(".env.example"), `${workflowPath}: deploy script must not overwrite trello-gateway/.env`);
-
-    assert(typeof script === "string" && script.includes("monitor-bridge.sh"), `${workflowPath}: deploy script should copy monitor-bridge.sh`);
-    assert(typeof script === "string" && script.includes("SERVICE=github-pr-bridge"), `${workflowPath}: deploy script cron should monitor github-pr-bridge`);
-    assert(typeof script === "string" && script.includes("SERVICE=trello-bridge"), `${workflowPath}: deploy script cron should monitor trello-bridge`);
-    assert(typeof script === "string" && script.includes("SERVICE=gmail-hook-bridge"), `${workflowPath}: deploy script cron should monitor gmail-hook-bridge`);
-    assert(typeof script === "string" && script.includes("SERVICE=gog-canary-bridge"), `${workflowPath}: deploy script cron should monitor gog-canary-bridge`);
-
     const result = spawnSync("bash", ["-n"], { input: script, encoding: "utf8" });
     assert(result.status === 0, `${workflowPath}: embedded ssh script failed bash -n: ${result.stderr.trim()}`);
     if (result.status === 0) pass(`${workflowPath}: embedded ssh script passed bash -n`);
