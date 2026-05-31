@@ -76,10 +76,13 @@ function shouldWake(dedupeKey) {
   if (now - previous < dedupeWindowMs) return false;
   wakeDeduper.set(dedupeKey, now);
   if (wakeDeduper.size > 500) {
-    // Trim old entries on growth to avoid unbounded memory.
     for (const [key, ts] of wakeDeduper) {
       if (now - ts > dedupeWindowMs) wakeDeduper.delete(key);
-      if (wakeDeduper.size <= 300) break;
+    }
+    while (wakeDeduper.size > 300) {
+      const oldestKey = wakeDeduper.keys().next().value;
+      if (oldestKey === undefined) break;
+      wakeDeduper.delete(oldestKey);
     }
   }
   return true;
@@ -372,7 +375,7 @@ async function wakeOpenClaw(payload, cardResult) {
   const dedupeKey = wakeDedupeKey(payload);
   if (!shouldWake(dedupeKey)) {
     console.log(
-      `github-pr-bridge: skipped duplicate Marcos wake for ${dedupeKey} (action=${payload.action}, pr=#${pr.number})`,
+      `github-pr-bridge: skipped duplicate ${OPENCLAW_HOOK_AGENT_ID} wake for ${dedupeKey} (action=${payload.action}, pr=#${pr.number})`,
     );
     return { skipped: "deduped_recently" };
   }

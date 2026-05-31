@@ -1128,7 +1128,7 @@ test("concurrent webhook deliveries for the same PR head SHA wake Marcos at most
   assert.equal(deduped.length, 3, `expected three deduped wakes, got ${deduped.length}`);
   assert.equal(hookCalls.length, 1);
   assert.equal(
-    (bridgeLog.match(/skipped duplicate Marcos wake for 84:e983d19a614b0caae27c05827a9b9267484b9f48/g) || []).length,
+    (bridgeLog.match(/skipped duplicate marcos wake for 84:e983d19a614b0caae27c05827a9b9267484b9f48/g) || []).length,
     3,
     `expected three dedupe log lines, bridge log:\n${bridgeLog}`,
   );
