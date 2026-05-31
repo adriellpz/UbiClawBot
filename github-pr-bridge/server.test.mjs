@@ -636,3 +636,244 @@ test("the board list-name cache honours a configurable TTL", async (t) => {
     `expected board_lists to be refetched per request with TTL=0, got ${boardListCalls.length}`,
   );
 });
+
+test("gateway search reuses a Done PR card instead of creating a duplicate", async (t) => {
+  const gatewayCalls = [];
+
+  const gateway = await listen(
+    http.createServer(async (req, res) => {
+      const body = await getJsonBody(req);
+      gatewayCalls.push(body);
+
+      let payload = { success: true };
+      switch (body.operation) {
+        case "search":
+          payload = {
+            success: true,
+            cards: [
+              {
+                id: "card-done",
+                idList: "list-done",
+                name: "P2 - Review PR 69",
+                desc: "PR: https://github.com/adriellpz/UbiClawBot/pull/69",
+                closed: false,
+                shortUrl: "card-done",
+              },
+            ],
+          };
+          break;
+        case "board_lists":
+          payload = {
+            success: true,
+            lists: [
+              { id: "list-review", name: "Review", closed: false },
+              { id: "list-done", name: "Done", closed: false },
+            ],
+          };
+          break;
+        case "comment":
+          payload = { success: true, commented: true };
+          break;
+        default:
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: `Unexpected operation ${body.operation}` }));
+          return;
+      }
+
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }),
+  );
+
+  const hook = await listen(
+    http.createServer((req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const bridgePort = await allocatePort();
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      GITHUB_PR_BRIDGE_PORT: String(bridgePort),
+      GITHUB_PR_WEBHOOK_SECRET: "test-secret",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_GATEWAY_AGENT_ID: "system",
+      TRELLO_BOARD_ID: "board123",
+      TRELLO_DONE_LIST_NAMES: "Done",
+      OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
+      OPENCLAW_HOOK_TOKEN: "hook-test",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hook.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${bridgePort}/healthz`);
+
+  const payload = {
+    action: "synchronize",
+    pull_request: {
+      number: 69,
+      html_url: "https://github.com/adriellpz/UbiClawBot/pull/69",
+      title: "Re-trigger after Done",
+      user: { login: "adriellpz" },
+      head: { ref: "feature/retrigger" },
+      base: { ref: "main" },
+      draft: false,
+      labels: [],
+    },
+  };
+  const body = JSON.stringify(payload);
+  const signature = `sha256=${createHmac("sha256", "test-secret").update(body).digest("hex")}`;
+
+  const res = await fetch(`http://127.0.0.1:${bridgePort}/github-pr`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-hub-signature-256": signature,
+      "x-github-event": "pull_request",
+      "x-github-delivery": "delivery-done-reuse",
+    },
+    body,
+  });
+
+  const responseBody = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(responseBody.mode, "updated");
+  assert.equal(responseBody.cardId, "card-done");
+  assert.equal(gatewayCalls.some((call) => call.operation === "create_card"), false);
+  const commentCalls = gatewayCalls.filter((call) => call.operation === "comment");
+  assert.equal(commentCalls.length, 1);
+  assert.equal(commentCalls[0].cardId, "card-done");
+});
+
+test("gateway search comments on duplicate open PR cards and creates none", async (t) => {
+  const gatewayCalls = [];
+
+  const gateway = await listen(
+    http.createServer(async (req, res) => {
+      const body = await getJsonBody(req);
+      gatewayCalls.push(body);
+
+      let payload = { success: true };
+      switch (body.operation) {
+        case "search":
+          payload = {
+            success: true,
+            cards: [
+              {
+                id: "card-primary",
+                idList: "list-review",
+                name: "P2 - Review PR 21",
+                desc: "PR: https://github.com/adriellpz/UbiClawBot/pull/21",
+                closed: false,
+                shortUrl: "card-primary",
+              },
+              {
+                id: "card-dupe",
+                idList: "list-review",
+                name: "P2 - Review PR 21",
+                desc: "PR: https://github.com/adriellpz/UbiClawBot/pull/21",
+                closed: false,
+                shortUrl: "card-dupe",
+              },
+            ],
+          };
+          break;
+        case "board_lists":
+          payload = {
+            success: true,
+            lists: [
+              { id: "list-review", name: "Review", closed: false },
+              { id: "list-done", name: "Done", closed: false },
+            ],
+          };
+          break;
+        case "comment":
+          payload = { success: true, commented: true };
+          break;
+        default:
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: `Unexpected operation ${body.operation}` }));
+          return;
+      }
+
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(payload));
+    }),
+  );
+
+  const hook = await listen(
+    http.createServer((req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    }),
+  );
+
+  const bridgePort = await allocatePort();
+  const bridge = spawn(process.execPath, ["server.mjs"], {
+    cwd: new URL(".", import.meta.url),
+    env: {
+      ...process.env,
+      GITHUB_PR_BRIDGE_PORT: String(bridgePort),
+      GITHUB_PR_WEBHOOK_SECRET: "test-secret",
+      TRELLO_GATEWAY_URL: gateway.url,
+      TRELLO_GATEWAY_KEY: "gw-test",
+      TRELLO_GATEWAY_AGENT_ID: "system",
+      TRELLO_BOARD_ID: "board123",
+      OPENCLAW_HOOK_URL: `${hook.url}/hooks/agent`,
+      OPENCLAW_HOOK_TOKEN: "hook-test",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  t.after(async () => {
+    await Promise.allSettled([stopChild(bridge), closeServer(gateway.server), closeServer(hook.server)]);
+  });
+
+  await waitFor(`http://127.0.0.1:${bridgePort}/healthz`);
+
+  const payload = {
+    action: "synchronize",
+    pull_request: {
+      number: 21,
+      html_url: "https://github.com/adriellpz/UbiClawBot/pull/21",
+      title: "Duplicate cards already exist",
+      user: { login: "adriellpz" },
+      head: { ref: "feature/dupes" },
+      base: { ref: "main" },
+      draft: false,
+      labels: [],
+    },
+  };
+  const body = JSON.stringify(payload);
+  const signature = `sha256=${createHmac("sha256", "test-secret").update(body).digest("hex")}`;
+
+  const res = await fetch(`http://127.0.0.1:${bridgePort}/github-pr`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-hub-signature-256": signature,
+      "x-github-event": "pull_request",
+      "x-github-delivery": "delivery-dupe-open",
+    },
+    body,
+  });
+
+  const responseBody = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(responseBody.mode, "updated");
+  assert.equal(responseBody.duplicatesNotified, 1);
+  assert.equal(gatewayCalls.some((call) => call.operation === "create_card"), false);
+  const commentCalls = gatewayCalls.filter((call) => call.operation === "comment");
+  assert.equal(commentCalls.length, 2);
+  assert.equal(commentCalls[0].cardId, "card-primary");
+  assert.equal(commentCalls[1].cardId, "card-dupe");
+  assert.match(commentCalls[1].params.text, /Duplicate PR review card/);
+});
