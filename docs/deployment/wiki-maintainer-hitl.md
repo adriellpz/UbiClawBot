@@ -56,7 +56,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 | 2 | Collection | Wiki collection exists; excluded paths not indexed |
 | 3 | Reindex hook | After a maintainer tick that touches `wiki/`, `reindexWikiSearch` returns `{ ok: true }` (not `skipped: true`) — see `wiki-search-index-manager.mjs` |
 | 4 | Query smoke | Ingest or edit a known page → `qmd query "<unique phrase from page>"` returns that page |
-| 5 | Cron | Cheryl wiki maintainer job (`*/15`, America/Denver) still runs; tick logs show reindex when qmd present |
+| 5 | Cron | Cheryl wiki maintainer job (six times daily, America/Denver) still runs; tick logs show reindex when qmd present |
 
 **Contract reference:** `reindexWikiSearch skips gracefully when qmd absent` (test 25) — until install, ticks continue with `reason: qmd not installed (WM-09 HITL)`.
 
@@ -86,7 +86,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 
 ### Register daily contradiction-review cron
 
-1. Add a **separate** daily job (not the `*/15` curator tick):
+1. Add a **separate** daily job (not the wiki maintainer curator tick):
 
    - **Agent:** `scheduler` (Cheryl)
    - **Schedule:** operator-chosen local time — default **`0 8 * * *`** `America/Denver` (08:00 MT daily)
@@ -126,7 +126,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 ### Operator prerequisites
 
 - WM-09 signed off (qmd query in smoke path)
-- Cheryl wiki maintainer cron enabled (`*/15 * * * *`, America/Denver) — see `config/live/cron/jobs.json` job **Cheryl wiki maintainer**
+- Cheryl wiki maintainer cron enabled (`0 0,9,12,15,18,21 * * *`, America/Denver) — see `config/live/cron/jobs.json` job **Cheryl wiki maintainer**
 - `cheryl-vault-inbox` skill + `wiki/workflows/wiki-curator.md` deployed to vault
 - Preflight CLI: `node …/bin/wiki-log-preflight.mjs <vault-root>`
 - Register CLI (after edits): `node …/bin/wiki-log-register.mjs <vault-root> wiki/path1.md …`
@@ -138,7 +138,7 @@ Human-in-the-loop slices for the LLM Wiki maintainer program (Cheryl v2). AFK co
 
 1. Note starting state: `wiki/log.md` completion registry line count, `wiki/sources/ingested.log` lines, `raw-input/` file count, `wikiMaintainer.curatorIdleStreak` in scheduler config (`openclaw.json` or `wiki-maintainer.json`).
 
-2. **Raw input drop:** place `{agent}-YYYY-MM-DD-smoke-raw.md` in `raw-input/` (simple note, no `update:`). Wait **≥1** curator tick (15 min) or trigger cron manually if your ops process allows.
+2. **Raw input drop:** place `{agent}-YYYY-MM-DD-smoke-raw.md` in `raw-input/` (simple note, no `update:`). Wait for the **next wiki maintainer cron** (six times daily) or trigger cron manually if your ops process allows.
 
 3. **Source clip:** place `wiki/sources/smoke-clip-YYYY-MM-DD.md` with at least one remote image URL. Wait **≥1** tick for one-source ingest (test 29 path: stub summary under `wiki/reports/`).
 

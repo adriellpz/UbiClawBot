@@ -45,7 +45,8 @@ Persistent droplet-only paths (not overwritten by deploy): `/home/deploy/opencla
 | `smoke-verifier.mjs --vault-root …` | **PASS** — layout, workspaces, legacy-paths, gateway healthz |
 | Phase 2 `wiki/workflows/raw-input.md` | **Present** |
 | Phase 2 `cheryl/skills/cheryl-vault-inbox/` | **Present** (`SKILL.md`) |
-| Cheryl `*/15` raw-input cron in `jobs.json` | **Present** — `agentId: scheduler`, `*/15 * * * *`, `America/Denver`, NO_REPLY if empty; model `opencode-go/deepseek-v4-flash` per [`openclaw-agents.md`](./openclaw-agents.md) |
+| Cheryl wiki maintainer cron in `jobs.json` | **Present** — `agentId: scheduler`, `0 0,9,12,15,18,21 * * *`, `America/Denver` (six times daily); model `opencode-go/deepseek-v4-flash` per [`openclaw-agents.md`](./openclaw-agents.md) |
+| Memory audit crons (6 jobs) | **Present** — Ubi/Marcos/Cheryl weekly + monthly; see ADR `0005-memory-audit-cadence` |
 | Curator smoke drop | **Filed manually** during vault cleanup to `wiki/workflows/ubi-2026-05-30-handoff-test.md`; async cron filing not separately awaited |
 
 ### Droplet command evidence (redacted)

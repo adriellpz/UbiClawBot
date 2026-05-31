@@ -14,6 +14,21 @@
           "streaming": true
         },
         "openai-codex/gpt-5.5": {}
+      },
+      "compaction": {
+        "memoryFlush": {
+          "enabled": true
+        }
+      },
+      "memorySearch": {
+        "enabled": true,
+        "provider": "openai",
+        "model": "text-embedding-3-small",
+        "fallback": "none",
+        "experimental": {
+          "sessionMemory": true,
+          "sources": ["memory", "sessions"]
+        }
       }
     },
     "list": [
