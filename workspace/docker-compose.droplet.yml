@@ -174,7 +174,7 @@ services:
       openclaw-gateway:
         condition: service_started
       trello-gateway:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -238,7 +238,7 @@ services:
       openclaw-gateway:
         condition: service_started
       trello-gateway:
-        condition: service_started
+        condition: service_healthy
 
   gmail-hook-bridge:
     image: openclaw-with-gog:local
@@ -288,7 +288,7 @@ services:
       openclaw-gateway:
         condition: service_started
       trello-gateway:
-        condition: service_started
+        condition: service_healthy
 
   gog-canary-bridge:
     image: openclaw-with-gog:local
@@ -343,7 +343,7 @@ services:
       openclaw-gateway:
         condition: service_started
       trello-gateway:
-        condition: service_started
+        condition: service_healthy
 
   trello-gateway:
     build:
@@ -414,7 +414,7 @@ services:
       openclaw-gateway:
         condition: service_started
       trello-gateway:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -461,7 +461,7 @@ services:
       openclaw-gateway:
         condition: service_started
       trello-gateway:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test:
         [
