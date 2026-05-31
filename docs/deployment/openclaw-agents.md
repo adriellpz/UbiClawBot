@@ -32,13 +32,24 @@ Cheryl’s **wiki inbox cron** is an AI agent turn (`agentTurn` in `jobs.json`):
 
 ## Wiki curator cron (reference)
 
-- **Job name:** Cheryl vault inbox curator  
-- **Schedule:** `*/15 * * * *`, `America/Denver`  
+- **Job name:** Cheryl wiki maintainer  
+- **Schedule:** `0 9,12,15,18,21,0 * * *` (six times daily), `America/Denver`  
 - **Agent:** `scheduler`  
-- **Empty inbox:** reply exactly `NO_REPLY`  
+- **Empty inbox:** reply exactly `NO_REPLY` (idle ticks 1–3; full lint on idle tick 4)  
 - **Skill:** `cheryl/skills/cheryl-vault-inbox/SKILL.md`  
 - **Inbox:** `/home/node/.openclaw/agent-vault/raw-input/`  
 - **Runtime tools:** `/home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/` (preflight, index generator)
+
+## Memory audit crons (reference)
+
+Six isolated jobs in `cron/jobs.json` (see ADR `0005-memory-audit-cadence`). Vault skills: `*-memory-audit` under each agent workspace. America/Denver:
+
+| Job | Schedule | Agent |
+|-----|----------|-------|
+| Weekly memory audit | Mon 1:00 / 3:15 / 5:15 | Ubi / Marcos / Cheryl |
+| Monthly memory audit | 1st 1:00 / 3:15 / 5:15 | Ubi / Marcos / Cheryl |
+
+Weekly jobs no-op on the 1st (monthly replaces). Config: `memorySearch.experimental.sessionMemory` in `openclaw.json`.
 
 ## Changing a model
 

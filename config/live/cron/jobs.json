@@ -114,12 +114,12 @@
       "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
       "agentId": "scheduler",
       "name": "Cheryl wiki maintainer",
-      "description": "Every 15 minutes: wiki maintainer curator cron tick (preflight, raw input ingest, one source, maintenance, indexes, idle lint).",
+      "description": "Six times daily (midnight, 9 AM, noon, 3 PM, 6 PM, 9 PM MT): wiki maintainer curator cron tick (preflight, raw input ingest, one source, maintenance, indexes, idle lint).",
       "enabled": true,
       "createdAtMs": 1780076558866,
       "schedule": {
         "kind": "cron",
-        "expr": "*/15 * * * *",
+        "expr": "0 9,12,15,18,21,0 * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
@@ -157,6 +157,196 @@
         "mode": "announce",
         "channel": "telegram",
         "to": "telegram:8045915111"
+      }
+    },
+    {
+      "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
+      "name": "Ubi weekly memory audit",
+      "description": "Monday 1:00 AM MT: audit ubi/MEMORY.md and session notes via ubi-memory-audit skill. NO_REPLY unless drift. No-op on 1st (monthly replaces).",
+      "enabled": true,
+      "createdAtMs": 1780150000001,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 1 * * 1",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: ubi-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "8b006421-8d43-49f3-a092-3c03baee10d3",
+      "name": "Ubi monthly memory audit",
+      "description": "1st of month 1:00 AM MT: deep memory audit via ubi-memory-audit skill. Always Telegram summary.",
+      "enabled": true,
+      "createdAtMs": 1780150000002,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 1 1 * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: ubi-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Always send a brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
+      "agentId": "marcos",
+      "name": "Marcos weekly memory audit",
+      "description": "Monday 3:15 AM MT: audit marcos/MEMORY.md and session notes. NO_REPLY unless drift. No-op on 1st.",
+      "enabled": true,
+      "createdAtMs": 1780150000003,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 3 * * 1",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: marcos-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "8966be3c-f3a6-4309-b006-a110d2443a33",
+      "agentId": "marcos",
+      "name": "Marcos monthly memory audit",
+      "description": "1st of month 3:15 AM MT: deep memory audit via marcos-memory-audit skill. Always Telegram summary.",
+      "enabled": true,
+      "createdAtMs": 1780150000004,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 3 1 * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: marcos-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Always send a brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
+      "agentId": "scheduler",
+      "name": "Cheryl weekly memory audit",
+      "description": "Monday 5:15 AM MT: audit cheryl/MEMORY.md and session notes only (not wiki maintainer). NO_REPLY unless drift. No-op on 1st.",
+      "enabled": true,
+      "createdAtMs": 1780150000005,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 5 * * 1",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: cheryl-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Do not run wiki ingest or wiki lint. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      }
+    },
+    {
+      "id": "3ad7dd5f-f6b8-4359-9aa4-c27b0c773709",
+      "agentId": "scheduler",
+      "name": "Cheryl monthly memory audit",
+      "description": "1st of month 5:15 AM MT: deep memory audit via cheryl-memory-audit skill. Always Telegram summary.",
+      "enabled": true,
+      "createdAtMs": 1780150000006,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 5 1 * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: cheryl-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Do not run wiki ingest or wiki lint. Always send a brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
       }
     }
   ]

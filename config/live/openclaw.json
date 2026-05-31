@@ -31,7 +31,11 @@
         "enabled": true,
         "provider": "openai",
         "model": "text-embedding-3-small",
-        "fallback": "none"
+        "fallback": "none",
+        "experimental": {
+          "sessionMemory": true,
+          "sources": ["memory", "sessions"]
+        }
       }
     },
     "list": [
