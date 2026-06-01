@@ -102,6 +102,13 @@ caddy_validate_config() {
   fi
 }
 
+caddy_sync_env_file() {
+  # Write secrets to /etc/caddy/environment so systemctl reload/restart picks them up.
+  # Requires the systemd drop-in: docs/deployment/README.md#caddy-systemd-environment
+  printf 'BOARD_BASICAUTH_HASH=%s\n' "$BOARD_BASICAUTH_HASH" \
+    | sudo_deploy tee /etc/caddy/environment > /dev/null
+}
+
 smoke_public_route() {
   local host="$1"
   local pathq="$2"
@@ -273,6 +280,7 @@ if cmp -s "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile 2>/dev/null;
   echo "Caddyfile unchanged — skipping validate/install/reload"
 else
   caddy_validate_config "${OPENCLAW_ROOT}/Caddyfile.droplet"
+  caddy_sync_env_file
   sudo_deploy install -m 0644 "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile
   if ! sudo_deploy systemctl reload caddy; then
     echo "caddy reload failed; journal follows, then restart" >&2
