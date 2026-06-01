@@ -199,7 +199,7 @@
     "profile": "coding",
     "web": {
       "search": {
-        "provider": "brave",
+        "provider": "duckduckgo",
         "enabled": true
       }
     },
@@ -293,20 +293,7 @@
         "enabled": true
       },
       "duckduckgo": {
-        "enabled": false
-      },
-      "brave": {
-        "enabled": false,
-        "config": {
-          "webSearch": {
-            "apiKey": {
-              "source": "env",
-              "provider": "default",
-              "id": "BRAVE_API_KEY"
-            },
-            "mode": "web"
-          }
-        }
+        "enabled": true
       },
       "browser": {
         "enabled": true
