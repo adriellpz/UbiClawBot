@@ -16,7 +16,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skills: ubi_trello_ops, ubi_calendar_scheduling.\n\nRead first:\n- /home/node/.openclaw/agent-runtime/ubi/scripts/USER.md (core goals)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-06-2026/calendar_priority_audit_2026-05-06.md (protected blocks + inversion rules)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-23-2026/morning_attention_sweep_spec.md (this job)\n\nMorning attention sweep — three outcomes:\n\n1) PRIORITY ATTENTION\n- Surface P1 (then P2) items Adriel should see today or tomorrow: Backlog, Reschedule, Scheduled without a sensible near-term calendar block, overdue Scheduled (gateway may have commented), Adriel Focus awaiting decision.\n- No full-board cleanup; only priority-relevant cards.\n\n2) CALENDAR vs PRIORITY (next 7 days) — TRELLO ONLY, NO CALENDAR EDITS\n- You may READ Google Calendar (gog) and Trello (gateway) to detect inversion: flexible P3 work blocks on near-term days while P1 work lacks a good block this week.\n- Priority from card titles (P1/P2/P3) on Trello-linked events.\n- Do not create, update, move, or delete Google Calendar events in this job. Never duplicate events.\n- Safe fix (only allowed action): use the Trello gateway to move cards to the Reschedule list in this order:\n  (a) All eligible flexible P3 work on Scheduled (or blocking near-term time) to Reschedule first.\n  (b) Then P1 work that needs a slot to Reschedule.\n- handle_reschedule.mjs (queue worker) places calendar slots deterministically (P3 about +5 days, P1 about +1 day). Do not invent manual times.\n\nNever move to Reschedule for rebalance (protected — calendar must stay):\n- Any card on the Routine list\n- Work block, shared/family calendar visibility, dog walk, sciatica, gym/Planet Fitness/swim, OT/accountability, Sunday reset, drive buffers, therapy, antacid, date/relationship time, or titles matching those routines\n- Adriel Focus (unless Adriel explicitly asked for that exact move)\n\nIf unsure whether a card is flexible work vs protected routine, leave it alone.\n\nOptional: one Trello comment on a summary/backlog card listing what you moved (Trello only; no Telegram for routine moves).\n\n3) GOALS\n- For each USER.md core goal, briefly: on track / stalled / no time this week. If stalled, name the smallest next Trello action (not a calendar edit).\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nFor calendar READS only (no writes):\nexport GOG_KEYRING_PASSWORD=\"$(cat /home/node/.openclaw/credentials/gog-keyring-password)\"\nexport PATH=\"/home/node/.openclaw/tools/gogcli:$PATH\"\n\nSafety: no applications submitted, external messages, spend, PII exposure, production/credential changes, Browserbase, or Adriel Focus moves unless Adriel explicitly asked.\n\nTelegram only if:\n(a) P1 work still has no viable path after you moved cards to Reschedule (handlers may still be running — note if queue may be behind),\n(b) a core goal is stalled with no week plan,\n(c) a real decision is needed, or\n(d) you could not use gateway/Trello safely.\n\nOtherwise reply exactly NO_REPLY.",
+        "message": "Use skills: ubi_trello_ops, ubi_calendar_scheduling.\n\nRead first:\n- /home/node/.openclaw/agent-runtime/ubi/scripts/USER.md (core goals)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-06-2026/calendar_priority_audit_2026-05-06.md (protected blocks + inversion rules)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-23-2026/morning_attention_sweep_spec.md (this job)\n\nMorning attention sweep \u2014 three outcomes:\n\n1) PRIORITY ATTENTION\n- Surface P1 (then P2) items Adriel should see today or tomorrow: Backlog, Reschedule, Scheduled without a sensible near-term calendar block, overdue Scheduled (gateway may have commented), Adriel Focus awaiting decision.\n- No full-board cleanup; only priority-relevant cards.\n\n2) CALENDAR vs PRIORITY (next 7 days) \u2014 TRELLO ONLY, NO CALENDAR EDITS\n- You may READ Google Calendar (gog) and Trello (gateway) to detect inversion: flexible P3 work blocks on near-term days while P1 work lacks a good block this week.\n- Priority from card titles (P1/P2/P3) on Trello-linked events.\n- Do not create, update, move, or delete Google Calendar events in this job. Never duplicate events.\n- Safe fix (only allowed action): use the Trello gateway to move cards to the Reschedule list in this order:\n  (a) All eligible flexible P3 work on Scheduled (or blocking near-term time) to Reschedule first.\n  (b) Then P1 work that needs a slot to Reschedule.\n- handle_reschedule.mjs (queue worker) places calendar slots deterministically (P3 about +5 days, P1 about +1 day). Do not invent manual times.\n\nNever move to Reschedule for rebalance (protected \u2014 calendar must stay):\n- Any card on the Routine list\n- Work block, shared/family calendar visibility, dog walk, sciatica, gym/Planet Fitness/swim, OT/accountability, Sunday reset, drive buffers, therapy, antacid, date/relationship time, or titles matching those routines\n- Adriel Focus (unless Adriel explicitly asked for that exact move)\n\nIf unsure whether a card is flexible work vs protected routine, leave it alone.\n\nOptional: one Trello comment on a summary/backlog card listing what you moved (Trello only; no Telegram for routine moves).\n\n3) GOALS\n- For each USER.md core goal, briefly: on track / stalled / no time this week. If stalled, name the smallest next Trello action (not a calendar edit).\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nFor calendar READS only (no writes):\nexport GOG_KEYRING_PASSWORD=\"$(cat /home/node/.openclaw/credentials/gog-keyring-password)\"\nexport PATH=\"/home/node/.openclaw/tools/gogcli:$PATH\"\n\nSafety: no applications submitted, external messages, spend, PII exposure, production/credential changes, Browserbase, or Adriel Focus moves unless Adriel explicitly asked.\n\nTelegram only if:\n(a) P1 work still has no viable path after you moved cards to Reschedule (handlers may still be running \u2014 note if queue may be behind),\n(b) a core goal is stalled with no week plan,\n(c) a real decision is needed, or\n(d) you could not use gateway/Trello safely.\n\nOtherwise reply exactly NO_REPLY.",
         "timeoutSeconds": 900
       },
       "delivery": {
@@ -28,7 +28,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "4e624bd1-6b71-4922-8d22-3fa98bb002b5",
@@ -69,12 +70,13 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "3a431fbd-797b-4490-a176-341fb38588c6",
       "name": "Nightly job search",
-      "description": "Nightly 4:09 AM MT: search QA/junior roles, write report/packages, intake Trello cards via job_application_review_card_intake.mjs (Backlog template → Reschedule → P2 calendar).",
+      "description": "Nightly 4:09 AM MT: search QA/junior roles, write report/packages, intake Trello cards via job_application_review_card_intake.mjs (Backlog template \u2192 Reschedule \u2192 P2 calendar).",
       "enabled": true,
       "createdAtMs": 1778558884651,
       "schedule": {
@@ -87,7 +89,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skills: ubi_nightly_job_search, ubi_job_applications, ubi_trello_ops.\n\nRead: /home/node/.openclaw/agent-runtime/ubi/scripts/skills/ubi-nightly-job-search/SKILL.md\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nNightly job search — one agent run (Option B: no webhook; you complete Trello intake in this run).\n\n## Phase 1 — Search and packages\n\n1. Review prior reports/shortlists under Docs/Reports/ (especially job_search_shortlist.md and any nightly_job_search_report_*.md) to avoid stale/duplicate leads.\n2. Find fresh QA/junior developer roles: Denver/Boulder/Colorado hybrid or Remote US, target ~$65k+ (see ubi_job_applications).\n3. Write Docs/Reports/YYYY-MM-DD/nightly_job_search_report_YYYY-MM-DD.md with sources, fit scores, rejects.\n4. For the best 1–3 live matches, write packages under job_applications/packages/YYYY-MM-DD/ — status: Ready for Adriel review, not submitted.\n\n## Phase 2 — Trello per package (gateway + intake script)\n\nFor each package, do **not** use trello_create_card.mjs (legacy direct API). Run:\n\nnode /home/node/.openclaw/agent-runtime/ubi/scripts/scripts/trello/active/job_application_review_card_intake.mjs \\\n  --company \"Company Name\" \\\n  --role \"Role Title\" \\\n  --apply-url \"https://...\" \\\n  --package-path \"/home/node/.openclaw/agent-runtime/ubi/scripts/job_applications/packages/YYYY-MM-DD/file.md\" \\\n  --report-path \"/home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/YYYY-MM-DD/nightly_job_search_report_YYYY-MM-DD.md\" \\\n  --fit-score 8 \\\n  --research \"Brief fit summary from your search.\"\n\nThat script applies the **same Backlog intake template** as the bridge hook (adapted for job applications):\n\n- Original Request → Research → Next steps → Peer Review (N/A for Marcos) → Work completed\n- Styles card (cover, priority label, assign Adriel)\n- Sets Time Needed (default 45 min)\n- Comments @adriellopez1 with links\n- Moves to **Reschedule** → queue worker runs handle_reschedule.mjs → **P2** calendar block → Scheduled\n\nAgent-created cards do **not** wake a second Ubi session; this script replaces that hook path.\n\n## Safety\n\nNever submit applications, pay, create accounts, message recruiters, use Browserbase, or edit calendar directly in this job.\n\nIf no good roles: report only, reply exactly NO_REPLY unless a real blocker or decision.\n\nIf script/Trello fails: comment blocker on an existing job-search card or Telegram briefly, then report the error.",
+        "message": "Use skills: ubi_nightly_job_search, ubi_job_applications, ubi_trello_ops.\n\nRead: /home/node/.openclaw/agent-runtime/ubi/scripts/skills/ubi-nightly-job-search/SKILL.md\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nNightly job search \u2014 one agent run (Option B: no webhook; you complete Trello intake in this run).\n\n## Phase 1 \u2014 Search and packages\n\n1. Review prior reports/shortlists under Docs/Reports/ (especially job_search_shortlist.md and any nightly_job_search_report_*.md) to avoid stale/duplicate leads.\n2. Find fresh QA/junior developer roles: Denver/Boulder/Colorado hybrid or Remote US, target ~$65k+ (see ubi_job_applications).\n3. Write Docs/Reports/YYYY-MM-DD/nightly_job_search_report_YYYY-MM-DD.md with sources, fit scores, rejects.\n4. For the best 1\u20133 live matches, write packages under job_applications/packages/YYYY-MM-DD/ \u2014 status: Ready for Adriel review, not submitted.\n\n## Phase 2 \u2014 Trello per package (gateway + intake script)\n\nFor each package, do **not** use trello_create_card.mjs (legacy direct API). Run:\n\nnode /home/node/.openclaw/agent-runtime/ubi/scripts/scripts/trello/active/job_application_review_card_intake.mjs \\\n  --company \"Company Name\" \\\n  --role \"Role Title\" \\\n  --apply-url \"https://...\" \\\n  --package-path \"/home/node/.openclaw/agent-runtime/ubi/scripts/job_applications/packages/YYYY-MM-DD/file.md\" \\\n  --report-path \"/home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/YYYY-MM-DD/nightly_job_search_report_YYYY-MM-DD.md\" \\\n  --fit-score 8 \\\n  --research \"Brief fit summary from your search.\"\n\nThat script applies the **same Backlog intake template** as the bridge hook (adapted for job applications):\n\n- Original Request \u2192 Research \u2192 Next steps \u2192 Peer Review (N/A for Marcos) \u2192 Work completed\n- Styles card (cover, priority label, assign Adriel)\n- Sets Time Needed (default 45 min)\n- Comments @adriellopez1 with links\n- Moves to **Reschedule** \u2192 queue worker runs handle_reschedule.mjs \u2192 **P2** calendar block \u2192 Scheduled\n\nAgent-created cards do **not** wake a second Ubi session; this script replaces that hook path.\n\n## Safety\n\nNever submit applications, pay, create accounts, message recruiters, use Browserbase, or edit calendar directly in this job.\n\nIf no good roles: report only, reply exactly NO_REPLY unless a real blocker or decision.\n\nIf script/Trello fails: comment blocker on an existing job-search card or Telegram briefly, then report the error.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "exec",
@@ -108,7 +110,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
@@ -119,20 +122,21 @@
       "createdAtMs": 1780076558866,
       "schedule": {
         "kind": "cron",
-        "expr": "0 0,9,12,15,18,21 * * *",
+        "expr": "0 * * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Wiki maintainer **curator cron tick** — run cheryl-vault-inbox skill.\n\n1. Exec preflight: `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs /home/node/.openclaw/agent-vault`\n2. Follow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` (locked pipeline order).\n3. Ingest all `raw-input/` drops (honor `update:` frontmatter); then one pending `wiki/sources/` clip; then up to five maintenance backlog pages.\n4. Regenerate indexes for touched folders; call qmd reindex when available.\n5. Register every touched wiki page (never hand-write registry timestamps): `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs /home/node/.openclaw/agent-vault wiki/path1.md ...`\n6. Idle: read scheduler `wikiMaintainer.curatorIdleStreak` in openclaw.json (or `/home/node/.openclaw/config/live/wiki-maintainer.json`) — ticks 1–3 with empty queues + complete registry → NO_REPLY; tick 4 → full wiki lint.\n7. Append wiki log chronicle when work ran.\n\nVault: `/home/node/.openclaw/agent-vault/`. Apply page format contract. Reply NO_REPLY only when idle rules satisfied.",
+        "message": "Wiki maintainer **curator cron tick** \u2014 run cheryl-vault-inbox skill.\n\n1. Exec preflight: `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs /home/node/.openclaw/agent-vault`\n2. Follow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` (locked pipeline order).\n3. Ingest all `raw-input/` drops (honor `update:` frontmatter); then up to five pending `wiki/sources/` clips sequentially (no subagents); then up to five maintenance backlog pages.\n4. Regenerate indexes for touched folders; call qmd reindex when available.\n5. Register every touched wiki page (never hand-write registry timestamps): `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs /home/node/.openclaw/agent-vault wiki/path1.md ...`\n6. Idle: read scheduler `wikiMaintainer.curatorIdleStreak` in openclaw.json (or `/home/node/.openclaw/config/live/wiki-maintainer.json`) \u2014 ticks 1\u201323 with empty queues + complete registry \u2192 NO_REPLY; tick 24 \u2192 full wiki lint (cron is now hourly \u2014 this keeps full lint to ~once per day).\n7. Append wiki log chronicle when work ran.\n\nVault: `/home/node/.openclaw/agent-vault/`. Apply page format contract. Reply NO_REPLY only when idle rules satisfied.",
         "timeoutSeconds": 600
       },
       "delivery": {
         "mode": "none",
         "channel": "last"
-      }
+      },
+      "state": {}
     },
     {
       "id": "10b7d135-2b7f-4196-88fb-dcff702b8cfb",
@@ -150,14 +154,15 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Daily **contradiction review** — run cheryl-vault-inbox skill.\n\n1. List open records under `/home/node/.openclaw/agent-vault/wiki/contradictions/` (flat `*.md` files).\n2. For each record: read body (inline `> **Contradiction:**` callout + findings) and affected pages linked in the record.\n3. If count is zero → reply exactly **NO_REPLY**.\n4. If count > 0 → send Telegram summary listing each record path + one-line finding + affected wikilinks. Do not resolve automatically.\n5. When operator directs resolution in a follow-up: update affected pages, remove inline callouts, delete the contradiction record, append wiki log chronicle line (`lint | contradiction resolved`).\n\nFollow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` contradiction review section.",
+        "message": "Daily **contradiction review** \u2014 run cheryl-vault-inbox skill.\n\n1. List open records under `/home/node/.openclaw/agent-vault/wiki/contradictions/` (flat `*.md` files).\n2. For each record: read body (inline `> **Contradiction:**` callout + findings) and affected pages linked in the record.\n3. If count is zero \u2192 reply exactly **NO_REPLY**.\n4. If count > 0 \u2192 send Telegram summary listing each record path + one-line finding + affected wikilinks. Do not resolve automatically.\n5. When operator directs resolution in a follow-up: update affected pages, remove inline callouts, delete the contradiction record, append wiki log chronicle line (`lint | contradiction resolved`).\n\nFollow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` contradiction review section.",
         "timeoutSeconds": 300
       },
       "delivery": {
         "mode": "announce",
         "channel": "telegram",
         "to": "telegram:8045915111"
-      }
+      },
+      "state": {}
     },
     {
       "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
@@ -177,7 +182,13 @@
         "kind": "agentTurn",
         "message": "Use skill: ubi-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
-        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ]
       },
       "delivery": {
         "mode": "announce",
@@ -189,7 +200,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "8b006421-8d43-49f3-a092-3c03baee10d3",
@@ -209,7 +221,13 @@
         "kind": "agentTurn",
         "message": "Use skill: ubi-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
-        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ]
       },
       "delivery": {
         "mode": "announce",
@@ -221,7 +239,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
@@ -241,7 +260,13 @@
         "kind": "agentTurn",
         "message": "Use skill: marcos-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
-        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ]
       },
       "delivery": {
         "mode": "announce",
@@ -253,7 +278,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "8966be3c-f3a6-4309-b006-a110d2443a33",
@@ -273,7 +299,13 @@
         "kind": "agentTurn",
         "message": "Use skill: marcos-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
-        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ]
       },
       "delivery": {
         "mode": "announce",
@@ -285,7 +317,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
@@ -305,7 +338,13 @@
         "kind": "agentTurn",
         "message": "Use skill: cheryl-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Do not run wiki ingest or wiki lint. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
-        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ]
       },
       "delivery": {
         "mode": "announce",
@@ -317,7 +356,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "3ad7dd5f-f6b8-4359-9aa4-c27b0c773709",
@@ -337,7 +377,13 @@
         "kind": "agentTurn",
         "message": "Use skill: cheryl-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Do not run wiki ingest or wiki lint. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
-        "toolsAllow": ["read", "write", "edit", "memory_search", "memory_get"]
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get"
+        ]
       },
       "delivery": {
         "mode": "announce",
@@ -349,7 +395,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     }
   ]
 }

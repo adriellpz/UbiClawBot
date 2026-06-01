@@ -46,7 +46,7 @@
         "id": "main",
         "model": "opencode-go/deepseek-v4-flash",
         "heartbeat": {
-          "every": "30m",
+          "every": "1h",
           "model": "opencode-go/deepseek-v4-flash",
           "isolatedSession": true,
           "lightContext": true,
@@ -76,7 +76,7 @@
         "model": "opencode-go/deepseek-v4-flash",
         "thinkingDefault": "medium",
         "heartbeat": {
-          "every": "30m",
+          "every": "1h",
           "model": "opencode-go/deepseek-v4-flash",
           "isolatedSession": true,
           "lightContext": true,
@@ -100,7 +100,7 @@
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
         "model": "opencode-go/deepseek-v4-pro",
         "heartbeat": {
-          "every": "30m",
+          "every": "1h",
           "model": "opencode-go/deepseek-v4-flash",
           "isolatedSession": true,
           "lightContext": true,
