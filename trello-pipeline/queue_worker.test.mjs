@@ -47,11 +47,30 @@ async function waitFor(predicate, timeoutMs = 5_000) {
   throw new Error("Timed out waiting for condition");
 }
 
+function createGogStub(tempDir) {
+  const scriptPath = path.join(tempDir, "gog");
+  fs.writeFileSync(
+    scriptPath,
+    `#!/usr/bin/env node
+import fs from "node:fs";
+const args = process.argv.slice(2);
+if (args[0] === "calendar" && args[1] === "events") {
+  process.stdout.write(JSON.stringify({ events: [] }));
+} else if (args[0] === "calendar" && (args[1] === "create" || args[1] === "update")) {
+  process.stdout.write(JSON.stringify({ event: { htmlLink: "https://calendar.google.com/event?eid=test-1" } }));
+} else {
+  process.stdout.write(JSON.stringify({ ok: true }));
+}
+`,
+    { mode: 0o755 },
+  );
+  return scriptPath;
+}
+
 test("repo-owned queue worker dispatches reschedule handlers from repo-owned state", async (t) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "trello-pipeline-worker-"));
   const stateDir = path.join(tempDir, "state");
-  const handlerLog = path.join(tempDir, "handler-log.json");
-  const handlerPath = path.join(tempDir, "reschedule-handler.mjs");
+  const gogStub = createGogStub(tempDir);
   fs.mkdirSync(stateDir, { recursive: true });
 
   fs.writeFileSync(
@@ -65,15 +84,6 @@ test("repo-owned queue worker dispatches reschedule handlers from repo-owned sta
     })}\n`,
   );
 
-  fs.writeFileSync(
-    handlerPath,
-    `#!/usr/bin/env node
-import fs from "node:fs";
-fs.writeFileSync(process.env.HANDLER_LOG_FILE, JSON.stringify({ args: process.argv.slice(2) }));
-`,
-    { mode: 0o755 },
-  );
-
   const gatewayCalls = [];
   const gateway = await listen(
     http.createServer(async (req, res) => {
@@ -84,21 +94,13 @@ fs.writeFileSync(process.env.HANDLER_LOG_FILE, JSON.stringify({ args: process.ar
 
       res.writeHead(200, { "content-type": "application/json" });
       if (body.operation === "get") {
-        res.end(
-          JSON.stringify({
-            success: true,
-            card: {
-              id: "card-1",
-              name: "P2 - Reschedule this",
-              shortUrl: "https://trello.com/c/card-1",
-              shortLink: "card-1",
-              closed: false,
-            },
-          }),
-        );
+        res.end(JSON.stringify({ success: true, card: { id: "card-1", name: "P2 - Reschedule this", shortUrl: "https://trello.com/c/card-1", shortLink: "card-1", desc: "Time needed: 30", labels: [], closed: false } }));
         return;
       }
-
+      if (body.operation === "board_lists") {
+        res.end(JSON.stringify({ success: true, lists: [{ id: "s1", name: "Scheduled" }, { id: "m1", name: "Missed" }, { id: "r1", name: "Routine" }] }));
+        return;
+      }
       res.end(JSON.stringify({ success: true }));
     }),
   );
@@ -107,12 +109,13 @@ fs.writeFileSync(process.env.HANDLER_LOG_FILE, JSON.stringify({ args: process.ar
     cwd: new URL(".", import.meta.url),
     env: {
       ...process.env,
-      HANDLER_LOG_FILE: handlerLog,
+      GOG_BIN: gogStub,
+      GOG_KEYRING_PASSWORD: "test",
+      GOOGLE_CALENDAR_ID: "cal@example.com",
       TRELLO_GATEWAY_URL: gateway.url,
       TRELLO_GATEWAY_KEY: "gw-test",
       TRELLO_PIPELINE_ONE_SHOT: "1",
       TRELLO_PIPELINE_POLL_MS: "10",
-      TRELLO_PIPELINE_RESCHEDULE_HANDLER: handlerPath,
       TRELLO_PIPELINE_STATE_DIR: stateDir,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -122,20 +125,10 @@ fs.writeFileSync(process.env.HANDLER_LOG_FILE, JSON.stringify({ args: process.ar
     await Promise.allSettled([stopChild(worker), closeServer(gateway.server)]);
   });
 
-  await waitFor(() => fs.existsSync(handlerLog));
   await waitFor(() => worker.exitCode !== null);
 
   const handledIds = readJson(path.join(stateDir, "actionable_handled_ids.json"), []);
   assert.deepEqual(handledIds, ["action-1"]);
-
-  const handlerCall = JSON.parse(fs.readFileSync(handlerLog, "utf8"));
-  assert.deepEqual(handlerCall.args, [
-    "--card-id",
-    "card-1",
-    "--short-link",
-    "https://trello.com/c/card-1",
-    "--from-list",
-    "Backlog",
-  ]);
   assert.equal(gatewayCalls.some((call) => call.operation === "get"), true);
+  assert.equal(gatewayCalls.some((call) => call.operation === "board_lists"), true);
 });

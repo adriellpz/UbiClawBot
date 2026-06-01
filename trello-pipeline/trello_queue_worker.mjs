@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { dispatch } from "./queue-worker-core.mjs";
+import { run as runReschedule } from "./handle_reschedule.mjs";
+import { run as runMissed } from "./trello_missed_adjust_calendar.mjs";
+import { run as runDone } from "./trello_done_adjust_calendar.mjs";
 const STATE = process.env.TRELLO_PIPELINE_STATE_DIR || "/var/lib/trello-pipeline";
-const MAX_HANDLER_ATTEMPTS = Number(process.env.TRELLO_PIPELINE_MAX_HANDLER_ATTEMPTS || 5);
 const POLL_MS = Number(process.env.TRELLO_PIPELINE_POLL_MS || 30_000);
 const ONE_SHOT = process.env.TRELLO_PIPELINE_ONE_SHOT === "1";
 
@@ -17,8 +17,6 @@ const GATEWAY_KEY = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
 if (!GATEWAY_KEY) throw new Error("Missing TRELLO_GATEWAY_KEY");
 
 const pendingFile = path.join(STATE, "actionable_pending.jsonl");
-const handledFile = path.join(STATE, "actionable_handled_ids.json");
-const failuresFile = path.join(STATE, "handler_failures.json");
 const logFile = path.join(STATE, "queue_worker.log");
 
 function log(msg, obj) {
@@ -53,106 +51,6 @@ function entries() {
     .filter(Boolean);
 }
 
-function failureRecord(actionId) {
-  const failures = readJson(failuresFile, {});
-  return failures[actionId] || null;
-}
-
-function recordFailure(actionId, detail) {
-  const failures = readJson(failuresFile, {});
-  const previous = failures[actionId] || { count: 0 };
-  failures[actionId] = { count: previous.count + 1, lastAt: new Date().toISOString(), ...detail };
-  const keys = Object.keys(failures);
-  if (keys.length > 500) {
-    for (const key of keys.slice(0, keys.length - 500)) delete failures[key];
-  }
-  writeJson(failuresFile, failures);
-}
-
-function clearFailure(actionId) {
-  const failures = readJson(failuresFile, {});
-  if (failures[actionId]) {
-    delete failures[actionId];
-    writeJson(failuresFile, failures);
-  }
-}
-
-async function runHandler(handler, args) {
-  const { spawn } = await import("node:child_process");
-  return new Promise((resolve) => {
-    let stderr = "";
-    const child = spawn(process.execPath, [handler, ...args], {
-      stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
-    });
-    child.stderr?.on("data", (chunk) => {
-      stderr += chunk.toString();
-      if (stderr.length > 4000) stderr = stderr.slice(-4000);
-    });
-    const timer = setTimeout(() => {
-      try {
-        child.kill("SIGTERM");
-      } catch {}
-      resolve({ ok: false, code: null, signal: "timeout", stderr: stderr.trim() });
-    }, 120_000);
-    child.on("exit", (code, signal) => {
-      clearTimeout(timer);
-      resolve({ ok: code === 0, code, signal: signal || null, stderr: stderr.trim() });
-    });
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({ ok: false, code: null, signal: "spawn_error", stderr: error.message });
-    });
-  });
-}
-
-function markHandled(id) {
-  const handled = new Set(readJson(handledFile, []));
-  handled.add(id);
-  writeJson(handledFile, [...handled].slice(-3000));
-}
-
-async function runDeterministicHandler(entry, handlerPath, args, eventName) {
-  const previous = failureRecord(entry.actionId);
-  const attempt = (previous?.count || 0) + 1;
-
-  if (previous && previous.count >= MAX_HANDLER_ATTEMPTS) {
-    markHandled(entry.actionId);
-    log(`${eventName}_gave_up`, {
-      actionId: entry.actionId,
-      attempts: previous.count,
-      lastExitCode: previous.exitCode,
-      lastStderr: (previous.stderr || "").slice(0, 200),
-    });
-    return true;
-  }
-
-  const result = await runHandler(handlerPath, args);
-  if (result.ok) {
-    clearFailure(entry.actionId);
-    markHandled(entry.actionId);
-    log(`handled_${eventName}`, { actionId: entry.actionId, card: entry.cardName || entry.cardId });
-    return true;
-  }
-
-  recordFailure(entry.actionId, {
-    exitCode: result.code,
-    signal: result.signal,
-    stderr: result.stderr,
-    handler: path.basename(handlerPath),
-  });
-  log(`${eventName}_failed`, {
-    actionId: entry.actionId,
-    card: entry.cardName,
-    attempt,
-    maxAttempts: MAX_HANDLER_ATTEMPTS,
-    exitCode: result.code,
-    signal: result.signal,
-    stderr: result.stderr.slice(0, 400),
-  });
-  return true;
-}
-
 async function gateway(operation, cardId, params = {}) {
   const response = await fetch(GATEWAY_URL, {
     method: "POST",
@@ -170,47 +68,16 @@ async function getCard(cardId) {
   return data.card || null;
 }
 
-function handlerPath(kind) {
-  if (kind === "trello_card_moved_to_reschedule") {
-    return process.env.TRELLO_PIPELINE_RESCHEDULE_HANDLER || path.join(__dirname, "handle_reschedule.mjs");
-  }
-  if (kind === "trello_card_moved_to_missed") {
-    return process.env.TRELLO_PIPELINE_MISSED_HANDLER || path.join(__dirname, "trello_missed_adjust_calendar.mjs");
-  }
-  if (kind === "trello_card_moved_to_done") {
-    return process.env.TRELLO_PIPELINE_DONE_HANDLER || path.join(__dirname, "trello_done_adjust_calendar.mjs");
-  }
-  return null;
+function buildHandlerMap() {
+  return {
+    trello_card_moved_to_reschedule: { run: (card, ctx) => runReschedule(card, ctx) },
+    trello_card_moved_to_missed: { run: (card, ctx) => runMissed(card, ctx) },
+    trello_card_moved_to_done: { run: (card, ctx) => runDone(card, ctx) },
+  };
 }
 
 async function handle(entry) {
-  const card = entry.cardId ? await getCard(entry.cardId).catch(() => null) : null;
-  if (card?.closed) {
-    log("skipped_closed_card", { actionId: entry.actionId, cardId: card.id, cardName: card.name });
-    markHandled(entry.actionId);
-    return true;
-  }
-
-  if (entry.kind === "trello_card_moved_to_reschedule" && card) {
-    return runDeterministicHandler(
-      entry,
-      handlerPath(entry.kind),
-      ["--card-id", card.id, "--short-link", card.shortUrl || card.shortLink, "--from-list", entry.fromListName || "unknown"],
-      "reschedule",
-    );
-  }
-
-  if (entry.kind === "trello_card_moved_to_missed" && card) {
-    return runDeterministicHandler(entry, handlerPath(entry.kind), [card.shortLink || card.id], "missed");
-  }
-
-  if (entry.kind === "trello_card_moved_to_done" && card) {
-    return runDeterministicHandler(entry, handlerPath(entry.kind), [card.shortLink || card.id], "done");
-  }
-
-  markHandled(entry.actionId);
-  log("delegated_or_silent", { actionId: entry.actionId, kind: entry.kind, card: entry.cardName });
-  return true;
+  return dispatch(entry, buildHandlerMap(), { getCard, stateDir: STATE });
 }
 
 function reschedulePriorityRank(cardName) {
@@ -230,7 +97,7 @@ function pendingQueueOrder(a, b) {
 }
 
 async function tick() {
-  const handled = new Set(readJson(handledFile, []));
+  const handled = new Set(readJson(path.join(STATE, "actionable_handled_ids.json"), []));
   const pending = entries().filter((entry) => entry?.actionId && !handled.has(entry.actionId));
   pending.sort(pendingQueueOrder);
   for (const entry of pending) {
