@@ -1,5 +1,5 @@
 // Task Board server
-// Container: TASKS_DIR=/app/vault/tasks PORT=3334 (set via compose env)
+// Container: TASKS_DIR=/vault/tasks PORT=3334 (set via compose env)
 // Local dev: node server.mjs  (defaults to ../../agent-workspace-vault/tasks)
 
 import http from 'node:http'

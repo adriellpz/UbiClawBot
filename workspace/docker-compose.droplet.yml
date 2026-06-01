@@ -352,10 +352,11 @@ services:
     image: task-board:local
     environment:
       PORT: "3334"
-      TASKS_DIR: /app/vault/tasks
+      # Vault at /vault (not /app/vault): /app is a read-only bind of ./task-board.
+      TASKS_DIR: /vault/tasks
     volumes:
       - ./task-board:/app:ro
-      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/app/vault
+      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/vault
     ports:
       - "127.0.0.1:3334:3334"
     init: true
