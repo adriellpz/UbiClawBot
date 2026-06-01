@@ -20,25 +20,8 @@ const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || "adriellpz@gmail.com";
 const GOG_ACCOUNT = process.env.GOG_ACCOUNT || "ubitheai@gmail.com";
 const DEFAULT_BLOCK_MINUTES = 30;
 
-function argVal(flag) {
-  const index = process.argv.indexOf(flag);
-  return index >= 0 ? process.argv[index + 1] : null;
-}
-
-const cardId = argVal("--card-id");
-const shortLink = argVal("--short-link");
-const fromList = (argVal("--from-list") || "").toLowerCase();
-const dryRun = process.argv.includes("--dry-run");
-
-if (!cardId && !shortLink) process.exit(2);
-
-if (!process.env.TRELLO_GATEWAY_URL) throw new Error("TRELLO_GATEWAY_URL is required");
 const GATEWAY_URL = process.env.TRELLO_GATEWAY_URL;
 const GATEWAY_KEY = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
-if (!GATEWAY_KEY) {
-  console.error(JSON.stringify({ error: "Missing TRELLO_GATEWAY_KEY" }));
-  process.exit(2);
-}
 
 function gogEnv() {
   const env = { ...process.env };
@@ -156,8 +139,7 @@ function startOfDay(date) {
   return value;
 }
 
-async function main() {
-  const card = cardId ? await getCard(cardId) : await getCard(shortLink);
+async function rescheduleCard(card, fromList, dryRun) {
   if (card.closed) {
     console.log(JSON.stringify({ status: "skipped", reason: "card_closed", card: card.name }));
     return;
@@ -402,7 +384,34 @@ async function main() {
   console.log(JSON.stringify({ ...resultBase, status: dryRun ? "dry_run" : "ok", action, targetList: targetList.name, due: slot.end.toISOString(), calendarEventId: currentEvent?.id || null, priority, conflictShifted: slot.shifted, conflictAttempts: slot.attempts, softOverlaps: slot.overlaps }));
 }
 
-main().catch((error) => {
-  console.error(JSON.stringify({ status: "error", error: error.message }));
-  process.exit(1);
-});
+export async function run(card, ctx = {}) {
+  if (!GATEWAY_URL) throw new Error("TRELLO_GATEWAY_URL is required");
+  if (!GATEWAY_KEY) throw new Error("Missing TRELLO_GATEWAY_KEY");
+  await rescheduleCard(card, (ctx.fromListName || "").toLowerCase(), false);
+  return { ok: true };
+}
+
+// CLI entry point
+const isCLI = process.argv[1] && new URL(import.meta.url).pathname === process.argv[1];
+if (isCLI) {
+  if (!GATEWAY_URL) throw new Error("TRELLO_GATEWAY_URL is required");
+  if (!GATEWAY_KEY) { console.error(JSON.stringify({ error: "Missing TRELLO_GATEWAY_KEY" })); process.exit(2); }
+
+  function argVal(flag) {
+    const index = process.argv.indexOf(flag);
+    return index >= 0 ? process.argv[index + 1] : null;
+  }
+  const cardId = argVal("--card-id");
+  const shortLink = argVal("--short-link");
+  const fromList = (argVal("--from-list") || "").toLowerCase();
+  const dryRun = process.argv.includes("--dry-run");
+  if (!cardId && !shortLink) process.exit(2);
+
+  (async () => {
+    const card = cardId ? await getCard(cardId) : await getCard(shortLink);
+    await rescheduleCard(card, fromList, dryRun);
+  })().catch((error) => {
+    console.error(JSON.stringify({ status: "error", error: error.message }));
+    process.exit(1);
+  });
+}

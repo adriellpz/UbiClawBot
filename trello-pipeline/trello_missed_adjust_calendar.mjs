@@ -6,74 +6,80 @@ import { execFileSync } from "node:child_process";
 import { findAllLinkedEvents, fetchEvents } from "./calendar_lookup.mjs";
 import { parseCalendarLink } from "./trello_card_calendar_desc.mjs";
 
-if (!process.env.TRELLO_GATEWAY_URL) throw new Error("TRELLO_GATEWAY_URL is required");
-const GATEWAY_URL = process.env.TRELLO_GATEWAY_URL;
-const GATEWAY_KEY = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
-if (!GATEWAY_KEY) throw new Error("Missing TRELLO_GATEWAY_KEY");
-
 function normalizeCardRef(ref) {
   const match = String(ref || "").match(/trello\.com\/c\/([a-zA-Z0-9]+)/);
   return match ? match[1] : ref;
 }
 
-const cardRef = normalizeCardRef(process.argv[2]);
-if (!cardRef) throw new Error("Usage: trello_missed_adjust_calendar.mjs <cardShortLinkOrId>");
-
-async function gw(operation, cardId, params = {}) {
-  const response = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${GATEWAY_KEY}` },
-    body: JSON.stringify({ agentId: "system", operation, cardId, params }),
-  });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!response.ok) throw new Error(`Gateway ${operation}: ${response.status} ${text.slice(0, 300)}`);
-  return data;
+function makeGw(gatewayUrl, gatewayKey) {
+  return async function gw(operation, cardId, params = {}) {
+    const response = await fetch(gatewayUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${gatewayKey}` },
+      body: JSON.stringify({ agentId: "system", operation, cardId, params }),
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) throw new Error(`Gateway ${operation}: ${response.status} ${text.slice(0, 300)}`);
+    return data;
+  };
 }
 
-function gogEnv() {
-  const env = { ...process.env };
-  const gogBin = process.env.GOG_BIN || "gog";
-  if (gogBin.includes("/")) env.PATH = `${path.dirname(gogBin)}:${env.PATH || ""}`;
-  const passwordFile = process.env.GOG_KEYRING_PASSWORD_FILE || "/home/node/.openclaw/credentials/gog-keyring-password";
-  if (!env.GOG_KEYRING_PASSWORD) {
-    try {
-      env.GOG_KEYRING_PASSWORD = fs.readFileSync(passwordFile, "utf8").trim();
-    } catch {}
+function makeGog() {
+  return function gog(args) {
+    const gogBin = process.env.GOG_BIN || "gog";
+    const env = { ...process.env };
+    if (gogBin.includes("/")) env.PATH = `${path.dirname(gogBin)}:${env.PATH || ""}`;
+    const passwordFile = process.env.GOG_KEYRING_PASSWORD_FILE || "/home/node/.openclaw/credentials/gog-keyring-password";
+    if (!env.GOG_KEYRING_PASSWORD) {
+      try { env.GOG_KEYRING_PASSWORD = fs.readFileSync(passwordFile, "utf8").trim(); } catch {}
+    }
+    return execFileSync(gogBin, args, { encoding: "utf8", env, stdio: ["ignore", "pipe", "pipe"] });
+  };
+}
+
+export async function run(card, _ctx = {}) {
+  const gatewayUrl = process.env.TRELLO_GATEWAY_URL;
+  const gatewayKey = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
+  if (!gatewayUrl) throw new Error("TRELLO_GATEWAY_URL is required");
+  if (!gatewayKey) throw new Error("Missing TRELLO_GATEWAY_KEY");
+
+  const gw = makeGw(gatewayUrl, gatewayKey);
+  const gog = makeGog();
+  const calendarId = process.env.GOOGLE_CALENDAR_ID || "adriellpz@gmail.com";
+  const gogAccount = process.env.GOG_ACCOUNT || "ubitheai@gmail.com";
+
+  if (!card) return { ok: false, reason: "card_not_found" };
+  if (card.closed) return { ok: true, skipped: "card_is_closed_archived" };
+
+  const allEvents = fetchEvents();
+  const matches = findAllLinkedEvents(card, allEvents);
+  if (!matches.length) {
+    return { ok: true, deleted: false, reason: "no_matching_calendar_event", card: card.name, hasCalendarLink: !!parseCalendarLink(card.desc) };
   }
-  return env;
+
+  let deleted = 0;
+  for (const event of matches) {
+    gog(["calendar", "delete", calendarId, event.id, "--account", gogAccount, "--no-input", "--force", "--send-updates", "none"]);
+    deleted += 1;
+  }
+
+  await gw("comment", card.id, { text: `Missed cleanup: deleted ${deleted} calendar event(s) for this card. @adriellopez1` });
+  return { ok: true, deleted: true, count: deleted, card: card.name, cardUrl: card.shortUrl };
 }
 
-function gog(args) {
-  return execFileSync(process.env.GOG_BIN || "gog", args, {
-    encoding: "utf8",
-    env: gogEnv(),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-}
+// CLI entry point
+if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) {
+  const cardRef = normalizeCardRef(process.argv[2]);
+  if (!cardRef) throw new Error("Usage: trello_missed_adjust_calendar.mjs <cardShortLinkOrId>");
 
-const card = (await gw("get", cardRef)).card || null;
-if (!card) {
-  console.log(JSON.stringify({ deleted: false, reason: "card_not_found" }));
-  process.exit(0);
-}
-if (card.closed) {
-  console.log(JSON.stringify({ deleted: false, skipped: "card_is_closed_archived", cardId: card.id, cardName: card.name }));
-  process.exit(0);
-}
+  const gatewayUrl = process.env.TRELLO_GATEWAY_URL;
+  const gatewayKey = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
+  if (!gatewayUrl) throw new Error("TRELLO_GATEWAY_URL is required");
+  if (!gatewayKey) throw new Error("Missing TRELLO_GATEWAY_KEY");
 
-const allEvents = fetchEvents();
-const matches = findAllLinkedEvents(card, allEvents);
-if (!matches.length) {
-  console.log(JSON.stringify({ deleted: false, reason: "no_matching_calendar_event", card: card.name, cardUrl: card.shortUrl, hasCalendarLink: !!parseCalendarLink(card.desc) }));
-  process.exit(0);
+  const gw = makeGw(gatewayUrl, gatewayKey);
+  const card = (await gw("get", cardRef)).card || null;
+  const result = await run(card);
+  console.log(JSON.stringify(result));
 }
-
-let deleted = 0;
-for (const event of matches) {
-  gog(["calendar", "delete", process.env.GOOGLE_CALENDAR_ID || "adriellpz@gmail.com", event.id, "--account", process.env.GOG_ACCOUNT || "ubitheai@gmail.com", "--no-input", "--force", "--send-updates", "none"]);
-  deleted += 1;
-}
-
-await gw("comment", card.id, { text: `Missed cleanup: deleted ${deleted} calendar event(s) for this card. @adriellopez1` });
-console.log(JSON.stringify({ deleted: true, count: deleted, card: card.name, cardUrl: card.shortUrl }));
