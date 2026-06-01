@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TASKS_DIR = process.env.TASKS_DIR || path.resolve(__dirname, '../../agent-workspace-vault/tasks')
-const PORT = Number(process.env.PORT || 3333)
+const PORT = Number(process.env.PORT || 3334)
 
 // ── Frontmatter ──────────────────────────────────────────────────────────────
 
@@ -30,6 +30,16 @@ function parseFrontmatter(content) {
 function serializeFile(fm, body) {
   const lines = Object.entries(fm).map(([k, v]) => `${k}: ${v}`)
   return `---\n${lines.join('\n')}\n---\n${body}`
+}
+
+// ── Path safety ───────────────────────────────────────────────────────────────
+
+const TASKS_DIR_RESOLVED = path.resolve(TASKS_DIR)
+
+function safeTaskPath(filename) {
+  const resolved = path.resolve(TASKS_DIR_RESOLVED, filename)
+  if (!resolved.startsWith(TASKS_DIR_RESOLVED + path.sep)) return null
+  return resolved
 }
 
 // ── Task CRUD ────────────────────────────────────────────────────────────────
@@ -56,7 +66,8 @@ function readTasks() {
 }
 
 function patchTask(filename, fields) {
-  const filepath = path.join(TASKS_DIR, filename)
+  const filepath = safeTaskPath(filename)
+  if (!filepath) throw Object.assign(new Error('forbidden'), { status: 403 })
   const content = fs.readFileSync(filepath, 'utf8')
   const { fm, body } = parseFrontmatter(content)
   Object.assign(fm, fields)
@@ -65,7 +76,7 @@ function patchTask(filename, fields) {
 
 function createTask({ title, status = 'Backlog', due = '', agent = '' }) {
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)
-  const filename = `${slug}-${Date.now()}.md`
+  const filename = `${slug}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.md`
   const today = new Date().toISOString().slice(0, 10)
   const content = serializeFile(
     { title, status, due, agent, created: today, tags: '[]' },
@@ -79,10 +90,16 @@ function createTask({ title, status = 'Backlog', due = '', agent = '' }) {
 
 const HTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8')
 
-async function body(req) {
-  return new Promise((resolve) => {
+async function body(req, maxBytes = 65536) {
+  return new Promise((resolve, reject) => {
     let s = ''
-    req.on('data', c => s += c)
+    req.on('data', c => {
+      s += c
+      if (Buffer.byteLength(s) > maxBytes) {
+        req.destroy()
+        reject(Object.assign(new Error('payload too large'), { status: 413 }))
+      }
+    })
     req.on('end', () => { try { resolve(JSON.parse(s)) } catch { resolve({}) } })
   })
 }
@@ -106,20 +123,30 @@ http.createServer(async (req, res) => {
       return res.end(JSON.stringify(readTasks()))
     }
     if (req.method === 'POST') {
-      const data = await body(req)
-      const filename = createTask(data)
-      res.writeHead(201, { 'content-type': 'application/json' })
-      return res.end(JSON.stringify({ filename }))
+      try {
+        const data = await body(req)
+        const filename = createTask(data)
+        res.writeHead(201, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ filename }))
+      } catch (e) {
+        res.writeHead(e.status || 500)
+        return res.end(e.message)
+      }
     }
   }
 
   const patch = url.pathname.match(/^\/api\/tasks\/(.+)$/)
   if (patch && req.method === 'PATCH') {
-    const filename = decodeURIComponent(patch[1])
-    const data = await body(req)
-    patchTask(filename, data)
-    res.writeHead(200, { 'content-type': 'application/json' })
-    return res.end(JSON.stringify({ ok: true }))
+    try {
+      const filename = decodeURIComponent(patch[1])
+      const data = await body(req)
+      patchTask(filename, data)
+      res.writeHead(200, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ ok: true }))
+    } catch (e) {
+      res.writeHead(e.status || 500)
+      return res.end(e.message)
+    }
   }
 
   res.writeHead(404)

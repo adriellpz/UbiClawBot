@@ -59,6 +59,13 @@
 - **Pipeline state**: durable operational state used by the Trello production pipeline, such as queue records, handled-action tracking, retry tracking, and similar service state. This is distinct from agent memory or taskflow state.
 - **Documentation contract test**: a `node:test` case in `UbiClawBot` that asserts a structural or cross-repo documentation invariant (for example, a forbidden duplicate path is absent or a required canonical page exists). These tests may read sibling agent repositories; they are not tests of runtime Trello behavior.
 
+## Vault-native task system
+
+- **task file**: a markdown file under `tasks/` at the vault root — frontmatter carries `status` (maps 1:1 to former Trello list names), `due`, `agent`, and other structured fields. Source of truth for the task state machine in the vault-native task system. Replaces Trello cards.
+- **task vault**: the `tasks/` top-level folder at vault root — sibling to `wiki/` and `raw-input/`. Holds live task state only; archived tasks leave via **raw input** → Cheryl → **wiki**. Not a **wiki top-level folder**.
+- **task gateway**: the thin local HTTP service replacing `trello-gateway` — same HTTP interface (`agentId`, `operation`, `cardId`, `params`), same transition matrix and per-agent authorization rules, backed by **task files** instead of the Trello API. Agents require zero changes to call it.
+- **task watcher**: filesystem daemon monitoring `tasks/` for frontmatter `status:` changes, dispatching the existing pipeline automation (reschedule, missed, done calendar adjustments). Replaces Trello webhooks as the event trigger.
+
 ## Trello board language
 
 - **open-card contract**: the gateway-enforced shape of cards on scoped lists—four description sections in fixed order (`Original Request`, `Research`, `Peer Review`, `Work completed`) plus section mutation rules (e.g. Marcos-only `Peer Review`). Distinct from agent prompts and skills.
