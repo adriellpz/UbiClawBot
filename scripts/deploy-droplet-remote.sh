@@ -41,6 +41,54 @@ smoke_required_env() {
   done
 }
 
+# Resolve a deploy-host secret for Caddy {env.*} placeholders (validate runs outside systemd).
+read_deploy_env_var() {
+  local name="$1"
+  if [ -n "${!name:-}" ]; then
+    return 0
+  fi
+  local env_file line val
+  for env_file in "${OPENCLAW_ROOT}/.env" /etc/caddy/environment; do
+    [ -f "$env_file" ] || continue
+    line="$(grep -E "^[[:space:]]*${name}=" "$env_file" 2>/dev/null | tail -1 || true)"
+    [ -n "$line" ] || continue
+    val="${line#*=}"
+    val="${val//$'\r'/}"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    case "$val" in
+      \"*\") val="${val#\"}"; val="${val%\"}" ;;
+      \'*\') val="${val#\'}"; val="${val%\'}" ;;
+    esac
+    if [ -n "$val" ]; then
+      export "$name=$val"
+      return 0
+    fi
+  done
+  if command -v systemctl >/dev/null 2>&1; then
+    val="$(systemctl show caddy.service -p Environment --value 2>/dev/null \
+      | tr ' ' '\n' \
+      | grep -E "^${name}=" \
+      | tail -1 \
+      | cut -d= -f2- \
+      || true)"
+    if [ -n "$val" ]; then
+      export "$name=$val"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+caddy_validate_config() {
+  local config="$1"
+  if ! read_deploy_env_var BOARD_BASICAUTH_HASH; then
+    echo "deploy failed: BOARD_BASICAUTH_HASH is unset — add a bcrypt hash to ${OPENCLAW_ROOT}/.env (see .env.example) for board.sonofwolf.org basic auth" >&2
+    exit 1
+  fi
+  sudo env BOARD_BASICAUTH_HASH="$BOARD_BASICAUTH_HASH" caddy validate --config "$config"
+}
+
 smoke_public_route() {
   local host="$1"
   local pathq="$2"
@@ -208,7 +256,7 @@ cat "${OPENCLAW_ROOT}/deployed-revision.json"
 if cmp -s "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile 2>/dev/null; then
   echo "Caddyfile unchanged — skipping validate/install/reload"
 else
-  sudo caddy validate --config "${OPENCLAW_ROOT}/Caddyfile.droplet"
+  caddy_validate_config "${OPENCLAW_ROOT}/Caddyfile.droplet"
   sudo install -m 0644 "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile
   if ! sudo systemctl reload caddy; then
     echo "caddy reload failed; journal follows, then restart" >&2
