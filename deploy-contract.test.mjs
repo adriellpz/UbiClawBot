@@ -75,19 +75,29 @@ test("openclaw-gateway compose service bind-mounts qmd cache at /home/node/.cach
   assert.ok(cacheMount, `${COMPOSE_DROPLET_PATH}: openclaw-gateway missing bind-mount for /home/node/.cache/qmd`);
 });
 
-test("task-board compose bind-mounts the full task-board directory at /app", () => {
+test("task-board compose mounts app code read-only and vault outside /app", () => {
   const compose = getComposeDropletYaml();
   const taskBoard = compose?.services?.["task-board"];
   assert.ok(taskBoard, `${COMPOSE_DROPLET_PATH}: task-board service not found`);
   const volumes = taskBoard?.volumes ?? [];
-  const hasAppMount = volumes.some((v) => {
-    if (typeof v !== "string") return false;
-    const [source, target] = v.split(":");
-    return source === "./task-board" && target === "/app";
-  });
+  const hasAppMount = volumes.some(
+    (v) => typeof v === "string" && v === "./task-board:/app:ro",
+  );
+  const hasVaultMount = volumes.some(
+    (v) => typeof v === "string" && v.endsWith(":/vault"),
+  );
   assert.ok(
     hasAppMount,
-    `${COMPOSE_DROPLET_PATH}: task-board must mount ./task-board:/app so manifest.json, sw.js, and icon.svg are available at startup`,
+    `${COMPOSE_DROPLET_PATH}: task-board must mount ./task-board:/app:ro so manifest.json, sw.js, and icon.svg are available at startup`,
+  );
+  assert.ok(
+    hasVaultMount,
+    `${COMPOSE_DROPLET_PATH}: task-board vault must mount at /vault (not /app/vault) because /app is read-only`,
+  );
+  assert.equal(
+    taskBoard?.environment?.TASKS_DIR,
+    "/vault/tasks",
+    `${COMPOSE_DROPLET_PATH}: TASKS_DIR must point at the vault mount`,
   );
 });
 
