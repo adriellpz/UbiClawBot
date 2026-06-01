@@ -1379,6 +1379,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 .hd-btn:hover { color: var(--amber); background: var(--amber-glow); border-color: rgba(232,160,32,0.2); }
 .hd-btn.active { color: var(--amber); background: var(--amber-glow); border-color: rgba(232,160,32,0.25); }
+.hd-btn.notify-denied { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Agenda view ─────────────────────────────────────────────────────────── */
 
@@ -1580,6 +1581,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
     <span class="hd-hint">[ N ] new &nbsp;·&nbsp; [ / ] search &nbsp;·&nbsp; drag to move</span>
     <span class="hd-sep"></span>
     <button class="hd-btn" id="agenda-btn" onclick="openAgenda()" title="Agenda view [ A ]">☰ agenda</button>
+    <span class="hd-sep"></span>
+    <button class="hd-btn" id="notify-btn" onclick="toggleNotifications()" title="Push notifications">○ notify</button>
     <span class="hd-sep"></span>
     <span class="hd-clock" id="clock"></span>
   </div>
@@ -2949,8 +2952,86 @@ load().then(() => {
   if (cardId) loadAndOpenCard(cardId)
 })
 
+// ── Push notifications ────────────────────────────────────────────────────
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
+}
+
+async function getVapidKey() {
+  const r = await fetch('/api/push/vapid-public-key')
+  if (!r.ok) return null
+  const { key } = await r.json()
+  return key || null
+}
+
+async function initNotifyButton() {
+  const btn = document.getElementById('notify-btn')
+  if (!btn || !('Notification' in window) || !('serviceWorker' in navigator)) {
+    if (btn) btn.style.display = 'none'
+    return
+  }
+  const vapidKey = await getVapidKey().catch(() => null)
+  if (!vapidKey) { btn.style.display = 'none'; return }
+
+  if (Notification.permission === 'denied') {
+    btn.textContent = '⊘ notify'
+    btn.classList.add('notify-denied')
+    btn.title = 'Notifications blocked — check browser settings'
+    return
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.ready
+    const existing = await reg.pushManager.getSubscription()
+    if (existing) {
+      btn.textContent = '● notify'
+      btn.classList.add('active')
+    }
+  } catch {}
+}
+
+async function toggleNotifications() {
+  const btn = document.getElementById('notify-btn')
+  if (!btn || btn.classList.contains('notify-denied')) return
+  const vapidKey = await getVapidKey().catch(() => null)
+  if (!vapidKey) return
+  const reg = await navigator.serviceWorker.ready
+  const existing = await reg.pushManager.getSubscription()
+  if (existing) {
+    await existing.unsubscribe()
+    btn.textContent = '○ notify'
+    btn.classList.remove('active')
+    return
+  }
+  const perm = await Notification.requestPermission()
+  if (perm !== 'granted') {
+    btn.textContent = '⊘ notify'
+    btn.classList.add('notify-denied')
+    return
+  }
+  try {
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    })
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    })
+    btn.textContent = '● notify'
+    btn.classList.add('active')
+  } catch (e) {
+    console.error('Push subscribe failed:', e)
+  }
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {})
+  navigator.serviceWorker.register('/sw.js').then(() => initNotifyButton()).catch(() => {})
 }
 
 // ── Live updates (SSE) ────────────────────────────────────────────────────

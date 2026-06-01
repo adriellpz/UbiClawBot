@@ -354,9 +354,16 @@ services:
       PORT: "3334"
       # Vault at /vault (not /app/vault): /app is a read-only bind of ./task-board.
       TASKS_DIR: /vault/tasks
+      OPENCLAW_HOOK_URL: ${OPENCLAW_HOOK_URL:-}
+      OPENCLAW_HOOK_TOKEN: ${OPENCLAW_HOOK_TOKEN:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:adriellpz@gmail.com}
+      PUSH_SUBSCRIPTIONS_FILE: /data/push-subscriptions.json
     volumes:
       - ./task-board:/app:ro
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/vault
+      - ${TASK_BOARD_DATA_DIR:-/home/deploy/openclaw/data/task-board}:/data
     ports:
       - "127.0.0.1:3334:3334"
     init: true

@@ -187,6 +187,9 @@ install_bridge_watchdog_cron
 
 mkdir -p "${OPENCLAW_ROOT}/task-board"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-task-board/task-board/"* "${OPENCLAW_ROOT}/task-board/"
+if [ -f "${OPENCLAW_ROOT}/task-board/package.json" ]; then
+  (cd "${OPENCLAW_ROOT}/task-board" && npm ci --omit=dev --prefer-offline 2>&1 | tail -3)
+fi
 
 mkdir -p "${OPENCLAW_ROOT}/trello-gateway"
 for f in Dockerfile deploy.sh trello_card_contract.mjs trello_gateway.mjs trello_transition_matrix.csv .env.example; do
