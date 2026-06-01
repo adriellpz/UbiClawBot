@@ -62,6 +62,16 @@ test("deploy ssh script uses passwordless sudo for caddy install/reload", () => 
   assert(script.includes("sudo_deploy systemctl reload caddy"));
 });
 
+test("deploy ssh script syncs /etc/caddy/environment before caddy install", () => {
+  const script = getDeploySshScript();
+  assert(script.includes("caddy_sync_env_file"));
+  assert(script.includes("sudo_deploy tee /etc/caddy/environment"));
+  // env file write must precede the install step
+  const syncIdx = script.indexOf("caddy_sync_env_file");
+  const installIdx = script.indexOf("sudo_deploy install");
+  assert(syncIdx < installIdx, "caddy_sync_env_file must come before sudo_deploy install");
+});
+
 test("deploy ssh script smoke-checks HTTP endpoints after compose up", () => {
   const script = getDeploySshScript();
 

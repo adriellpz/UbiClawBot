@@ -39,6 +39,7 @@ The `deploy` user must run a few commands as root without a password (GitHub Act
 cat > /etc/sudoers.d/deploy-openclaw <<'EOF'
 deploy ALL=(root) NOPASSWD: /usr/bin/bash /home/deploy/openclaw/scripts/sync-live-config.sh
 deploy ALL=(root) NOPASSWD: /usr/bin/install
+deploy ALL=(root) NOPASSWD: /usr/bin/tee /etc/caddy/environment
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl reload caddy
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart caddy
 deploy ALL=(root) NOPASSWD: /usr/bin/journalctl
@@ -50,6 +51,21 @@ visudo -cf /etc/sudoers.d/deploy-openclaw
 `caddy validate` runs as `deploy` (config is under `/home/deploy/openclaw/`). Install/reload use `sudo -n` and fail fast with a pointer here if sudoers are missing.
 
 If you still have `/etc/sudoers.d/deploy-sync-live-config`, remove it after adding the block above (`rm /etc/sudoers.d/deploy-sync-live-config`).
+
+### Caddy systemd environment (one-time droplet setup) {#caddy-systemd-environment}
+
+Caddy's systemd unit has no `EnvironmentFile` by default, so `{env.BOARD_BASICAUTH_HASH}` in the Caddyfile is empty on every `systemctl reload`. Fix with a drop-in (once):
+
+```bash
+sudo mkdir -p /etc/systemd/system/caddy.service.d
+sudo tee /etc/systemd/system/caddy.service.d/env.conf <<'EOF'
+[Service]
+EnvironmentFile=-/etc/caddy/environment
+EOF
+sudo systemctl daemon-reload
+```
+
+The deploy script writes `/etc/caddy/environment` automatically on each Caddyfile update (via `caddy_sync_env_file`). Without the drop-in, every `systemctl reload caddy` will fail with `username and password are required` and the service will enter a permanent reloading loop.
 
 Manual `rsync` from a laptop can leave `config/live/` owned by uid 501 — fix with `chown -R deploy:deploy /home/deploy/openclaw/config/live` before deploy if CI reports permission denied.
 
