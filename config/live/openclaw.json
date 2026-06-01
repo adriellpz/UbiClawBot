@@ -50,8 +50,7 @@
           "model": "opencode-go/deepseek-v4-flash",
           "isolatedSession": true,
           "lightContext": true,
-          "target": "telegram",
-          "accountId": "main"
+          "target": "none"
         },
         "tools": {
           "alsoAllow": [
@@ -81,8 +80,7 @@
           "model": "opencode-go/deepseek-v4-flash",
           "isolatedSession": true,
           "lightContext": true,
-          "target": "telegram",
-          "accountId": "scheduler"
+          "target": "none"
         },
         "tools": {
           "alsoAllow": [
@@ -106,8 +104,7 @@
           "model": "opencode-go/deepseek-v4-flash",
           "isolatedSession": true,
           "lightContext": true,
-          "target": "telegram",
-          "accountId": "marcos"
+          "target": "none"
         }
       }
     ]
