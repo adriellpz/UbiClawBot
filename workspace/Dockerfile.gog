@@ -2,6 +2,13 @@
 # Keep default in sync with `OPENCLAW_IMAGE` in repo root `.env` (see `.env.example`). Compose passes build args from .env.
 ARG BASE_IMAGE=ghcr.io/openclaw/openclaw:2026.5.28
 FROM ${BASE_IMAGE}
+# Upgrade Node.js beyond what the base image ships (v24.14.0 → v24.16.0, released 2026-05-21).
+# Extract over /usr/local so the existing openclaw npm globals are preserved.
+ARG NODE_VERSION=24.16.0
+RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz" \
+    | tar -xzC /usr/local --strip-components=1 \
+    && node --version
+
 # Pin release — asset names are gogcli_<ver>_linux_amd64.tar.gz (not .../latest/download/gogcli_linux_amd64.tar.gz).
 ARG GOGCLI_VERSION=0.14.0
 # Renamed assets under openclaw/goplaces — pin version (latest/.../goplaces_linux_amd64.tar.gz no longer exists).
