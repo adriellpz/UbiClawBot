@@ -173,7 +173,7 @@ bash scripts/sync-live-config.sh
 
 cd "${OPENCLAW_ROOT}"
 docker compose build openclaw-gateway trello-gateway task-board
-docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines task-board
+docker compose up -d --force-recreate --remove-orphans openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines task-board
 
 # Sync OPENCLAW_IMAGE version in .env to match the version baked into the image.
 OPENCLAW_IMAGE_TARGET="ghcr.io/openclaw/openclaw:2026.5.28"
