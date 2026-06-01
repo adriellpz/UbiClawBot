@@ -292,9 +292,6 @@ const HTML     = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8')
 const MANIFEST = fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf8')
 const SW       = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8')
 const ICON     = fs.readFileSync(path.join(__dirname, 'icon.svg'), 'utf8')
-const HTML_V2 = fs.readFileSync(path.join(__dirname, 'index-v2.html'), 'utf8')
-const HTML_V3 = fs.readFileSync(path.join(__dirname, 'index-v3.html'), 'utf8')
-const HTML_V4 = fs.readFileSync(path.join(__dirname, 'index-v4.html'), 'utf8')
 
 async function body(req, maxBytes = 65536) {
   return new Promise((resolve, reject) => {
@@ -338,20 +335,6 @@ http.createServer(async (req, res) => {
     return res.end(ICON)
   }
 
-  if (req.method === 'GET' && url.pathname === '/v2') {
-    res.writeHead(200, { 'content-type': 'text/html' })
-    return res.end(HTML_V2)
-  }
-
-  if (req.method === 'GET' && url.pathname === '/v3') {
-    res.writeHead(200, { 'content-type': 'text/html' })
-    return res.end(HTML_V3)
-  }
-
-  if (req.method === 'GET' && url.pathname === '/v4') {
-    res.writeHead(200, { 'content-type': 'text/html' })
-    return res.end(HTML_V4)
-  }
 
   if (url.pathname === '/api/tasks') {
     if (req.method === 'GET') {
