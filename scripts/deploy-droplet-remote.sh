@@ -86,7 +86,7 @@ caddy_validate_config() {
     echo "deploy failed: BOARD_BASICAUTH_HASH is unset — add a bcrypt hash to ${OPENCLAW_ROOT}/.env (see .env.example) for board.sonofwolf.org basic auth" >&2
     exit 1
   fi
-  sudo env BOARD_BASICAUTH_HASH="$BOARD_BASICAUTH_HASH" caddy validate --config "$config"
+  sudo --preserve-env=BOARD_BASICAUTH_HASH caddy validate --config "$config"
 }
 
 smoke_public_route() {
