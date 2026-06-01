@@ -345,6 +345,35 @@ services:
       trello-gateway:
         condition: service_healthy
 
+  task-board:
+    build:
+      context: ./task-board
+      dockerfile: Dockerfile
+    image: task-board:local
+    environment:
+      PORT: "3334"
+      TASKS_DIR: /app/vault/tasks
+    volumes:
+      - ./task-board/server.mjs:/app/server.mjs:ro
+      - ./task-board/index.html:/app/index.html:ro
+      - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/app/vault
+    ports:
+      - "127.0.0.1:3334:3334"
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3334/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   trello-gateway:
     build:
       context: ./trello-gateway

@@ -9,6 +9,7 @@
     "gog-canary-bridge/**",
     "trello-routines/**",
     "trello-pipeline/**",
+    "task-board/**",
     "trello-gateway/**",
     "shared/**",
     "scripts/manual/**",
@@ -97,6 +98,14 @@
       ]
     },
     {
+      "id": "task-board",
+      "scpSource": "task-board/*",
+      "installMarkers": [
+        "mkdir -p \"${OPENCLAW_ROOT}/task-board\"",
+        ".deploy-tmp-task-board/task-board/"
+      ]
+    },
+    {
       "id": "trello-gateway",
       "scpSource": "trello-gateway/*",
       "installMarkers": [
@@ -167,7 +176,8 @@
     "gog-canary-bridge",
     "trello-gateway",
     "trello-queue-worker",
-    "trello-routines"
+    "trello-routines",
+    "task-board"
   ],
   "smokeChecks": {
     "requiredFiles": [
@@ -188,7 +198,8 @@
       "scripts/sync-live-config.sh",
       "scripts/monitor-github-pr-bridge.sh",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs",
-      "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
+      "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs",
+      "task-board/server.mjs"
     ],
     "httpEndpoints": [
       {
@@ -210,6 +221,10 @@
       {
         "id": "trello-bridge",
         "url": "http://127.0.0.1:18990/health"
+      },
+      {
+        "id": "task-board",
+        "url": "http://127.0.0.1:3334/healthz"
       }
     ]
   }

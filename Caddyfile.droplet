@@ -2,6 +2,11 @@
 # Gmail Pub/Sub push -> gog watch serve (127.0.0.1:8788, path /); public URL is /gmail-pubsub
 #
 # WebSockets must NOT go through `encode` — compression breaks the Upgrade handshake (browser sees WS close 1006).
+board.sonofwolf.org {
+	# Task board — operator-only POC. Add basicauth before sharing.
+	reverse_proxy 127.0.0.1:3334
+}
+
 ai.sonofwolf.org {
 	handle_path /gmail-pubsub* {
 		reverse_proxy 127.0.0.1:8788
