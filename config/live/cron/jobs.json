@@ -28,7 +28,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "4e624bd1-6b71-4922-8d22-3fa98bb002b5",
@@ -69,7 +70,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "3a431fbd-797b-4490-a176-341fb38588c6",
@@ -108,7 +110,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
@@ -126,13 +129,14 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Wiki maintainer **curator cron tick** \u2014 run cheryl-vault-inbox skill.\n\n1. Exec preflight: `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs /home/node/.openclaw/agent-vault`\n2. Follow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` (locked pipeline order).\n3. Ingest all `raw-input/` drops (honor `update:` frontmatter); then one pending `wiki/sources/` clip; then up to five maintenance backlog pages.\n4. Regenerate indexes for touched folders; call qmd reindex when available.\n5. Register every touched wiki page (never hand-write registry timestamps): `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs /home/node/.openclaw/agent-vault wiki/path1.md ...`\n6. Idle: read scheduler `wikiMaintainer.curatorIdleStreak` in openclaw.json (or `/home/node/.openclaw/config/live/wiki-maintainer.json`) \u2014 ticks 1\u20133 with empty queues + complete registry \u2192 NO_REPLY; tick 4 \u2192 full wiki lint.\n7. Append wiki log chronicle when work ran.\n\nVault: `/home/node/.openclaw/agent-vault/`. Apply page format contract. Reply NO_REPLY only when idle rules satisfied.",
+        "message": "Wiki maintainer **curator cron tick** \u2014 run cheryl-vault-inbox skill.\n\n1. Exec preflight: `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs /home/node/.openclaw/agent-vault`\n2. Follow `/home/node/.openclaw/agent-vault/wiki/workflows/wiki-curator.md` (locked pipeline order).\n3. Ingest all `raw-input/` drops (honor `update:` frontmatter); then up to five pending `wiki/sources/` clips sequentially (no subagents); then up to five maintenance backlog pages.\n4. Regenerate indexes for touched folders; call qmd reindex when available.\n5. Register every touched wiki page (never hand-write registry timestamps): `node /home/node/.openclaw/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs /home/node/.openclaw/agent-vault wiki/path1.md ...`\n6. Idle: read scheduler `wikiMaintainer.curatorIdleStreak` in openclaw.json (or `/home/node/.openclaw/config/live/wiki-maintainer.json`) \u2014 ticks 1\u201323 with empty queues + complete registry \u2192 NO_REPLY; tick 24 \u2192 full wiki lint (cron is now hourly \u2014 this keeps full lint to ~once per day).\n7. Append wiki log chronicle when work ran.\n\nVault: `/home/node/.openclaw/agent-vault/`. Apply page format contract. Reply NO_REPLY only when idle rules satisfied.",
         "timeoutSeconds": 600
       },
       "delivery": {
         "mode": "none",
         "channel": "last"
-      }
+      },
+      "state": {}
     },
     {
       "id": "10b7d135-2b7f-4196-88fb-dcff702b8cfb",
@@ -157,7 +161,8 @@
         "mode": "announce",
         "channel": "telegram",
         "to": "telegram:8045915111"
-      }
+      },
+      "state": {}
     },
     {
       "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
@@ -195,7 +200,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "8b006421-8d43-49f3-a092-3c03baee10d3",
@@ -233,7 +239,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
@@ -271,7 +278,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "8966be3c-f3a6-4309-b006-a110d2443a33",
@@ -309,7 +317,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
@@ -347,7 +356,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     },
     {
       "id": "3ad7dd5f-f6b8-4359-9aa4-c27b0c773709",
@@ -385,7 +395,8 @@
         "channel": "telegram",
         "to": "8045915111",
         "cooldownMs": 3600000
-      }
+      },
+      "state": {}
     }
   ]
 }
