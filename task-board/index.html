@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Board ⚗️</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #172b4d;
+}
+
+header {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+header h1 { font-size: 15px; font-weight: 600; color: #e2e8f0; letter-spacing: 0.3px; }
+header .badge { font-size: 10px; background: #ff6b35; color: white; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+header .hint { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.3); }
+
+.board {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: flex-start;
+}
+
+.board::-webkit-scrollbar { height: 6px; }
+.board::-webkit-scrollbar-track { background: transparent; }
+.board::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+.column {
+  flex-shrink: 0;
+  width: 230px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  transition: background 0.1s;
+}
+
+.column.drag-over {
+  background: rgba(0, 120, 215, 0.2);
+  outline: 2px dashed rgba(0, 120, 215, 0.6);
+}
+
+.column-header {
+  padding: 10px 10px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.column-title { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.6px; }
+
+.col-meta { display: flex; align-items: center; gap: 4px; }
+
+.count {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.08);
+  padding: 1px 6px;
+  border-radius: 8px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.add-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.3);
+  font-size: 16px;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); }
+
+.cards {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cards::-webkit-scrollbar { width: 4px; }
+.cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.empty-col {
+  font-size: 11px;
+  color: rgba(255,255,255,0.15);
+  text-align: center;
+  padding: 20px 8px;
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.card {
+  background: white;
+  border-radius: 5px;
+  padding: 9px 11px;
+  cursor: grab;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  border-left: 3px solid #c1c7d0;
+  user-select: none;
+  transition: box-shadow 0.1s;
+}
+
+.card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.35); }
+.card.dragging { opacity: 0.35; cursor: grabbing; }
+.card:active { cursor: grabbing; }
+
+.card-title { font-size: 12.5px; color: #172b4d; line-height: 1.4; margin-bottom: 5px; font-weight: 500; }
+
+.card-meta { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+
+.tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag-due { background: #fff3e0; color: #e65100; }
+.tag-due.overdue { background: #ffebee; color: #b71c1c; }
+.tag-agent { background: #e3f2fd; color: #1565c0; }
+
+/* Column accent colors */
+.col-Backlog      .card { border-left-color: #78909c; }
+.col-Scheduled    .card { border-left-color: #1976d2; }
+.col-Blocked      .card { border-left-color: #d32f2f; }
+.col-Routine      .card { border-left-color: #388e3c; }
+.col-Reschedule   .card { border-left-color: #f57c00; }
+.col-Missed       .card { border-left-color: #e53935; }
+.col-Done         .card { border-left-color: #43a047; opacity: 0.65; }
+.col-AdrielFocus  .card { border-left-color: #7b1fa2; }
+
+/* Modal */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.overlay.open { display: flex; }
+
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 22px 24px;
+  width: 360px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+.modal h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #172b4d; }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; font-weight: 600; color: #5e6c84; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.field input, .field select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 2px solid #dfe1e6;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #172b4d;
+  outline: none;
+  background: white;
+}
+.field input:focus, .field select:focus { border-color: #1976d2; }
+
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+.btn { padding: 7px 16px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; }
+.btn-primary { background: #1976d2; color: white; }
+.btn-primary:hover { background: #1565c0; }
+.btn-cancel { background: #f4f5f7; color: #172b4d; }
+.btn-cancel:hover { background: #dfe1e6; }
+
+/* Status bar */
+.statusbar {
+  background: #0d0d1a;
+  color: rgba(255,255,255,0.35);
+  font-size: 11px;
+  padding: 4px 16px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.statusbar.ok { color: #66bb6a; }
+.statusbar.err { color: #ef5350; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Task Board</h1>
+  <span class="badge">⚗️ POC</span>
+  <span class="hint">press N to add card &nbsp;·&nbsp; drag to move</span>
+</header>
+
+<div class="board" id="board"></div>
+
+<div class="statusbar" id="bar">loading…</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>New Card</h2>
+    <div class="field">
+      <label>Title</label>
+      <input id="f-title" type="text" placeholder="What needs doing?">
+    </div>
+    <div class="field">
+      <label>Column</label>
+      <select id="f-status"></select>
+    </div>
+    <div class="field">
+      <label>Due date <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <input id="f-due" type="datetime-local">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCard()">Create card</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLS = ['Backlog','Scheduled','Blocked','Routine','Reschedule','Missed','Done','Adriel Focus']
+let tasks = []
+let dragging = null
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+
+function bar(msg, type = '') {
+  const el = document.getElementById('bar')
+  el.textContent = msg
+  el.className = 'statusbar ' + type
+}
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function colId(col) { return 'col-' + col.replace(/\s+/g,'') }
+
+function fmtDue(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d)) return iso
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+}
+
+function isOverdue(iso) {
+  return iso && new Date(iso) < new Date()
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+
+function render() {
+  const board = document.getElementById('board')
+  board.innerHTML = ''
+
+  for (const col of COLS) {
+    const colTasks = tasks.filter(t => t.status === col)
+    const wrap = document.createElement('div')
+    wrap.className = `column ${colId(col)}`
+    wrap.dataset.col = col
+
+    const cardsHtml = colTasks.length === 0
+      ? '<div class="empty-col">drop here</div>'
+      : colTasks.map(t => `
+        <div class="card"
+          draggable="true"
+          data-file="${esc(t.filename)}">
+          <div class="card-title">${esc(t.title)}</div>
+          <div class="card-meta">
+            ${t.due ? `<span class="tag tag-due${isOverdue(t.due) ? ' overdue' : ''}">
+              ${isOverdue(t.due) ? '⚠ ' : ''}${esc(fmtDue(t.due))}</span>` : ''}
+            ${t.agent ? `<span class="tag tag-agent">${esc(t.agent)}</span>` : ''}
+          </div>
+        </div>`).join('')
+
+    wrap.innerHTML = `
+      <div class="column-header">
+        <span class="column-title">${esc(col)}</span>
+        <div class="col-meta">
+          <span class="count">${colTasks.length}</span>
+          <button class="add-btn" data-col="${esc(col)}" title="Add card">+</button>
+        </div>
+      </div>
+      <div class="cards">${cardsHtml}</div>`
+
+    board.appendChild(wrap)
+  }
+
+  attachListeners()
+}
+
+// ── Drag & drop ───────────────────────────────────────────────────────────
+
+function attachListeners() {
+  document.querySelectorAll('.card').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      dragging = el.dataset.file
+      el.classList.add('dragging')
+      e.dataTransfer.effectAllowed = 'move'
+      bar(`dragging → ${dragging}`)
+    })
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging')
+      dragging = null
+    })
+  })
+
+  document.querySelectorAll('.column').forEach(col => {
+    col.addEventListener('dragover', e => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      col.classList.add('drag-over')
+    })
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) col.classList.remove('drag-over')
+    })
+    col.addEventListener('drop', async e => {
+      e.preventDefault()
+      col.classList.remove('drag-over')
+      if (!dragging) return
+
+      const toStatus = col.dataset.col
+      const task = tasks.find(t => t.filename === dragging)
+      if (!task || task.status === toStatus) return
+
+      const from = task.status
+      bar(`moving ${dragging}: ${from} → ${toStatus} …`)
+
+      // Optimistic update
+      task.status = toStatus
+      render()
+
+      const res = await fetch(`/api/tasks/${encodeURIComponent(dragging)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: toStatus })
+      })
+
+      if (res.ok) {
+        bar(`✓ ${dragging}  ${from} → ${toStatus}  |  frontmatter updated on disk`, 'ok')
+      } else {
+        bar('patch failed — reloading', 'err')
+        await load()
+      }
+    })
+  })
+
+  document.querySelectorAll('.add-btn').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn.dataset.col))
+  })
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────
+
+async function load() {
+  const res = await fetch('/api/tasks')
+  tasks = await res.json()
+  render()
+  bar(`${tasks.length} tasks loaded  ·  ${COLS.map(c => {
+    const n = tasks.filter(t => t.status === c).length
+    return n ? `${c}: ${n}` : null
+  }).filter(Boolean).join('  ·  ')}`)
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────
+
+function openModal(defaultCol = 'Backlog') {
+  const sel = document.getElementById('f-status')
+  sel.innerHTML = COLS.map(c =>
+    `<option value="${esc(c)}"${c === defaultCol ? ' selected' : ''}>${esc(c)}</option>`
+  ).join('')
+  document.getElementById('f-title').value = ''
+  document.getElementById('f-due').value = ''
+  document.getElementById('overlay').classList.add('open')
+  setTimeout(() => document.getElementById('f-title').focus(), 30)
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open')
+}
+
+async function submitCard() {
+  const title = document.getElementById('f-title').value.trim()
+  if (!title) { document.getElementById('f-title').focus(); return }
+
+  const status = document.getElementById('f-status').value
+  const due = document.getElementById('f-due').value
+  closeModal()
+  bar(`creating "${title}" in ${status} …`)
+
+  const res = await fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ title, status, due: due || '' })
+  })
+
+  const { filename } = await res.json()
+  bar(`✓ created ${filename}`, 'ok')
+  await load()
+}
+
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal()
+})
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal()
+  if (e.key === 'n' && !e.target.matches('input,select,textarea')) openModal()
+})
+
+load()
+</script>
+</body>
+</html>

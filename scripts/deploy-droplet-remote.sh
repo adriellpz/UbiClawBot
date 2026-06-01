@@ -137,6 +137,9 @@ cp "${OPENCLAW_ROOT}/.deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.ym
 
 install_bridge_watchdog_cron
 
+mkdir -p "${OPENCLAW_ROOT}/task-board"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-task-board/task-board/"* "${OPENCLAW_ROOT}/task-board/"
+
 mkdir -p "${OPENCLAW_ROOT}/trello-gateway"
 for f in Dockerfile deploy.sh trello_card_contract.mjs trello_gateway.mjs trello_transition_matrix.csv .env.example; do
   cp "${OPENCLAW_ROOT}/.deploy-tmp-trello-gateway/trello-gateway/$f" "${OPENCLAW_ROOT}/trello-gateway/$f"
@@ -163,13 +166,14 @@ smoke_required_file "scripts/monitor-github-pr-bridge.sh"
 smoke_required_file "scripts/monitor-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
+smoke_required_file "task-board/server.mjs"
 
 cd "${OPENCLAW_ROOT}"
 bash scripts/sync-live-config.sh
 
 cd "${OPENCLAW_ROOT}"
-docker compose build openclaw-gateway trello-gateway
-docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines
+docker compose build openclaw-gateway trello-gateway task-board
+docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines task-board
 
 # Sync OPENCLAW_IMAGE version in .env to match the version baked into the image.
 OPENCLAW_IMAGE_TARGET="ghcr.io/openclaw/openclaw:2026.5.28"
@@ -190,6 +194,7 @@ smoke_http "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" "github-pr
 smoke_http "http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz" "gmail-hook-bridge"
 smoke_http "http://127.0.0.1:${GOG_CANARY_BRIDGE_PORT:-19093}/healthz" "gog-canary-bridge"
 smoke_http "http://127.0.0.1:18990/health" "trello-bridge"
+smoke_http "http://127.0.0.1:3334/healthz" "task-board"
 
 PUBLIC_HOST="$(awk '!/^#/ && /\{[ \t]*$/ {sub(/[ \t]*\{[ \t]*$/,""); print; exit}' "${OPENCLAW_ROOT}/Caddyfile.droplet")"
 smoke_public_route "${PUBLIC_HOST:-ai.sonofwolf.org}" "/github-pr" "github-pr public route"
