@@ -401,7 +401,7 @@ function validateCaddyfile() {
     if (depth < 0) fail(`${caddyPath}: closing brace appears before an opening brace`);
   }
   assert(depth === 0, `${caddyPath}: braces should be balanced`);
-  for (const expected of ["ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
+  for (const expected of ["board.sonofwolf.org", "basic_auth", "{env.BOARD_BASICAUTH_HASH}", "ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:3334", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
     assert(source.includes(expected), `${caddyPath}: expected ${expected}`);
   }
   pass(`${caddyPath}: static Caddyfile checks completed`);
@@ -462,7 +462,20 @@ function optionalToolChecks() {
 
   const caddy = spawnSync("caddy", ["version"], { encoding: "utf8" });
   if (caddy.status === 0) {
-    const result = spawnSync("caddy", ["validate", "--config", "Caddyfile.droplet", "--adapter", "caddyfile"], { cwd: repoRoot, encoding: "utf8" });
+    const result = spawnSync(
+      "caddy",
+      ["validate", "--config", "Caddyfile.droplet", "--adapter", "caddyfile"],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          BOARD_BASICAUTH_HASH:
+            process.env.BOARD_BASICAUTH_HASH
+            || "$2a$14$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+        },
+      },
+    );
     assert(result.status === 0, `caddy validate failed: ${result.stderr.trim() || result.stdout.trim()}`);
     if (result.status === 0) pass("caddy validate passed");
   } else {

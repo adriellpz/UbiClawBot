@@ -46,6 +46,12 @@ test("deploy ssh wrapper invokes remote deploy script", () => {
   assert.match(wrapper, /deploy-droplet-remote\.sh/);
 });
 
+test("deploy ssh script loads BOARD_BASICAUTH_HASH before caddy validate", () => {
+  const script = getDeploySshScript();
+  assert(script.includes("read_deploy_env_var BOARD_BASICAUTH_HASH"));
+  assert(script.includes('sudo env BOARD_BASICAUTH_HASH="$BOARD_BASICAUTH_HASH" caddy validate'));
+});
+
 test("deploy ssh script smoke-checks HTTP endpoints after compose up", () => {
   const script = getDeploySshScript();
 
