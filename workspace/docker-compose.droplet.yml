@@ -354,8 +354,7 @@ services:
       PORT: "3334"
       TASKS_DIR: /app/vault/tasks
     volumes:
-      - ./task-board/server.mjs:/app/server.mjs:ro
-      - ./task-board/index.html:/app/index.html:ro
+      - ./task-board:/app:ro
       - ${OPENCLAW_AGENT_VAULT_DIR:-/home/deploy/openclaw/data/agent-vault}:/app/vault
     ports:
       - "127.0.0.1:3334:3334"

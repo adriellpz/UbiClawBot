@@ -75,6 +75,22 @@ test("openclaw-gateway compose service bind-mounts qmd cache at /home/node/.cach
   assert.ok(cacheMount, `${COMPOSE_DROPLET_PATH}: openclaw-gateway missing bind-mount for /home/node/.cache/qmd`);
 });
 
+test("task-board compose bind-mounts the full task-board directory at /app", () => {
+  const compose = getComposeDropletYaml();
+  const taskBoard = compose?.services?.["task-board"];
+  assert.ok(taskBoard, `${COMPOSE_DROPLET_PATH}: task-board service not found`);
+  const volumes = taskBoard?.volumes ?? [];
+  const hasAppMount = volumes.some((v) => {
+    if (typeof v !== "string") return false;
+    const [source, target] = v.split(":");
+    return source === "./task-board" && target === "/app";
+  });
+  assert.ok(
+    hasAppMount,
+    `${COMPOSE_DROPLET_PATH}: task-board must mount ./task-board:/app so manifest.json, sw.js, and icon.svg are available at startup`,
+  );
+});
+
 test("deploy/host-config/qmd/index.yml defines wiki and openclaw-docs collections at correct paths", () => {
   const config = getQmdIndexYaml();
   const collections = config?.collections ?? {};
