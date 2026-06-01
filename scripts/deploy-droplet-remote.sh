@@ -80,13 +80,26 @@ read_deploy_env_var() {
   return 1
 }
 
+sudo_deploy() {
+  if ! sudo -n "$@"; then
+    echo "deploy failed: passwordless sudo required for: sudo $*" >&2
+    echo "One-time droplet setup: docs/deployment/README.md#deploy-user-sudo" >&2
+    exit 1
+  fi
+}
+
 caddy_validate_config() {
   local config="$1"
   if ! read_deploy_env_var BOARD_BASICAUTH_HASH; then
     echo "deploy failed: BOARD_BASICAUTH_HASH is unset — add a bcrypt hash to ${OPENCLAW_ROOT}/.env (see .env.example) for board.sonofwolf.org basic auth" >&2
     exit 1
   fi
-  sudo env BOARD_BASICAUTH_HASH="$BOARD_BASICAUTH_HASH" caddy validate --config "$config"
+  # Validate as deploy (config lives under OPENCLAW_ROOT); only install/reload need root.
+  export BOARD_BASICAUTH_HASH
+  if ! caddy validate --config "$config"; then
+    echo "deploy failed: caddy validate --config ${config}" >&2
+    exit 1
+  fi
 }
 
 smoke_public_route() {
@@ -260,11 +273,11 @@ if cmp -s "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile 2>/dev/null;
   echo "Caddyfile unchanged — skipping validate/install/reload"
 else
   caddy_validate_config "${OPENCLAW_ROOT}/Caddyfile.droplet"
-  sudo install -m 0644 "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile
-  if ! sudo systemctl reload caddy; then
+  sudo_deploy install -m 0644 "${OPENCLAW_ROOT}/Caddyfile.droplet" /etc/caddy/Caddyfile
+  if ! sudo_deploy systemctl reload caddy; then
     echo "caddy reload failed; journal follows, then restart" >&2
-    sudo journalctl -u caddy.service -n 30 --no-pager >&2 || true
-    sudo systemctl restart caddy
+    sudo_deploy journalctl -u caddy.service -n 30 --no-pager >&2 || true
+    sudo_deploy systemctl restart caddy
   fi
 fi
 docker compose ps

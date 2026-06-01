@@ -33,15 +33,23 @@ CI enforces that `.github/workflows/deploy-droplet.yml` stays in sync with `depl
 
 ### Deploy user sudo (one-time droplet setup)
 
-`scripts/sync-live-config.sh` writes under `/root/openclaw/data/config/`. The deploy user must be able to re-exec that script as root without a password. On the droplet (once):
+The `deploy` user must run a few commands as root without a password (GitHub Actions SSH has no TTY). On the droplet (once):
 
 ```bash
-cat > /etc/sudoers.d/deploy-sync-live-config <<'EOF'
+cat > /etc/sudoers.d/deploy-openclaw <<'EOF'
 deploy ALL=(root) NOPASSWD: /usr/bin/bash /home/deploy/openclaw/scripts/sync-live-config.sh
+deploy ALL=(root) NOPASSWD: /usr/bin/install
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl reload caddy
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart caddy
+deploy ALL=(root) NOPASSWD: /usr/bin/journalctl
 EOF
-chmod 440 /etc/sudoers.d/deploy-sync-live-config
-visudo -cf /etc/sudoers.d/deploy-sync-live-config
+chmod 440 /etc/sudoers.d/deploy-openclaw
+visudo -cf /etc/sudoers.d/deploy-openclaw
 ```
+
+`caddy validate` runs as `deploy` (config is under `/home/deploy/openclaw/`). Install/reload use `sudo -n` and fail fast with a pointer here if sudoers are missing.
+
+If you still have `/etc/sudoers.d/deploy-sync-live-config`, remove it after adding the block above (`rm /etc/sudoers.d/deploy-sync-live-config`).
 
 Manual `rsync` from a laptop can leave `config/live/` owned by uid 501 — fix with `chown -R deploy:deploy /home/deploy/openclaw/config/live` before deploy if CI reports permission denied.
 

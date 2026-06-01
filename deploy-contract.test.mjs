@@ -49,7 +49,17 @@ test("deploy ssh wrapper invokes remote deploy script", () => {
 test("deploy ssh script loads BOARD_BASICAUTH_HASH before caddy validate", () => {
   const script = getDeploySshScript();
   assert(script.includes("read_deploy_env_var BOARD_BASICAUTH_HASH"));
-  assert(script.includes('sudo env BOARD_BASICAUTH_HASH="$BOARD_BASICAUTH_HASH" caddy validate'));
+  assert(script.includes("export BOARD_BASICAUTH_HASH"));
+  assert(script.includes('caddy validate --config "$config"'));
+  assert(!script.includes("sudo") || !script.match(/sudo[^\n]*caddy validate/));
+});
+
+test("deploy ssh script uses passwordless sudo for caddy install/reload", () => {
+  const script = getDeploySshScript();
+  assert(script.includes("sudo_deploy()"));
+  assert(script.includes("sudo -n"));
+  assert(script.includes("sudo_deploy install"));
+  assert(script.includes("sudo_deploy systemctl reload caddy"));
 });
 
 test("deploy ssh script smoke-checks HTTP endpoints after compose up", () => {
