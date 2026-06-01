@@ -8,7 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile.gog
       args:
-        BASE_IMAGE: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:2026.4.23}
+        BASE_IMAGE: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:2026.5.28}
     image: openclaw-with-gog:local
     env_file:
       - path: .env

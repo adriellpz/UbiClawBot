@@ -171,6 +171,20 @@ cd "${OPENCLAW_ROOT}"
 docker compose build openclaw-gateway trello-gateway
 docker compose up -d --force-recreate openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines
 
+# Sync OPENCLAW_IMAGE version in .env to match the version baked into the image.
+OPENCLAW_IMAGE_TARGET="ghcr.io/openclaw/openclaw:2026.5.28"
+if [ -f "${OPENCLAW_ROOT}/.env" ]; then
+  if grep -q "^OPENCLAW_IMAGE=" "${OPENCLAW_ROOT}/.env"; then
+    sed -i "s|^OPENCLAW_IMAGE=.*|OPENCLAW_IMAGE=${OPENCLAW_IMAGE_TARGET}|" "${OPENCLAW_ROOT}/.env"
+  else
+    printf 'OPENCLAW_IMAGE=%s\n' "${OPENCLAW_IMAGE_TARGET}" >> "${OPENCLAW_ROOT}/.env"
+  fi
+fi
+
+# Ensure Brave search plugin is installed (idempotent — safe to re-run).
+docker exec openclaw-openclaw-cli-1 \
+  sh -c 'openclaw plugins install clawhub:@openclaw/brave-plugin 2>&1 | tail -1' || true
+
 smoke_http "http://127.0.0.1:18792/healthz" "trello-gateway"
 smoke_http "http://127.0.0.1:${GITHUB_PR_BRIDGE_PORT:-19091}/healthz" "github-pr-bridge"
 smoke_http "http://127.0.0.1:${GMAIL_HOOK_BRIDGE_PORT:-19092}/healthz" "gmail-hook-bridge"
