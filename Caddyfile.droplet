@@ -3,7 +3,8 @@
 #
 # WebSockets must NOT go through `encode` — compression breaks the Upgrade handshake (browser sees WS close 1006).
 board.sonofwolf.org {
-	basic_auth {
+	@protected not path /manifest.json /sw.js /icon.svg
+	basic_auth @protected {
 		adriel {env.BOARD_BASICAUTH_HASH}
 	}
 	reverse_proxy 127.0.0.1:3334
