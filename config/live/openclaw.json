@@ -296,7 +296,7 @@
         "enabled": false
       },
       "brave": {
-        "enabled": false,
+        "enabled": true,
         "config": {
           "webSearch": {
             "apiKey": {
