@@ -6,6 +6,7 @@ import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { randomBytes } from 'node:crypto'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TASKS_DIR = process.env.TASKS_DIR || path.resolve(__dirname, '../../agent-workspace-vault/tasks')
@@ -23,6 +24,10 @@ function parseFrontmatter(content) {
     const key = line.slice(0, i).trim()
     const val = line.slice(i + 1).trim()
     if (key) fm[key] = val
+  }
+  // migrate legacy tags:[] array to tag:string
+  if (!fm.tag && fm.tags) {
+    try { const a = JSON.parse(fm.tags); fm.tag = Array.isArray(a) && a.length ? a[0] : '' } catch { fm.tag = '' }
   }
   return { fm, body: match[2] }
 }
@@ -55,6 +60,12 @@ const ownWrites      = new Set()  // filenames written by this server (suppress 
 const watchDebounces = new Map()  // per-file debounce timers
 const sseClients     = new Set()  // active SSE response objects
 const diffStore      = new Map()  // diffId → { sectionName: { before, after } }
+const DIFF_STORE_MAX = 500
+
+function diffStoreSet(id, data) {
+  if (diffStore.size >= DIFF_STORE_MAX) diffStore.delete(diffStore.keys().next().value)
+  diffStore.set(id, data)
+}
 
 function notifyClients(filename) {
   const msg = `data: ${JSON.stringify({ filename })}\n\n`
@@ -130,8 +141,10 @@ function appendHistoryEntry(filename, line) {
       newBody = body.trimEnd() + '\n\n## History\n\n' + line + '\n'
     }
     ownWrites.add(filename)
-    setTimeout(() => ownWrites.delete(filename), 3000)
     fs.writeFileSync(filepath, serializeFile(fm, newBody))
+    const snap = captureSnapshot(filename)
+    if (snap) taskSnapshots.set(filename, snap)
+    setTimeout(() => ownWrites.delete(filename), 500)
   } catch (e) {
     console.error('appendHistoryEntry failed:', e.message)
   }
@@ -159,8 +172,8 @@ function watchTasks() {
           const before = prev._notes || ''
           const after  = curr._notes || ''
           if (before !== after) {
-            const diffId = Math.random().toString(36).slice(2, 10)
-            diffStore.set(diffId, { Notes: { before, after } })
+            const diffId = randomBytes(5).toString('hex')
+            diffStoreSet(diffId, { Notes: { before, after } })
             parts.push(`notes updated [diff:${diffId}]`)
           } else {
             parts.push('notes updated')
@@ -251,9 +264,13 @@ function appendComment(filename, { text, author }) {
     ? body + '\n' + line
     : body + '\n\n## Comments\n\n' + line
   ownWrites.add(filename)
-  setTimeout(() => ownWrites.delete(filename), 3000)
   fs.writeFileSync(filepath, serializeFile(fm, newBody))
+  const snap = captureSnapshot(filename)
+  if (snap) taskSnapshots.set(filename, snap)
+  setTimeout(() => ownWrites.delete(filename), 500)
 }
+
+const PATCH_ALLOWED = new Set(['title', 'status', 'due', 'agent', 'tag', 'time_needed', 'calendar_link', 'priority'])
 
 function patchTask(filename, fields) {
   const filepath = safeTaskPath(filename)
@@ -261,16 +278,18 @@ function patchTask(filename, fields) {
   const content = fs.readFileSync(filepath, 'utf8')
   const { fm, body: existingBody } = parseFrontmatter(content)
   const { body: newBody, ...fmFields } = fields
-  Object.assign(fm, fmFields)
+  for (const [k, v] of Object.entries(fmFields)) {
+    if (PATCH_ALLOWED.has(k)) fm[k] = v
+  }
   ownWrites.add(filename)
-  setTimeout(() => ownWrites.delete(filename), 5000)
   fs.writeFileSync(filepath, serializeFile(fm, newBody !== undefined ? newBody : existingBody))
   const snap = captureSnapshot(filename)
   if (snap) taskSnapshots.set(filename, snap)
+  setTimeout(() => ownWrites.delete(filename), 500)
 }
 
 function genId() {
-  return Math.random().toString(36).slice(2, 10)
+  return randomBytes(5).toString('hex')
 }
 
 function createTask({ title, status = 'Backlog', due = '', agent = '', tag = '' }) {
@@ -421,8 +440,8 @@ http.createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/api/diff') {
     try {
       const data = await body(req)
-      const diffId = Math.random().toString(36).slice(2, 10)
-      diffStore.set(diffId, data)
+      const diffId = randomBytes(5).toString('hex')
+      diffStoreSet(diffId, data)
       res.writeHead(201, { 'content-type': 'application/json' })
       return res.end(JSON.stringify({ diffId }))
     } catch (e) {
@@ -458,4 +477,9 @@ http.createServer(async (req, res) => {
   console.log(`Tasks dir  → ${TASKS_DIR}`)
   initSnapshots()
   watchTasks()
+  setInterval(() => {
+    for (const res of sseClients) {
+      try { res.write(': ping\n\n') } catch { sseClients.delete(res) }
+    }
+  }, 30000)
 })
