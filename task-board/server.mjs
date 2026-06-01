@@ -7,10 +7,109 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
+import webpush from 'web-push'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TASKS_DIR = process.env.TASKS_DIR || path.resolve(__dirname, '../../agent-workspace-vault/tasks')
 const PORT = Number(process.env.PORT || 3334)
+
+// ── Push / hook config ────────────────────────────────────────────────────────
+
+const VAPID_PUBLIC_KEY        = process.env.VAPID_PUBLIC_KEY || ''
+const VAPID_PRIVATE_KEY       = process.env.VAPID_PRIVATE_KEY || ''
+const VAPID_SUBJECT           = process.env.VAPID_SUBJECT || 'mailto:adriellpz@gmail.com'
+const OPENCLAW_HOOK_URL       = process.env.OPENCLAW_HOOK_URL || ''
+const OPENCLAW_HOOK_TOKEN     = process.env.OPENCLAW_HOOK_TOKEN || ''
+const PUSH_SUBSCRIPTIONS_FILE = process.env.PUSH_SUBSCRIPTIONS_FILE || '/var/lib/task-board/push-subscriptions.json'
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+  console.log('Push       → VAPID configured')
+} else {
+  console.log('Push       → VAPID not configured (set VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY)')
+}
+
+function loadSubscriptions() {
+  try { return JSON.parse(fs.readFileSync(PUSH_SUBSCRIPTIONS_FILE, 'utf8')) } catch { return [] }
+}
+
+function saveSubscriptions(subs) {
+  try {
+    fs.mkdirSync(path.dirname(PUSH_SUBSCRIPTIONS_FILE), { recursive: true })
+    fs.writeFileSync(PUSH_SUBSCRIPTIONS_FILE, JSON.stringify(subs, null, 2))
+  } catch (e) { console.error('saveSubscriptions failed:', e.message) }
+}
+
+// ── @mention dispatch ─────────────────────────────────────────────────────────
+
+const MENTION_MAP = {
+  '@ubi':    { type: 'hook', agentId: 'main' },
+  '@cheryl': { type: 'hook', agentId: 'scheduler' },
+  '@marcos': { type: 'hook', agentId: 'marcos' },
+  '@adriel': { type: 'push' },
+}
+
+function extractMentions(text) {
+  const found = new Set()
+  for (const handle of Object.keys(MENTION_MAP)) {
+    if (new RegExp(`(?<![a-z0-9])${handle}(?![a-z0-9])`, 'i').test(text)) found.add(handle)
+  }
+  return [...found]
+}
+
+async function wakeAgent(agentId, taskId, taskTitle, commentText) {
+  if (!OPENCLAW_HOOK_URL || !OPENCLAW_HOOK_TOKEN) return
+  const message = [
+    'task_mention',
+    `task: ${taskTitle}`,
+    `task_id: ${taskId}`,
+    `comment: ${String(commentText).slice(0, 500)}`,
+    `url: /?card=${taskId}`,
+  ].join('\n')
+  try {
+    const r = await fetch(OPENCLAW_HOOK_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'authorization': `Bearer ${OPENCLAW_HOOK_TOKEN}` },
+      body: JSON.stringify({ message, agentId, sessionKey: `hook:task-mention:${taskId}` }),
+    })
+    if (!r.ok) console.error(`wakeAgent ${agentId} failed: ${r.status}`)
+    else console.log(`wakeAgent  → ${agentId} for task ${taskId}`)
+  } catch (e) { console.error(`wakeAgent ${agentId} error:`, e.message) }
+}
+
+async function sendMentionPush(taskId, taskTitle, commentText) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return
+  const subs = loadSubscriptions()
+  if (!subs.length) return
+  const payload = JSON.stringify({
+    title: `Mention in ${taskTitle}`,
+    body: String(commentText).slice(0, 120),
+    url: `/?card=${taskId}`,
+  })
+  const dead = []
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(sub, payload)
+    } catch (e) {
+      if (e.statusCode === 410 || e.statusCode === 404) dead.push(sub.endpoint)
+      else console.error('sendMentionPush error:', e.message)
+    }
+  }
+  if (dead.length) saveSubscriptions(subs.filter(s => !dead.includes(s.endpoint)))
+}
+
+function dispatchMentions(filename, commentText) {
+  const mentions = extractMentions(commentText)
+  if (!mentions.length) return
+  try {
+    const task = getTask(filename)
+    for (const handle of mentions) {
+      const action = MENTION_MAP[handle]
+      if (action.type === 'hook') wakeAgent(action.agentId, task.id, task.title, commentText).catch(() => {})
+      else if (action.type === 'push') sendMentionPush(task.id, task.title, commentText).catch(() => {})
+    }
+  } catch (e) { console.error('dispatchMentions error:', e.message) }
+}
 
 // ── Frontmatter ──────────────────────────────────────────────────────────────
 
@@ -268,6 +367,7 @@ function appendComment(filename, { text, author }) {
   const snap = captureSnapshot(filename)
   if (snap) taskSnapshots.set(filename, snap)
   setTimeout(() => ownWrites.delete(filename), 500)
+  dispatchMentions(filename, String(text))
 }
 
 const PATCH_ALLOWED = new Set(['title', 'status', 'due', 'agent', 'tag', 'time_needed', 'calendar_link', 'priority'])
@@ -380,6 +480,29 @@ http.createServer(async (req, res) => {
     try {
       res.writeHead(200, { 'content-type': 'application/json' })
       return res.end(JSON.stringify(getTask(filename)))
+    } catch (e) {
+      res.writeHead(e.status || 500)
+      return res.end(e.message)
+    }
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/push/vapid-public-key') {
+    if (!VAPID_PUBLIC_KEY) { res.writeHead(503); return res.end('push not configured') }
+    res.writeHead(200, { 'content-type': 'application/json' })
+    return res.end(JSON.stringify({ key: VAPID_PUBLIC_KEY }))
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/push/subscribe') {
+    try {
+      const data = await body(req)
+      if (!data.endpoint) { res.writeHead(400); return res.end('missing endpoint') }
+      const subs = loadSubscriptions()
+      if (!subs.find(s => s.endpoint === data.endpoint)) {
+        subs.push(data)
+        saveSubscriptions(subs)
+      }
+      res.writeHead(201, { 'content-type': 'application/json' })
+      return res.end(JSON.stringify({ ok: true }))
     } catch (e) {
       res.writeHead(e.status || 500)
       return res.end(e.message)
