@@ -204,7 +204,7 @@
       "state": {}
     },
     {
-      "id": "573aaaca-df85-4129-aaa0-412f0bbece78",
+      "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
       "agentId": "main",
       "name": "Ubi weekly memory audit",
       "description": "Monday 1:00 AM MT: deep pass \u2014 archive aged MEMORY.md, review old session notes, reverse-scan wiki/ubi/ for promotable rules. Always Telegram summary.",
@@ -283,7 +283,7 @@
       "state": {}
     },
     {
-      "id": "4af68880-070b-4599-beff-4ea3688be189",
+      "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
       "agentId": "marcos",
       "name": "Marcos weekly memory audit",
       "description": "Monday 3:15 AM MT: deep pass \u2014 archive aged MEMORY.md, review old session notes, reverse-scan wiki/marcos/ for promotable rules. Always Telegram summary.",
@@ -440,7 +440,7 @@
       "state": {}
     },
     {
-      "id": "e13c0b76-d1b3-485a-9f48-39a8aabed60b",
+      "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
       "agentId": "scheduler",
       "name": "Cheryl weekly memory audit",
       "description": "Monday 5:15 AM MT: deep pass \u2014 archive aged MEMORY.md, review old session notes, reverse-scan wiki/cheryl/. Always Telegram summary.",
