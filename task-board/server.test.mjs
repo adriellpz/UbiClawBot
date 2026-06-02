@@ -306,6 +306,32 @@ test('PATCH status Done: parent auto-advances when last child goes Done', async 
   }
 })
 
+test('POST /links: duplicate POST does not insert second entry', async () => {
+  const dir = tmpTasksDir()
+  writeTask(dir, 'source.md', { title: 'Source', status: 'In Progress' })
+  writeTask(dir, 'target.md', { title: 'Target', status: 'Backlog' })
+  const { child, url } = await startServer(dir)
+  try {
+    const post = () => fetch(`${url}/api/tasks/source.md/links`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'blocks', targetFilename: 'target.md' }),
+    })
+    await post()
+    await post()
+
+    const srcFm = readFm(dir, 'source.md')
+    const tgtFm = readFm(dir, 'target.md')
+    const srcBlocks = Array.isArray(srcFm.blocks) ? srcFm.blocks : [srcFm.blocks]
+    const tgtBlockedBy = Array.isArray(tgtFm['blocked-by']) ? tgtFm['blocked-by'] : [tgtFm['blocked-by']]
+    assert.equal(srcBlocks.filter(v => v && v.includes('target')).length, 1, 'source.blocks should have exactly one entry for target')
+    assert.equal(tgtBlockedBy.filter(v => v && v.includes('source')).length, 1, 'target.blocked-by should have exactly one entry for source')
+  } finally {
+    await stopServer(child)
+    fs.rmSync(dir, { recursive: true })
+  }
+})
+
 test('GET /api/tasks: isBlocked computed from blocked-by links', async () => {
   const dir = tmpTasksDir()
   writeTask(dir, 'blocker.md', { title: 'Blocker', status: 'In Progress' })

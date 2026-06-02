@@ -21,7 +21,9 @@ export function parseLinkList(value) {
     if (typeof item !== 'string') continue
     const trimmed = item.trim()
     if (!trimmed.startsWith('[[') || !trimmed.endsWith(']]')) continue
-    result.push(parseWikilink(trimmed))
+    const parsed = parseWikilink(trimmed)
+    if (!parsed.filename) continue
+    result.push(parsed)
   }
   return result
 }

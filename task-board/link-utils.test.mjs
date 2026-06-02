@@ -55,6 +55,10 @@ test('parseLinkList: skips unparseable entries', () => {
   ])
 })
 
+test('parseLinkList: skips empty wikilink [[]]', () => {
+  assert.deepEqual(parseLinkList('[[]]'), [])
+})
+
 // ── formatLinkList ────────────────────────────────────────────────────────────
 
 test('formatLinkList: converts objects to [[filename|Title]] strings', () => {

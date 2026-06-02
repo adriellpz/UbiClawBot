@@ -555,23 +555,23 @@ function linkTask(filename, { type, targetFilename }) {
 
     srcFm.parent = formatWikilink(tgtStem, tgtTitle)
     const tgtChildren = parseLinkList(tgtFm.children)
-    tgtChildren.push({ filename: srcStem, title: srcTitle })
+    if (!tgtChildren.some(l => l.filename === srcStem)) tgtChildren.push({ filename: srcStem, title: srcTitle })
     tgtFm.children = formatLinkList(tgtChildren)
   } else if (type === 'blocks') {
     const srcBlocks = parseLinkList(srcFm.blocks)
-    srcBlocks.push({ filename: tgtStem, title: tgtTitle })
+    if (!srcBlocks.some(l => l.filename === tgtStem)) srcBlocks.push({ filename: tgtStem, title: tgtTitle })
     srcFm.blocks = formatLinkList(srcBlocks)
 
     const tgtBlockedBy = parseLinkList(tgtFm['blocked-by'])
-    tgtBlockedBy.push({ filename: srcStem, title: srcTitle })
+    if (!tgtBlockedBy.some(l => l.filename === srcStem)) tgtBlockedBy.push({ filename: srcStem, title: srcTitle })
     tgtFm['blocked-by'] = formatLinkList(tgtBlockedBy)
   } else if (type === 'related') {
     const srcRelated = parseLinkList(srcFm.related)
-    srcRelated.push({ filename: tgtStem, title: tgtTitle })
+    if (!srcRelated.some(l => l.filename === tgtStem)) srcRelated.push({ filename: tgtStem, title: tgtTitle })
     srcFm.related = formatLinkList(srcRelated)
 
     const tgtRelated = parseLinkList(tgtFm.related)
-    tgtRelated.push({ filename: srcStem, title: srcTitle })
+    if (!tgtRelated.some(l => l.filename === srcStem)) tgtRelated.push({ filename: srcStem, title: srcTitle })
     tgtFm.related = formatLinkList(tgtRelated)
   }
 
