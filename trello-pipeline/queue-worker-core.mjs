@@ -1,6 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * @typedef {object} HandlerContext
+ * @property {string} [fromListName] - Trello list the card moved from (reschedule handler).
+ * @property {string} actionId - Queue entry id for failure tracking.
+ * @property {string} [completedAt] - ISO timestamp when card was marked done (done handler).
+ */
+
+/**
+ * @typedef {object} HandlerResult
+ * @property {boolean} ok - When true, entry is marked handled; when false, failure is recorded for retry.
+ * @property {string} [error]
+ * @property {string} [reason]
+ */
+
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; }
 }
@@ -39,7 +53,15 @@ function clearFailure(stateDir, actionId) {
 const MAX_HANDLER_ATTEMPTS = Number(process.env.TRELLO_PIPELINE_MAX_HANDLER_ATTEMPTS || 5);
 
 export async function dispatch(entry, handlerMap, { getCard, stateDir }) {
-  const card = entry.cardId ? await getCard(entry.cardId).catch(() => null) : null;
+  let card = null;
+  if (entry.cardId) {
+    try {
+      card = await getCard(entry.cardId);
+    } catch (error) {
+      recordFailure(stateDir, entry.actionId, { ok: false, reason: "get_card_failed", error: error.message });
+      return;
+    }
+  }
 
   if (card?.closed) {
     markHandled(stateDir, entry.actionId);
@@ -58,13 +80,22 @@ export async function dispatch(entry, handlerMap, { getCard, stateDir }) {
     return;
   }
 
+  /** @type {HandlerContext} */
   const ctx = { fromListName: entry.fromListName, actionId: entry.actionId };
-  const result = await handler.run(card, ctx);
+  if (entry.completedAt) ctx.completedAt = entry.completedAt;
 
-  if (result.ok) {
+  /** @type {HandlerResult} */
+  let result;
+  try {
+    result = await handler.run(card, ctx);
+  } catch (error) {
+    result = { ok: false, error: error.message, reason: "handler_threw" };
+  }
+
+  if (result?.ok) {
     clearFailure(stateDir, entry.actionId);
     markHandled(stateDir, entry.actionId);
   } else {
-    recordFailure(stateDir, entry.actionId, result);
+    recordFailure(stateDir, entry.actionId, result || { ok: false, reason: "missing_result" });
   }
 }

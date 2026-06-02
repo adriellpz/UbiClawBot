@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-import fs from "node:fs";
-import path from "node:path";
-import { execFileSync } from "node:child_process";
 import process from "node:process";
 
 import { findAllLinkedEvents } from "./calendar_lookup.mjs";
 import { needsRoutineBeforeMissed, shouldRoutineMissedDuplicate } from "./handle_reschedule_logic.mjs";
 import { findFreeSlot } from "./find-free-slot.mjs";
+import { makeGw, makeGog } from "./pipeline_helpers.mjs";
 import {
   eventHtmlLink,
   formatCalendarTimeRange,
@@ -20,78 +18,8 @@ const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || "adriellpz@gmail.com";
 const GOG_ACCOUNT = process.env.GOG_ACCOUNT || "ubitheai@gmail.com";
 const DEFAULT_BLOCK_MINUTES = 30;
 
-const GATEWAY_URL = process.env.TRELLO_GATEWAY_URL;
-const GATEWAY_KEY = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
-
-function gogEnv() {
-  const env = { ...process.env };
-  const gogBin = process.env.GOG_BIN || "gog";
-  if (gogBin.includes("/")) {
-    env.PATH = `${path.dirname(gogBin)}:${env.PATH || ""}`;
-  }
-  const passwordFile = process.env.GOG_KEYRING_PASSWORD_FILE || "/home/node/.openclaw/credentials/gog-keyring-password";
-  if (!env.GOG_KEYRING_PASSWORD) {
-    try {
-      env.GOG_KEYRING_PASSWORD = fs.readFileSync(passwordFile, "utf8").trim();
-    } catch {}
-  }
-  return env;
-}
-
-function gog(args) {
-  const gogBin = process.env.GOG_BIN || "gog";
-  try {
-    return execFileSync(gogBin, args, { encoding: "utf8", env: gogEnv(), stdio: ["ignore", "pipe", "pipe"] });
-  } catch (error) {
-    if (/invalid_grant|Token has been expired/.test(error.stderr || "")) {
-      throw new Error("GOG OAuth token expired");
-    }
-    throw error;
-  }
-}
-
-async function gw(operation, card, params = {}) {
-  const response = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${GATEWAY_KEY}` },
-    body: JSON.stringify({ agentId: "system", operation, cardId: card, params }),
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Gateway ${operation}: ${response.status} ${text.slice(0, 300)}`);
-  return text ? JSON.parse(text) : {};
-}
-
-async function getCard(ref) {
-  const data = await gw("get", ref);
-  return data.card || null;
-}
-
-async function getLists() {
-  const data = await gw("board_lists", "board");
-  return data.lists || [];
-}
-
 function cardDuration(card) {
   return parseTimeNeeded(card.desc || "", DEFAULT_BLOCK_MINUTES);
-}
-
-async function moveCard(targetCardId, targetListName, due) {
-  const params = { targetList: targetListName };
-  if (due) params.due = due;
-  return gw("move", targetCardId, params);
-}
-
-async function addComment(targetCardId, text) {
-  return gw("comment", targetCardId, { text });
-}
-
-async function writeCalendarToDescription(card, gogOutput, slotStart, slotEnd, durationMin) {
-  const link = eventHtmlLink(gogOutput);
-  if (!link || !slotStart || !slotEnd) return;
-  const calendarTime = formatCalendarTimeRange(slotStart, slotEnd);
-  const desc = upsertCalendarBlock(card.desc || "", { link, calendarTime, timeNeeded: durationMin });
-  await gw("update", card.id, { fields: { desc } });
-  card.desc = desc;
 }
 
 const PROTECTED_ROUTINE_RE =
@@ -139,11 +67,49 @@ function startOfDay(date) {
   return value;
 }
 
-async function rescheduleCard(card, fromList, dryRun) {
-  if (card.closed) {
-    console.log(JSON.stringify({ status: "skipped", reason: "card_closed", card: card.name }));
-    return;
+export function toHandlerResult(payload) {
+  if (!payload) return { ok: false, reason: "empty_result" };
+  if (payload.status === "warning" && payload.message === "calendar_search_failed") {
+    return { ok: false, ...payload };
   }
+  return { ok: true, ...payload };
+}
+
+function createRescheduleDeps(gatewayUrl, gatewayKey) {
+  const gw = makeGw(gatewayUrl, gatewayKey);
+  const gog = makeGog();
+
+  return {
+    gog,
+    async getLists() {
+      const data = await gw("board_lists", "board");
+      return data.lists || [];
+    },
+    async moveCard(targetCardId, targetListName, due) {
+      const params = { targetList: targetListName };
+      if (due) params.due = due;
+      return gw("move", targetCardId, params);
+    },
+    async addComment(targetCardId, text) {
+      return gw("comment", targetCardId, { text });
+    },
+    async writeCalendarToDescription(card, gogOutput, slotStart, slotEnd, durationMin) {
+      const link = eventHtmlLink(gogOutput);
+      if (!link || !slotStart || !slotEnd) return;
+      const calendarTime = formatCalendarTimeRange(slotStart, slotEnd);
+      const desc = upsertCalendarBlock(card.desc || "", { link, calendarTime, timeNeeded: durationMin });
+      await gw("update", card.id, { fields: { desc } });
+      card.desc = desc;
+    },
+  };
+}
+
+export async function rescheduleCard(card, fromList, dryRun, deps) {
+  if (card.closed) {
+    return { status: "skipped", reason: "card_closed", card: card.name };
+  }
+
+  const { gog, getLists, moveCard, addComment, writeCalendarToDescription } = deps;
 
   const lists = await getLists();
   const byName = Object.fromEntries(lists.map((list) => [list.name.toLowerCase(), list]));
@@ -181,7 +147,12 @@ async function rescheduleCard(card, fromList, dryRun) {
         ]),
       ).events || [];
   } catch (error) {
-    console.log(JSON.stringify({ status: "warning", message: "calendar_search_failed", error: error.message, card: card.name }));
+    return {
+      status: "warning",
+      message: "calendar_search_failed",
+      error: error.message,
+      card: card.name,
+    };
   }
 
   const linkedEvents = findAllLinkedEvents(card, allEvents);
@@ -195,7 +166,7 @@ async function rescheduleCard(card, fromList, dryRun) {
 
   const activityName = card.name
     .replace(/^p[123]\s*[-]\s*/i, "")
-    .replace(/^R\s*-\s*/i, "")
+    .replace(/^R\s*[-]\s*/i, "")
     .replace(/\s*[-]\s*\d{4}-\d{2}-\d{2}\s*$/, "")
     .trim()
     .toLowerCase();
@@ -231,20 +202,17 @@ async function rescheduleCard(card, fromList, dryRun) {
         }
         await moveCard(card.id, targetList.name, new Date().toISOString());
       }
-      console.log(
-        JSON.stringify({
-          ...resultBase,
-          status: dryRun ? "dry_run" : "ok",
-          action,
-          targetList: targetList.name,
-          due: new Date().toISOString(),
-          deletedEventId: currentEvent?.id || null,
-          tomorrowEventId: tomorrowEvent.id,
-          priority,
-          viaRoutine: needsRoutineBeforeMissed(card),
-        }),
-      );
-      return;
+      return {
+        ...resultBase,
+        status: dryRun ? "dry_run" : "ok",
+        action,
+        targetList: targetList.name,
+        due: new Date().toISOString(),
+        deletedEventId: currentEvent?.id || null,
+        tomorrowEventId: tomorrowEvent.id,
+        priority,
+        viaRoutine: needsRoutineBeforeMissed(card),
+      };
     }
 
     targetList = routineList || scheduledList;
@@ -258,8 +226,14 @@ async function rescheduleCard(card, fromList, dryRun) {
           `@ubitheai1 @adriellopez1 Unable to find a slot for "${card.name}" in the next two weeks. Can you find a spot? If not, coordinate with each other to place this manually.`,
         );
       }
-      console.log(JSON.stringify({ ...resultBase, status: dryRun ? "dry_run" : "ok", action: "escalated_no_slot", targetList: "Reschedule", reason: slot.reason, attempts: slot.attempts }));
-      return;
+      return {
+        ...resultBase,
+        status: dryRun ? "dry_run" : "ok",
+        action: "escalated_no_slot",
+        targetList: "Reschedule",
+        reason: slot.reason,
+        attempts: slot.attempts,
+      };
     }
 
     if (!dryRun) {
@@ -306,8 +280,18 @@ async function rescheduleCard(card, fromList, dryRun) {
       if (gogResult) await writeCalendarToDescription(card, gogResult, slot.start, slot.end, durationMin);
     }
 
-    console.log(JSON.stringify({ ...resultBase, status: dryRun ? "dry_run" : "ok", action, targetList: targetList.name, due: slot.end.toISOString(), calendarEventId: currentEvent?.id || null, priority, conflictShifted: slot.shifted, conflictAttempts: slot.attempts, softOverlaps: slot.overlaps }));
-    return;
+    return {
+      ...resultBase,
+      status: dryRun ? "dry_run" : "ok",
+      action,
+      targetList: targetList.name,
+      due: slot.end.toISOString(),
+      calendarEventId: currentEvent?.id || null,
+      priority,
+      conflictShifted: slot.shifted,
+      conflictAttempts: slot.attempts,
+      softOverlaps: slot.overlaps,
+    };
   }
 
   if (isProtectedRoutineConstraint(card, fromList)) {
@@ -316,8 +300,12 @@ async function rescheduleCard(card, fromList, dryRun) {
       await addComment(card.id, "Auto-reschedule skipped: protected routine/constraint. Calendar unchanged.");
       await moveCard(card.id, restoreList.name, card.due || undefined);
     }
-    console.log(JSON.stringify({ ...resultBase, status: dryRun ? "dry_run" : "skipped", reason: "protected_routine_constraint", restoredList: restoreList?.name }));
-    return;
+    return {
+      ...resultBase,
+      status: dryRun ? "dry_run" : "skipped",
+      reason: "protected_routine_constraint",
+      restoredList: restoreList?.name,
+    };
   }
 
   const days = priorityDays(card.labels, card.name);
@@ -333,8 +321,14 @@ async function rescheduleCard(card, fromList, dryRun) {
         `@ubitheai1 @adriellopez1 Unable to find a slot for "${card.name}" in the next two weeks. Can you find a spot? If not, coordinate with each other to place this manually.`,
       );
     }
-    console.log(JSON.stringify({ ...resultBase, status: dryRun ? "dry_run" : "ok", action: "escalated_no_slot", targetList: "Reschedule", reason: slot.reason, attempts: slot.attempts }));
-    return;
+    return {
+      ...resultBase,
+      status: dryRun ? "dry_run" : "ok",
+      action: "escalated_no_slot",
+      targetList: "Reschedule",
+      reason: slot.reason,
+      attempts: slot.attempts,
+    };
   }
 
   if (!dryRun) {
@@ -381,21 +375,42 @@ async function rescheduleCard(card, fromList, dryRun) {
     if (gogResult) await writeCalendarToDescription(card, gogResult, slot.start, slot.end, durationMin);
   }
 
-  console.log(JSON.stringify({ ...resultBase, status: dryRun ? "dry_run" : "ok", action, targetList: targetList.name, due: slot.end.toISOString(), calendarEventId: currentEvent?.id || null, priority, conflictShifted: slot.shifted, conflictAttempts: slot.attempts, softOverlaps: slot.overlaps }));
+  return {
+    ...resultBase,
+    status: dryRun ? "dry_run" : "ok",
+    action,
+    targetList: targetList.name,
+    due: slot.end.toISOString(),
+    calendarEventId: currentEvent?.id || null,
+    priority,
+    conflictShifted: slot.shifted,
+    conflictAttempts: slot.attempts,
+    softOverlaps: slot.overlaps,
+  };
 }
 
 export async function run(card, ctx = {}) {
-  if (!GATEWAY_URL) throw new Error("TRELLO_GATEWAY_URL is required");
-  if (!GATEWAY_KEY) throw new Error("Missing TRELLO_GATEWAY_KEY");
-  await rescheduleCard(card, (ctx.fromListName || "").toLowerCase(), false);
-  return { ok: true };
+  const gatewayUrl = process.env.TRELLO_GATEWAY_URL;
+  const gatewayKey = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
+  if (!gatewayUrl) throw new Error("TRELLO_GATEWAY_URL is required");
+  if (!gatewayKey) throw new Error("Missing TRELLO_GATEWAY_KEY");
+
+  const deps = createRescheduleDeps(gatewayUrl, gatewayKey);
+  const payload = await rescheduleCard(card, (ctx.fromListName || "").toLowerCase(), false, deps);
+  console.log(JSON.stringify(payload));
+  return toHandlerResult(payload);
 }
 
 // CLI entry point
 const isCLI = process.argv[1] && new URL(import.meta.url).pathname === process.argv[1];
 if (isCLI) {
-  if (!GATEWAY_URL) throw new Error("TRELLO_GATEWAY_URL is required");
-  if (!GATEWAY_KEY) { console.error(JSON.stringify({ error: "Missing TRELLO_GATEWAY_KEY" })); process.exit(2); }
+  const gatewayUrl = process.env.TRELLO_GATEWAY_URL;
+  const gatewayKey = process.env.TRELLO_GATEWAY_KEY || process.env.GATEWAY_KEY;
+  if (!gatewayUrl) throw new Error("TRELLO_GATEWAY_URL is required");
+  if (!gatewayKey) {
+    console.error(JSON.stringify({ error: "Missing TRELLO_GATEWAY_KEY" }));
+    process.exit(2);
+  }
 
   function argVal(flag) {
     const index = process.argv.indexOf(flag);
@@ -407,9 +422,20 @@ if (isCLI) {
   const dryRun = process.argv.includes("--dry-run");
   if (!cardId && !shortLink) process.exit(2);
 
+  const deps = createRescheduleDeps(gatewayUrl, gatewayKey);
+  const gw = makeGw(gatewayUrl, gatewayKey);
+
   (async () => {
-    const card = cardId ? await getCard(cardId) : await getCard(shortLink);
-    await rescheduleCard(card, fromList, dryRun);
+    const data = await gw("get", cardId || shortLink);
+    const card = data.card || null;
+    if (!card) {
+      console.error(JSON.stringify({ status: "error", error: "card_not_found" }));
+      process.exit(1);
+    }
+    const payload = await rescheduleCard(card, fromList, dryRun, deps);
+    console.log(JSON.stringify(payload));
+    const result = toHandlerResult(payload);
+    if (!result.ok) process.exit(1);
   })().catch((error) => {
     console.error(JSON.stringify({ status: "error", error: error.message }));
     process.exit(1);

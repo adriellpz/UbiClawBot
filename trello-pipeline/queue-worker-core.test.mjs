@@ -97,6 +97,46 @@ test("dispatch: handler failure — records failure, entry NOT marked handled", 
   assert.equal(failures["action-1"].count, 1);
 });
 
+test("dispatch: handler throw — records failure, entry NOT marked handled", async () => {
+  const stateDir = tmpState();
+  const handlerMap = {
+    trello_card_moved_to_reschedule: {
+      run: async () => {
+        throw new Error("gog segfault");
+      },
+    },
+  };
+
+  await dispatch(entry(), handlerMap, { getCard: async () => fakeCard(), stateDir });
+
+  const handledFile = path.join(stateDir, "actionable_handled_ids.json");
+  const handled = fs.existsSync(handledFile) ? JSON.parse(fs.readFileSync(handledFile, "utf8")) : [];
+  assert.ok(!handled.includes("action-1"));
+
+  const failures = JSON.parse(fs.readFileSync(path.join(stateDir, "handler_failures.json"), "utf8"));
+  assert.equal(failures["action-1"].count, 1);
+  assert.equal(failures["action-1"].reason, "handler_threw");
+});
+
+test("dispatch: getCard throw — records failure, handler never called", async () => {
+  const stateDir = tmpState();
+  const calls = [];
+  const handlerMap = {
+    trello_card_moved_to_reschedule: { run: async () => { calls.push(true); return { ok: true }; } },
+  };
+
+  await dispatch(entry(), handlerMap, {
+    getCard: async () => {
+      throw new Error("gateway unreachable");
+    },
+    stateDir,
+  });
+
+  assert.equal(calls.length, 0);
+  const failures = JSON.parse(fs.readFileSync(path.join(stateDir, "handler_failures.json"), "utf8"));
+  assert.equal(failures["action-1"].reason, "get_card_failed");
+});
+
 test("dispatch: max attempts exceeded — entry marked handled (gives up)", async () => {
   const stateDir = tmpState();
   const calls = [];
