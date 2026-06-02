@@ -2724,8 +2724,8 @@ function renderLinks(task) {
       <div class="links-group-label">${esc(label)}</div>
       <div class="links-items">${links.map(l =>
         `<span class="link-item-wrap">
-          <button class="link-item" onclick="openDetail(${JSON.stringify(l.filename + '.md')})">${esc(l.title)}</button>
-          <button class="link-remove" onclick="removeLink(${JSON.stringify(task.filename)},${JSON.stringify(key)},${JSON.stringify(l.filename)})" title="Remove link">✕</button>
+          <button class="link-item" onclick="openDetail('${esc(l.filename)}.md')">${esc(l.title)}</button>
+          <button class="link-remove" onclick="removeLink('${esc(task.filename)}','${esc(key)}','${esc(l.filename)}')" title="Remove link">✕</button>
         </span>`
       ).join('')}</div>
     </div>`
