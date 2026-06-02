@@ -2736,9 +2736,11 @@ function renderLinks(task) {
     <div id="d-links-add-form" style="display:none">
       <div class="links-add-row">
         <select class="links-type-sel" id="d-link-type">
-          <option value="blocks">this blocks</option>
-          <option value="parent">parent is</option>
-          <option value="related">related to</option>
+          <option value="parent">Parent</option>
+          <option value="child">Child</option>
+          <option value="blocked-by">Blocked by</option>
+          <option value="blocks">Blocks</option>
+          <option value="related">Related</option>
         </select>
         <select class="links-target-sel" id="d-link-target">
           <option value="">— select task —</option>
@@ -2766,11 +2768,19 @@ async function submitAddLink() {
   const type           = document.getElementById('d-link-type')?.value
   const targetFilename = document.getElementById('d-link-target')?.value
   if (!targetFilename) { bar('select a task to link', 'err'); return }
-  const r = await fetch(`/api/tasks/${encodeURIComponent(detailFile)}/links`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ type, targetFilename }),
-  })
+  // "child" and "blocked-by" are expressed from the target's perspective
+  let url, body
+  if (type === 'child') {
+    url  = `/api/tasks/${encodeURIComponent(targetFilename)}/links`
+    body = { type: 'parent', targetFilename: detailFile }
+  } else if (type === 'blocked-by') {
+    url  = `/api/tasks/${encodeURIComponent(targetFilename)}/links`
+    body = { type: 'blocks', targetFilename: detailFile }
+  } else {
+    url  = `/api/tasks/${encodeURIComponent(detailFile)}/links`
+    body = { type, targetFilename }
+  }
+  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
   const data = await r.json().catch(() => ({}))
   if (!r.ok) { bar(data.error || 'link failed', 'err'); return }
   bar('link added', 'ok')
