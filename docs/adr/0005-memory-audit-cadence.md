@@ -14,10 +14,9 @@ We split memory hygiene from the Reddit OpenClaw 101 "all-in-heartbeat" model: *
 
 **Cadence update (agent-self-improvement-loop PRD):** Heartbeat self-apply (Gap 2) writes operational rules to `MEMORY.md` during every heartbeat, raising the write rate significantly. To match:
 
-- **Light pass (Ubi + Marcos):** weekly (Mondays) → **nightly** — trims stale and superseded entries, especially same-day self-apply duplicates. Cheryl unchanged.
-- **Deep pass (Ubi + Marcos):** monthly (1st) → **weekly (Mondays)** — absorbs the monthly audit; monthly crons retired. Deep pass adds a **reverse-scan** of `wiki/{agent}/` for operational rules not yet in `MEMORY.md`, proposed to operator via Telegram (not auto-applied).
-- Cheryl's cadence unchanged (her MEMORY.md write rate is unaffected by Gap 2).
-- Net cron changes: replace 4 existing crons (Ubi weekly + monthly, Marcos weekly + monthly) with 4 new crons (Ubi nightly + weekly, Marcos nightly + weekly).
+- **Nightly light pass (all three agents):** weekly → **nightly (Tue–Sun)** — trims stale and superseded entries. Cheryl's light pass is scoped to `cheryl/MEMORY.md` and `cheryl/memory/` only; no wiki curator steps.
+- **Weekly deep pass (all three agents):** monthly → **weekly (Mondays)** — absorbs the monthly audit; monthly crons retired. Deep pass adds a **reverse-scan** of `wiki/{agent}/` for operational rules not yet in `MEMORY.md`, proposed to operator via Telegram (not auto-applied). Cheryl's deep pass is likewise scoped to her workspace.
+- Net cron changes: 6 crons removed (Ubi weekly+monthly, Marcos weekly+monthly, Cheryl weekly+monthly) → 6 new crons (Ubi nightly+weekly, Marcos nightly+weekly, Cheryl nightly+weekly).
 
 **Deploy prerequisite:** Vault skills (`ubi-memory-audit`, `cheryl-memory-audit`, `marcos-memory-audit`) and updated `HEARTBEAT.md` files live in **agent workspace vault**, not this repo. Sync vault to the droplet before the first audit cron run; memory audit jobs are enabled at merge and will fail until skills are present.
 
