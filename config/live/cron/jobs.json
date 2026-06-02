@@ -29,7 +29,8 @@
         "to": "8045915111",
         "cooldownMs": 3600000
       },
-      "state": {}
+      "state": {},
+      "agentId": "main"
     },
     {
       "id": "4e624bd1-6b71-4922-8d22-3fa98bb002b5",
@@ -111,7 +112,8 @@
         "to": "8045915111",
         "cooldownMs": 3600000
       },
-      "state": {}
+      "state": {},
+      "agentId": "main"
     },
     {
       "id": "752eaf61-33ba-4e94-9e45-89f7d01844e0",
@@ -495,8 +497,9 @@
       "payload": {
         "kind": "agentTurn",
         "message": "Use skill: openclaw-skill-authoring.\n\nDaily auto-skill generation for Cheryl.\n\nSkill pool: `/home/node/.openclaw/agent-vault/cheryl/skills/`\n\n## Step 1 — Find a pattern worth capturing\n\nReview recent session notes under `memory/` and MEMORY.md for a task, lookup, or procedure you repeated across multiple sessions. Good candidates: scheduling decision rules, calendar conflict patterns, Trello-to-calendar workflows, recurring coordination logic. Skip if nothing qualifies — reply NO_REPLY.\n\n## Step 2 — Check the pool cap\n\nCount SKILL.md files with `origin: auto` frontmatter under the skill pool.\n- If count < 10: proceed to create.\n- If count = 10: find the skill with the lowest `read_count` that was `generated` more than 3 days ago. If multiple tie, pick the oldest `generated` date. If all are within the 3-day immunity window, reply NO_REPLY and retry tomorrow.\n- Delete the evicted skill folder before writing the new one.\n\n## Step 3 — Write the skill\n\nCreate `{skillPool}/{skill-name}/SKILL.md` following the openclaw-skill-authoring workflow. Use the auto-generated frontmatter shape:\n\n```yaml\n---\nname: skill-name\ndescription: What the skill does and when to use it.\norigin: auto\ngenerated: YYYY-MM-DD\nread_count: 0\nlast_read: null\n---\n```\n\nKeep the body under 200 lines. Do not create wiki-related skills — wiki maintenance is Cheryl's operator skills domain.\n\nReply NO_REPLY on completion (no Telegram unless a real error occurs).",
-        "timeoutSeconds": 900,
+        "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
