@@ -19,9 +19,8 @@ if (mode === "openclaw") {
       data.hooks.gmail.pushToken = "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN";
     }
   }
-  if (data.browser?.profiles?.browserbase) {
-    data.browser.profiles.browserbase.cdpUrl =
-      "wss://connect.browserbase.com?apiKey=REPLACE_ME_BROWSERBASE_API_KEY&projectId=REPLACE_ME_BROWSERBASE_PROJECT_ID";
+  if (data.browser?.profiles?.hitl) {
+    data.browser.profiles.hitl.cdpUrl = "ws://localhost:3000?token=REPLACE_ME_BROWSERLESS_TOKEN";
   }
   if (Array.isArray(data.commands?.ownerAllowFrom)) {
     data.commands.ownerAllowFrom = ["telegram:REPLACE_ME_TELEGRAM_USER_ID"];
