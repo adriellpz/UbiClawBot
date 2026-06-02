@@ -56,7 +56,7 @@ test("sanitize-live-config redacts hitl cdpUrl token but preserves public hostna
   const input = JSON.stringify({
     browser: {
       profiles: {
-        hitl: { cdpUrl: "wss://browser-2ca0d4.sonofwolf.org?token=super-secret-token", color: "#F97316" },
+        hitl: { cdpUrl: "wss://chrome.sonofwolf.org?token=super-secret-token", color: "#F97316" },
       },
     },
     gateway: { auth: { token: "real-gateway-token" } },
@@ -69,7 +69,7 @@ test("sanitize-live-config redacts hitl cdpUrl token but preserves public hostna
   const out = JSON.parse(result.stdout);
   assert.equal(
     out.browser.profiles.hitl.cdpUrl,
-    "wss://browser-2ca0d4.sonofwolf.org?token=REPLACE_ME_BROWSERLESS_TOKEN",
+    "wss://chrome.sonofwolf.org?token=REPLACE_ME_BROWSERLESS_TOKEN",
     "hitl cdpUrl should preserve hostname but redact token",
   );
   assert.equal(out.gateway.auth.token, "REPLACE_ME_LONG_HEX_GATEWAY_TOKEN");

@@ -10,7 +10,7 @@ board.sonofwolf.org {
 	reverse_proxy 127.0.0.1:3334
 }
 
-browser-2ca0d4.sonofwolf.org {
+chrome.sonofwolf.org {
 	@websockets {
 		header Connection *Upgrade*
 		header Upgrade websocket
