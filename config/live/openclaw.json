@@ -408,7 +408,8 @@
         "extraDirs": [
           "/home/node/.openclaw/workspace/hooks",
           "/home/node/.openclaw/agent-vault/ubi/hooks",
-          "/home/node/.openclaw/agent-vault/marcos/hooks"
+          "/home/node/.openclaw/agent-vault/marcos/hooks",
+          "/home/node/.openclaw/agent-vault/cheryl/hooks"
         ]
       },
       "entries": {
