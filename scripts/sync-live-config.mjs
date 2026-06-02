@@ -20,7 +20,7 @@ const SECRET_PATHS = [
   ["gateway", "auth", "token"],
   ["hooks", "token"],
   ["hooks", "gmail", "pushToken"],
-  ["browser", "profiles", "browserbase", "cdpUrl"],
+  ["browser", "profiles", "hitl", "cdpUrl"],
 ];
 
 function getAt(obj, keys) {
