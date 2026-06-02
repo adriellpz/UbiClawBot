@@ -219,7 +219,7 @@
     "ssrfPolicy": {
       "allowedHostnames": [
         "host.docker.internal",
-        "connect.browserbase.com"
+        "localhost"
       ],
       "dangerouslyAllowPrivateNetwork": false
     },
@@ -227,8 +227,8 @@
     "noSandbox": true,
     "headless": true,
     "profiles": {
-      "browserbase": {
-        "cdpUrl": "wss://connect.browserbase.com?apiKey=REPLACE_ME_BROWSERBASE_API_KEY&projectId=REPLACE_ME_BROWSERBASE_PROJECT_ID",
+      "hitl": {
+        "cdpUrl": "ws://localhost:3000?token=REPLACE_ME_BROWSERLESS_TOKEN",
         "color": "#F97316"
       }
     }
