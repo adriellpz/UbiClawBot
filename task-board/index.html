@@ -369,6 +369,57 @@ header {
 }
 .link-item:hover { background: rgba(232,160,32,0.08); border-color: rgba(232,160,32,0.2); color: var(--amber); }
 
+.link-item-wrap { position: relative; display: inline-flex; }
+.link-remove {
+  display: none;
+  position: absolute; top: -1px; right: -1px;
+  background: rgba(100,30,30,0.9);
+  border: none; border-radius: 0 2px 0 2px;
+  color: #e08080; font-size: 7px; font-family: var(--font);
+  cursor: pointer; padding: 2px 4px; line-height: 1; z-index: 1;
+  transition: background 0.1s;
+}
+.link-remove:hover { background: rgba(140,40,40,0.95); color: #ffa0a0; }
+.link-item-wrap:hover .link-remove { display: block; }
+
+.links-add-row {
+  display: flex; gap: 5px; align-items: center; margin-top: 8px; flex-wrap: wrap;
+}
+.links-type-sel {
+  background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 2px; font-size: 9.5px; font-family: var(--font);
+  color: var(--text); padding: 5px 7px; outline: none; flex-shrink: 0;
+}
+.links-type-sel:focus { border-color: var(--amber-border); }
+.links-target-sel {
+  background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 2px; font-size: 9.5px; font-family: var(--font);
+  color: var(--text); padding: 5px 7px; outline: none; flex: 1; min-width: 0;
+}
+.links-target-sel:focus { border-color: var(--amber-border); }
+.btn-link-submit {
+  background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.2);
+  border-radius: 2px; color: var(--amber-dim); font-size: 9px; font-family: var(--font);
+  font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 5px 11px; cursor: pointer; white-space: nowrap; transition: all 0.1s; flex-shrink: 0;
+}
+.btn-link-submit:hover { background: rgba(232,160,32,0.16); color: var(--amber); border-color: var(--amber-border); }
+.btn-link-cancel {
+  background: none; border: none; color: var(--text-dim); font-size: 14px;
+  font-family: var(--font); cursor: pointer; width: 24px; height: 24px;
+  border-radius: 2px; display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, color 0.1s; flex-shrink: 0;
+}
+.btn-link-cancel:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.links-add-toggle {
+  margin-top: 7px; background: none;
+  border: 1px dashed rgba(255,255,255,0.07); border-radius: 2px;
+  color: var(--text-dim); font-size: 9px; font-family: var(--font);
+  font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 3px 9px; cursor: pointer; transition: all 0.1s;
+}
+.links-add-toggle:hover { border-color: rgba(232,160,32,0.25); color: var(--amber-dim); }
+
 /* ── Modal ──────────────────────────────────────────────────────────────── */
 
 .overlay {
@@ -2672,12 +2723,84 @@ function renderLinks(task) {
     html += `<div class="links-group">
       <div class="links-group-label">${esc(label)}</div>
       <div class="links-items">${links.map(l =>
-        `<button class="link-item" onclick="openDetail(${JSON.stringify(l.filename + '.md')})">${esc(l.title)}</button>`
+        `<span class="link-item-wrap">
+          <button class="link-item" onclick="openDetail(${JSON.stringify(l.filename + '.md')})">${esc(l.title)}</button>
+          <button class="link-remove" onclick="removeLink(${JSON.stringify(task.filename)},${JSON.stringify(key)},${JSON.stringify(l.filename)})" title="Remove link">✕</button>
+        </span>`
       ).join('')}</div>
     </div>`
   }
+
+  const otherTasks = tasks.filter(t => t.filename !== task.filename)
+  html += `
+    <div id="d-links-add-form" style="display:none">
+      <div class="links-add-row">
+        <select class="links-type-sel" id="d-link-type">
+          <option value="blocks">this blocks</option>
+          <option value="parent">parent is</option>
+          <option value="related">related to</option>
+        </select>
+        <select class="links-target-sel" id="d-link-target">
+          <option value="">— select task —</option>
+          ${otherTasks.map(t => `<option value="${esc(t.filename)}">${esc(t.title)}</option>`).join('')}
+        </select>
+        <button class="btn-link-submit" onclick="submitAddLink()">Link</button>
+        <button class="btn-link-cancel" onclick="toggleAddLinkForm(false)" title="Cancel">✕</button>
+      </div>
+    </div>
+    <button class="links-add-toggle" id="d-links-add-toggle" onclick="toggleAddLinkForm(true)">+ add link</button>`
+
   content.innerHTML = html
-  section.style.display = html ? '' : 'none'
+  section.style.display = ''
+}
+
+function toggleAddLinkForm(show) {
+  const form   = document.getElementById('d-links-add-form')
+  const toggle = document.getElementById('d-links-add-toggle')
+  if (form)   form.style.display   = show ? '' : 'none'
+  if (toggle) toggle.style.display = show ? 'none' : ''
+  if (show) document.getElementById('d-link-target')?.focus()
+}
+
+async function submitAddLink() {
+  const type           = document.getElementById('d-link-type')?.value
+  const targetFilename = document.getElementById('d-link-target')?.value
+  if (!targetFilename) { bar('select a task to link', 'err'); return }
+  const r = await fetch(`/api/tasks/${encodeURIComponent(detailFile)}/links`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type, targetFilename }),
+  })
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) { bar(data.error || 'link failed', 'err'); return }
+  bar('link added', 'ok')
+  openDetail(detailFile)
+}
+
+async function removeLink(filename, key, linkFilename) {
+  const tgt = linkFilename.endsWith('.md') ? linkFilename : linkFilename + '.md'
+  let url, body
+  if (key === 'blocked-by') {
+    // The blocker task holds the forward "blocks" link; delete from there
+    url  = `/api/tasks/${encodeURIComponent(tgt)}/links`
+    body = { type: 'blocks', targetFilename: filename }
+  } else if (key === 'children') {
+    // The child holds the "parent" link; delete from there
+    url  = `/api/tasks/${encodeURIComponent(tgt)}/links`
+    body = { type: 'parent', targetFilename: filename }
+  } else {
+    url  = `/api/tasks/${encodeURIComponent(filename)}/links`
+    body = { type: key, targetFilename: tgt }
+  }
+  const r = await fetch(url, {
+    method: 'DELETE',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await r.json().catch(() => ({}))
+  if (!r.ok) { bar(data.error || 'unlink failed', 'err'); return }
+  bar('link removed', 'ok')
+  openDetail(filename)
 }
 
 function closeDetail() {
