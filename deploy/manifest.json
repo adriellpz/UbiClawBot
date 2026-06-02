@@ -3,6 +3,7 @@
   "dropletRoot": "/home/deploy/openclaw",
   "revisionFile": "deployed-revision.json",
   "pathFilters": [
+    "hitl/**",
     "workspace/**",
     "github-pr-bridge/**",
     "gmail-hook-bridge/**",
@@ -26,6 +27,14 @@
     ".github/workflows/deploy-droplet.yml"
   ],
   "copyBundles": [
+    {
+      "id": "hitl",
+      "scpSource": "hitl/*",
+      "installMarkers": [
+        "mkdir -p \"${OPENCLAW_ROOT}/hitl\"",
+        ".deploy-tmp-hitl/hitl/"
+      ]
+    },
     {
       "id": "workspace",
       "scpSource": "workspace/Dockerfile.gog,workspace/docker-compose.droplet.yml",
@@ -177,7 +186,8 @@
     "trello-gateway",
     "trello-queue-worker",
     "trello-routines",
-    "task-board"
+    "task-board",
+    "browserless"
   ],
   "smokeChecks": {
     "requiredFiles": [
@@ -199,7 +209,8 @@
       "scripts/monitor-github-pr-bridge.sh",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs",
-      "task-board/server.mjs"
+      "task-board/server.mjs",
+      "hitl/handoff.mjs"
     ],
     "httpEndpoints": [
       {

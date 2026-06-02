@@ -1,10 +1,10 @@
+// findFreeSlot uses setHours() for timezone math — must run in UTC.
+process.env.TZ = "UTC";
+
 import assert from "node:assert/strict";
 import test from "node:test";
 
 import { findFreeSlot } from "./find-free-slot.mjs";
-
-// NOTE: findFreeSlot uses setHours() for timezone math, which assumes system tz = UTC.
-// Run all tests in this file with TZ=UTC.
 
 // Tuesday 2026-06-02 10:00 MT = 16:00 UTC (well within work hours)
 const TUE_10AM_MT = new Date("2026-06-02T16:00:00.000Z");

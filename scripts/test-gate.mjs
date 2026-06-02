@@ -437,8 +437,51 @@ function validateExampleConfig() {
   assert(config.gateway?.auth?.mode === "token", "config/openclaw.example.json: gateway auth should use token mode in the template");
   assert(config.gateway?.auth?.token === "REPLACE_ME_LONG_HEX_GATEWAY_TOKEN", "config/openclaw.example.json: gateway token must remain a placeholder");
   assert(config.gateway?.controlUi?.dangerouslyDisableDeviceAuth === false, "config/openclaw.example.json: device auth should not be disabled in the template");
-  assert(config.browser?.profiles?.browserbase?.cdpUrl?.includes("REPLACE_ME_BROWSERBASE_API_KEY"), "config/openclaw.example.json: Browserbase API key should remain a placeholder");
+
+  // hitl profile replaces browserbase
+  assert(!config.browser?.profiles?.browserbase, "config/openclaw.example.json: browserbase profile must be removed (replaced by hitl)");
+  assert(config.browser?.profiles?.hitl, "config/openclaw.example.json: hitl browser profile must be present");
+  assert(
+    config.browser?.profiles?.hitl?.cdpUrl?.includes("REPLACE_ME_BROWSERLESS_TOKEN"),
+    "config/openclaw.example.json: hitl cdpUrl must contain REPLACE_ME_BROWSERLESS_TOKEN placeholder",
+  );
+  assert(
+    config.browser?.profiles?.hitl?.cdpUrl?.startsWith("ws://localhost:3000"),
+    "config/openclaw.example.json: hitl cdpUrl must point at local Browserless (ws://localhost:3000)",
+  );
+
+  // SSRF policy: allow local Browserless, not Browserbase
+  const allowedHostnames = config.browser?.ssrfPolicy?.allowedHostnames ?? [];
+  assert(!allowedHostnames.includes("connect.browserbase.com"), "config/openclaw.example.json: ssrfPolicy must not allow connect.browserbase.com");
+  assert(allowedHostnames.includes("localhost"), "config/openclaw.example.json: ssrfPolicy must allow localhost for Browserless");
+
   pass("config/openclaw.example.json: template safety checks completed");
+}
+
+function validateBrowserlessCompose() {
+  const composePath = "workspace/docker-compose.droplet.yml";
+  const source = readText(composePath);
+  const compose = JSON.parse(JSON.stringify(parseYamlFile(composePath) ?? {}));
+  const services = compose.services ?? {};
+
+  assert(services["browserless"], `${composePath}: browserless service must be defined`);
+  const bl = services["browserless"] ?? {};
+  assert(bl.image?.startsWith("browserless/chrome"), `${composePath}: browserless should use browserless/chrome image`);
+  assert(bl.restart === "unless-stopped", `${composePath}: browserless should restart unless stopped`);
+
+  const blEnv = bl.environment ?? {};
+  assert(blEnv.TOKEN !== undefined, `${composePath}: browserless must accept a TOKEN for auth`);
+  assert(blEnv.MAX_CONCURRENT_SESSIONS !== undefined, `${composePath}: browserless must set MAX_CONCURRENT_SESSIONS`);
+
+  // Port must only bind to loopback (Cloudflare Tunnel proxies it publicly — no direct internet exposure)
+  const blPorts = (bl.ports ?? []).map(String);
+  assert(blPorts.every((p) => p.startsWith("127.0.0.1:")), `${composePath}: browserless ports must bind to 127.0.0.1`);
+
+  // Persistent user-data-dir volume for login state survival
+  const blVolumes = (bl.volumes ?? []).map(String);
+  assert(blVolumes.some((v) => v.includes("browserless")), `${composePath}: browserless must mount a named volume for persistent user-data-dir`);
+
+  pass(`${composePath}: browserless service checks completed`);
 }
 
 function validateGithubPrBridge() {
@@ -498,6 +541,7 @@ validateTrelloPipelineDir();
 validateCaddyfile();
 validateDockerfile();
 validateExampleConfig();
+validateBrowserlessCompose();
 validateGithubPrBridge();
 optionalToolChecks();
 
