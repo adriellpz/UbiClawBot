@@ -2095,6 +2095,7 @@ function render() {
           ${tag ? `<div class="card-cover" ${coverStyle}></div>` : ''}
           <div class="card-title">${esc(t.title)}</div>
           <div class="card-meta">
+            ${t.isBlocked ? '<span class="tag tag-blocked">Blocked</span>' : ''}
             ${t.priority ? `<span class="tag tag-priority tag-priority-${esc(t.priority)}">P${esc(t.priority)}</span>` : ''}
             ${t.due ? `<span class="tag tag-due${isOverdue(t.due) ? ' overdue' : ''}">
               ${isOverdue(t.due) ? '! ' : ''}${esc(fmtDue(t.due))}</span>` : ''}
