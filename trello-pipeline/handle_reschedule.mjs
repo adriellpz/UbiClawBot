@@ -14,18 +14,11 @@ import {
   upsertCalendarBlock,
 } from "./trello_card_calendar_desc.mjs";
 
+import { evTime } from "./time-utils.mjs";
+
 const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID || "adriellpz@gmail.com";
 const GOG_ACCOUNT = process.env.GOG_ACCOUNT || "ubitheai@gmail.com";
 const DEFAULT_BLOCK_MINUTES = 30;
-const SEARCH_DEADLINE_DAYS = 14;
-const EVENING_CUTOFF_HOUR = 20;
-const MORNING_START_HOUR = 8;
-const WORK_START_HOUR = 7;
-const WORK_END_HOUR = 16;
-const MOUNTAIN_OFFSET = -6;
-const MIN_TASK_GAP_MINUTES = 60;
-const LUNCH_START_HOUR = 12;
-const LUNCH_END_HOUR = 13;
 
 function argVal(flag) {
   const index = process.argv.indexOf(flag);
@@ -161,10 +154,6 @@ function startOfDay(date) {
   const value = new Date(date);
   value.setHours(0, 0, 0, 0);
   return value;
-}
-
-function evTime(event, field) {
-  return new Date(event[field]?.dateTime || event[field]?.date || 0).getTime();
 }
 
 async function main() {

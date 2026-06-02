@@ -1,16 +1,16 @@
-const SEARCH_DEADLINE_DAYS = 14;
-const EVENING_CUTOFF_HOUR = 20;
-const MORNING_START_HOUR = 8;
-const WORK_START_HOUR = 7;
-const WORK_END_HOUR = 16;
-const MOUNTAIN_OFFSET = -6;
-const MIN_TASK_GAP_MINUTES = 60;
-const LUNCH_START_HOUR = 12;
-const LUNCH_END_HOUR = 13;
+import {
+  MOUNTAIN_OFFSET,
+  WORK_START_HOUR,
+  WORK_END_HOUR,
+  LUNCH_START_HOUR,
+  LUNCH_END_HOUR,
+  EVENING_CUTOFF_HOUR,
+  MORNING_START_HOUR,
+  MIN_TASK_GAP_MINUTES,
+  evTime,
+} from "./time-utils.mjs";
 
-function evTime(event, field) {
-  return new Date(event[field]?.dateTime || event[field]?.date || 0).getTime();
-}
+const SEARCH_DEADLINE_DAYS = 14;
 
 function toMountain(date) {
   const value = new Date(date);
@@ -214,6 +214,8 @@ export async function findFreeSlot(startTime, durationMin, existingEvents, exclu
     const personalOverlaps = overlapping.filter((event) => !isWorkEvent(event));
 
     if (isWorkHours(endMs)) {
+      // TODO(Candidate 2): dead code — gapMinutes() returns -1 for overlapping events,
+      // so personalOverlaps (actual overlaps only) will never satisfy gap >= 0.
       const tooClose = personalOverlaps.filter((event) => {
         const gap = gapMinutes(startMs, endMs, evTime(event, "start"), evTime(event, "end"));
         return gap >= 0 && gap < MIN_TASK_GAP_MINUTES;
