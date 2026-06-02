@@ -406,7 +406,9 @@
       "enabled": true,
       "load": {
         "extraDirs": [
-          "/home/node/.openclaw/workspace/hooks"
+          "/home/node/.openclaw/workspace/hooks",
+          "/home/node/.openclaw/agent-vault/ubi/hooks",
+          "/home/node/.openclaw/agent-vault/marcos/hooks"
         ]
       },
       "entries": {
@@ -421,6 +423,9 @@
         },
         "github-cli-config-link": {
           "enabled": true
+        },
+        "skill-read-tracker": {
+          "enabled": false
         }
       }
     },

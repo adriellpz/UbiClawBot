@@ -16,7 +16,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skills: ubi_trello_ops, ubi_calendar_scheduling.\n\nRead first:\n- /home/node/.openclaw/agent-runtime/ubi/scripts/USER.md (core goals)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-06-2026/calendar_priority_audit_2026-05-06.md (protected blocks + inversion rules)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-23-2026/morning_attention_sweep_spec.md (this job)\n\nMorning attention sweep \u2014 three outcomes:\n\n1) PRIORITY ATTENTION\n- Surface P1 (then P2) items Adriel should see today or tomorrow: Backlog, Reschedule, Scheduled without a sensible near-term calendar block, overdue Scheduled (gateway may have commented), Adriel Focus awaiting decision.\n- No full-board cleanup; only priority-relevant cards.\n\n2) CALENDAR vs PRIORITY (next 7 days) \u2014 TRELLO ONLY, NO CALENDAR EDITS\n- You may READ Google Calendar (gog) and Trello (gateway) to detect inversion: flexible P3 work blocks on near-term days while P1 work lacks a good block this week.\n- Priority from card titles (P1/P2/P3) on Trello-linked events.\n- Do not create, update, move, or delete Google Calendar events in this job. Never duplicate events.\n- Safe fix (only allowed action): use the Trello gateway to move cards to the Reschedule list in this order:\n  (a) All eligible flexible P3 work on Scheduled (or blocking near-term time) to Reschedule first.\n  (b) Then P1 work that needs a slot to Reschedule.\n- handle_reschedule.mjs (queue worker) places calendar slots deterministically (P3 about +5 days, P1 about +1 day). Do not invent manual times.\n\nNever move to Reschedule for rebalance (protected \u2014 calendar must stay):\n- Any card on the Routine list\n- Work block, shared/family calendar visibility, dog walk, sciatica, gym/Planet Fitness/swim, OT/accountability, Sunday reset, drive buffers, therapy, antacid, date/relationship time, or titles matching those routines\n- Adriel Focus (unless Adriel explicitly asked for that exact move)\n\nIf unsure whether a card is flexible work vs protected routine, leave it alone.\n\nOptional: one Trello comment on a summary/backlog card listing what you moved (Trello only; no Telegram for routine moves).\n\n3) GOALS\n- For each USER.md core goal, briefly: on track / stalled / no time this week. If stalled, name the smallest next Trello action (not a calendar edit).\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nFor calendar READS only (no writes):\nexport GOG_KEYRING_PASSWORD=\"$(cat /home/node/.openclaw/credentials/gog-keyring-password)\"\nexport PATH=\"/home/node/.openclaw/tools/gogcli:$PATH\"\n\nSafety: no applications submitted, external messages, spend, PII exposure, production/credential changes, Browserbase, or Adriel Focus moves unless Adriel explicitly asked.\n\nTelegram only if:\n(a) P1 work still has no viable path after you moved cards to Reschedule (handlers may still be running \u2014 note if queue may be behind),\n(b) a core goal is stalled with no week plan,\n(c) a real decision is needed, or\n(d) you could not use gateway/Trello safely.\n\nOtherwise reply exactly NO_REPLY.",
+        "message": "Use skills: ubi_trello_ops, ubi_calendar_scheduling.\n\nRead first:\n- /home/node/.openclaw/agent-runtime/ubi/scripts/USER.md (core goals)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-06-2026/calendar_priority_audit_2026-05-06.md (protected blocks + inversion rules)\n- /home/node/.openclaw/agent-runtime/ubi/scripts/Docs/Reports/05-23-2026/morning_attention_sweep_spec.md (this job)\n\nMorning attention sweep \u2014 four outcomes:\n\n1) PRIORITY ATTENTION\n- Surface P1 (then P2) items Adriel should see today or tomorrow: Backlog, Reschedule, Scheduled without a sensible near-term calendar block, overdue Scheduled (gateway may have commented), Adriel Focus awaiting decision.\n- No full-board cleanup; only priority-relevant cards.\n\n2) CALENDAR vs PRIORITY (next 7 days) \u2014 TRELLO ONLY, NO CALENDAR EDITS\n- You may READ Google Calendar (gog) and Trello (gateway) to detect inversion: flexible P3 work blocks on near-term days while P1 work lacks a good block this week.\n- Priority from card titles (P1/P2/P3) on Trello-linked events.\n- Do not create, update, move, or delete Google Calendar events in this job. Never duplicate events.\n- Safe fix (only allowed action): use the Trello gateway to move cards to the Reschedule list in this order:\n  (a) All eligible flexible P3 work on Scheduled (or blocking near-term time) to Reschedule first.\n  (b) Then P1 work that needs a slot to Reschedule.\n- handle_reschedule.mjs (queue worker) places calendar slots deterministically (P3 about +5 days, P1 about +1 day). Do not invent manual times.\n\nNever move to Reschedule for rebalance (protected \u2014 calendar must stay):\n- Any card on the Routine list\n- Work block, shared/family calendar visibility, dog walk, sciatica, gym/Planet Fitness/swim, OT/accountability, Sunday reset, drive buffers, therapy, antacid, date/relationship time, or titles matching those routines\n- Adriel Focus (unless Adriel explicitly asked for that exact move)\n\nIf unsure whether a card is flexible work vs protected routine, leave it alone.\n\nOptional: one Trello comment on a summary/backlog card listing what you moved (Trello only; no Telegram for routine moves).\n\n3) GOALS\n- For each USER.md core goal, briefly: on track / stalled / no time this week. If stalled, name the smallest next Trello action (not a calendar edit).\n\n4) CALENDAR CONFLICTS (next 7 days)\n- Using gog, scan the next 7 days for overlapping calendar events (any two events whose time ranges intersect on the same calendar).\n- Ignore all-day events and events marked as free/transparent.\n- If conflicts exist, list them in the Telegram message: date, time range, both event titles.\n- Do not move or edit any events \u2014 surface only.\n\nEnvironment (every exec):\nset -a; source /home/node/.openclaw/agent-runtime/ubi/scripts/trello_bridge/.env; set +a\nexport TRELLO_GATEWAY_URL TRELLO_GATEWAY_KEY\n\nFor calendar READS only (no writes):\nexport GOG_KEYRING_PASSWORD=\"$(cat /home/node/.openclaw/credentials/gog-keyring-password)\"\nexport PATH=\"/home/node/.openclaw/tools/gogcli:$PATH\"\n\nSafety: no applications submitted, external messages, spend, PII exposure, production/credential changes, Browserbase, or Adriel Focus moves unless Adriel explicitly asked.\n\nTelegram only if:\n(a) P1 work still has no viable path after you moved cards to Reschedule (handlers may still be running \u2014 note if queue may be behind),\n(b) a core goal is stalled with no week plan,\n(c) a real decision is needed,\n(d) you could not use gateway/Trello safely, or\n(e) calendar conflicts exist.\n\nOtherwise reply exactly NO_REPLY.",
         "timeoutSeconds": 900
       },
       "delivery": {
@@ -165,22 +165,22 @@
       "state": {}
     },
     {
-      "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
+      "id": "73d0d49e-aa75-417a-978c-1011985aa3cb",
       "agentId": "main",
-      "name": "Ubi weekly memory audit",
-      "description": "Monday 1:00 AM MT: audit ubi/MEMORY.md and session notes via ubi-memory-audit skill. NO_REPLY unless drift. No-op on 1st (monthly replaces).",
+      "name": "Ubi nightly memory audit",
+      "description": "Nightly 1:00 AM MT: light pass \u2014 trim stale/superseded MEMORY.md entries (especially same-day heartbeat self-apply). NO_REPLY unless drift.",
       "enabled": true,
-      "createdAtMs": 1780150000001,
+      "createdAtMs": 1780366524061,
       "schedule": {
         "kind": "cron",
-        "expr": "0 1 * * 1",
+        "expr": "0 1 * * 2-7",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: ubi-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
+        "message": "Use skill: ubi-memory-audit.\n\nNightly memory audit (light pass). Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "read",
@@ -204,22 +204,62 @@
       "state": {}
     },
     {
-      "id": "8b006421-8d43-49f3-a092-3c03baee10d3",
+      "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
       "agentId": "main",
-      "name": "Ubi monthly memory audit",
-      "description": "1st of month 1:00 AM MT: deep memory audit via ubi-memory-audit skill. Always Telegram summary.",
+      "name": "Ubi weekly memory audit",
+      "description": "Monday 1:00 AM MT: deep pass \u2014 archive aged MEMORY.md, review old session notes, reverse-scan wiki/ubi/ for promotable rules. Always Telegram summary.",
       "enabled": true,
-      "createdAtMs": 1780150000002,
+      "createdAtMs": 1780366524061,
       "schedule": {
         "kind": "cron",
-        "expr": "0 1 1 * *",
+        "expr": "0 1 * * 1",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: ubi-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Always send a brief Telegram summary.",
+        "message": "Use skill: ubi-memory-audit.\n\nWeekly memory audit (deep pass). Follow the skill weekly mode. Always send a brief Telegram summary.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "memory_search",
+          "memory_get",
+          "web_search"
+        ]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      },
+      "state": {}
+    },
+    {
+      "id": "fdaf7253-52a9-42bb-ba1d-6c0172b4c717",
+      "agentId": "marcos",
+      "name": "Marcos nightly memory audit",
+      "description": "Nightly 3:15 AM MT: light pass \u2014 trim stale/superseded MEMORY.md entries (especially same-day heartbeat self-apply). NO_REPLY unless drift.",
+      "enabled": true,
+      "createdAtMs": 1780366524061,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 3 * * 2-7",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: marcos-memory-audit.\n\nNightly memory audit (light pass). Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "read",
@@ -246,9 +286,9 @@
       "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
       "agentId": "marcos",
       "name": "Marcos weekly memory audit",
-      "description": "Monday 3:15 AM MT: audit marcos/MEMORY.md and session notes. NO_REPLY unless drift. No-op on 1st.",
+      "description": "Monday 3:15 AM MT: deep pass \u2014 archive aged MEMORY.md, review old session notes, reverse-scan wiki/marcos/ for promotable rules. Always Telegram summary.",
       "enabled": true,
-      "createdAtMs": 1780150000003,
+      "createdAtMs": 1780366524061,
       "schedule": {
         "kind": "cron",
         "expr": "15 3 * * 1",
@@ -258,14 +298,15 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: marcos-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
+        "message": "Use skill: marcos-memory-audit.\n\nWeekly memory audit (deep pass). Follow the skill weekly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "read",
           "write",
           "edit",
           "memory_search",
-          "memory_get"
+          "memory_get",
+          "web_search"
         ]
       },
       "delivery": {
@@ -282,22 +323,100 @@
       "state": {}
     },
     {
-      "id": "8966be3c-f3a6-4309-b006-a110d2443a33",
-      "agentId": "marcos",
-      "name": "Marcos monthly memory audit",
-      "description": "1st of month 3:15 AM MT: deep memory audit via marcos-memory-audit skill. Always Telegram summary.",
+      "id": "d247ecba-aebd-43ba-921e-52ea0a0921a9",
+      "agentId": "main",
+      "name": "Ubi daily skill generation",
+      "description": "Daily 2:00 AM MT: review recent wiki/ubi/ pages for repeatable procedures; generate at most one auto skill per day using openclaw-skill-authoring. Cap: 10 auto skills; 3-day immunity on new skills.",
       "enabled": true,
-      "createdAtMs": 1780150000004,
+      "createdAtMs": 1780366550811,
       "schedule": {
         "kind": "cron",
-        "expr": "15 3 1 * *",
+        "expr": "0 2 * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: marcos-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Always send a brief Telegram summary.",
+        "message": "Daily skill generation pass for Ubi.\n\n1. Scan wiki/ubi/ for pages produced in the last 7 days.\n2. Evaluate: does any page contain a repeatable multi-step procedure not already covered by an existing skill in ubi/skills/?\n3. If no candidate \u2192 reply exactly NO_REPLY.\n4. If a candidate exists:\n   a. Count SKILL.md files with `origin: auto` frontmatter under /home/node/.openclaw/agent-vault/ubi/skills/.\n   b. If count < 10 \u2192 use skill: openclaw-skill-authoring to generate the skill; write it to /home/node/.openclaw/agent-vault/ubi/skills/{skill-name}/SKILL.md with origin:auto, generated:YYYY-MM-DD, read_count:0, last_read:null frontmatter.\n   c. If count = 10 \u2192 find the auto skill with the lowest read_count where today - generated > 3 days \u2192 delete it, then generate the replacement. If all 10 are within the 3-day immunity window \u2192 reply exactly NO_REPLY.\n5. When a skill is created or replaced: send one-line Telegram notification to Adriel.\n\nNever generate more than one skill per run. Never create skills for procedures already covered by an existing skill.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "exec",
+          "memory_search"
+        ]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      },
+      "state": {}
+    },
+    {
+      "id": "a233b274-8a10-4785-9231-0f078c133fee",
+      "agentId": "marcos",
+      "name": "Marcos daily skill generation",
+      "description": "Daily 4:00 AM MT: review recent wiki/marcos/ pages for repeatable procedures; generate at most one auto skill per day using openclaw-skill-authoring. Cap: 10 auto skills; 3-day immunity on new skills.",
+      "enabled": true,
+      "createdAtMs": 1780366550811,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 4 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Daily skill generation pass for Marcos.\n\n1. Scan wiki/marcos/ for pages produced in the last 7 days.\n2. Evaluate: does any page contain a repeatable multi-step procedure not already covered by an existing skill in marcos/skills/?\n3. If no candidate \u2192 reply exactly NO_REPLY.\n4. If a candidate exists:\n   a. Count SKILL.md files with `origin: auto` frontmatter under /home/node/.openclaw/agent-vault/marcos/skills/.\n   b. If count < 10 \u2192 use skill: openclaw-skill-authoring to generate the skill; write it to /home/node/.openclaw/agent-vault/marcos/skills/{skill-name}/SKILL.md with origin:auto, generated:YYYY-MM-DD, read_count:0, last_read:null frontmatter.\n   c. If count = 10 \u2192 find the auto skill with the lowest read_count where today - generated > 3 days \u2192 delete it, then generate the replacement. If all 10 are within the 3-day immunity window \u2192 reply exactly NO_REPLY.\n5. When a skill is created or replaced: send one-line Telegram notification to Adriel.\n\nNever generate more than one skill per run. Never create skills for procedures already covered by an existing skill.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "read",
+          "write",
+          "edit",
+          "exec",
+          "memory_search"
+        ]
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "telegram:8045915111"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      },
+      "state": {}
+    },
+    {
+      "id": "e01c1f46-4e0c-4f41-b157-c216688fb39c",
+      "agentId": "scheduler",
+      "name": "Cheryl nightly memory audit",
+      "description": "Nightly 5:15 AM MT (Tue-Sun): light pass \u2014 trim stale MEMORY.md entries. NO_REPLY unless drift.",
+      "enabled": true,
+      "createdAtMs": 1780366845166,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 5 * * 2-7",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Use skill: cheryl-memory-audit.\n\nNightly memory audit (light pass). Do not run wiki ingest or wiki lint. Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "read",
@@ -324,9 +443,9 @@
       "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
       "agentId": "scheduler",
       "name": "Cheryl weekly memory audit",
-      "description": "Monday 5:15 AM MT: audit cheryl/MEMORY.md and session notes only (not wiki maintainer). NO_REPLY unless drift. No-op on 1st.",
+      "description": "Monday 5:15 AM MT: deep pass \u2014 archive aged MEMORY.md, review old session notes, reverse-scan wiki/cheryl/. Always Telegram summary.",
       "enabled": true,
-      "createdAtMs": 1780150000005,
+      "createdAtMs": 1780366845166,
       "schedule": {
         "kind": "cron",
         "expr": "15 5 * * 1",
@@ -336,46 +455,7 @@
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: cheryl-memory-audit.\n\nWeekly memory audit. If today is the 1st of the month, reply exactly NO_REPLY.\n\nFollow the skill weekly mode. Do not run wiki ingest or wiki lint. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
-        "timeoutSeconds": 1200,
-        "toolsAllow": [
-          "read",
-          "write",
-          "edit",
-          "memory_search",
-          "memory_get"
-        ]
-      },
-      "delivery": {
-        "mode": "announce",
-        "channel": "telegram",
-        "to": "telegram:8045915111"
-      },
-      "failureAlert": {
-        "after": 2,
-        "channel": "telegram",
-        "to": "8045915111",
-        "cooldownMs": 3600000
-      },
-      "state": {}
-    },
-    {
-      "id": "3ad7dd5f-f6b8-4359-9aa4-c27b0c773709",
-      "agentId": "scheduler",
-      "name": "Cheryl monthly memory audit",
-      "description": "1st of month 5:15 AM MT: deep memory audit via cheryl-memory-audit skill. Always Telegram summary.",
-      "enabled": true,
-      "createdAtMs": 1780150000006,
-      "schedule": {
-        "kind": "cron",
-        "expr": "15 5 1 * *",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Use skill: cheryl-memory-audit.\n\nMonthly memory audit. Follow the skill monthly mode. Do not run wiki ingest or wiki lint. Always send a brief Telegram summary.",
+        "message": "Use skill: cheryl-memory-audit.\n\nWeekly memory audit (deep pass). Do not run wiki ingest or wiki lint. Follow the skill weekly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "read",
