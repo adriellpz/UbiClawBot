@@ -82,7 +82,7 @@ function mergeCron(livePath, templatePath, outPath) {
   writeFileSync(outPath, `${JSON.stringify({ ...template, jobs }, null, 2)}\n`);
 }
 
-export { mergeCron, deepMerge };
+export { mergeCron, deepMerge, SECRET_PATHS };
 
 function main() {
   if (!existsSync(LIVE_DIR)) {

@@ -21,7 +21,7 @@ if (mode === "openclaw") {
   }
   if (data.browser?.profiles?.hitl?.cdpUrl) {
     // Preserve the public hostname, redact only the token value.
-    data.browser.profiles.hitl.cdpUrl = data.browser.profiles.hitl.cdpUrl.replace(/token=[^&]+/, "token=REPLACE_ME_BROWSERLESS_TOKEN");
+    data.browser.profiles.hitl.cdpUrl = data.browser.profiles.hitl.cdpUrl.replace(/\btoken=[^&#\s]+/, "token=REPLACE_ME_BROWSERLESS_TOKEN");
   }
   if (Array.isArray(data.commands?.ownerAllowFrom)) {
     data.commands.ownerAllowFrom = ["telegram:REPLACE_ME_TELEGRAM_USER_ID"];
