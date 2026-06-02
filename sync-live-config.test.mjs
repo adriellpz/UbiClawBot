@@ -52,11 +52,11 @@ test("mergeCron drops live-only jobs not in config/live template", async () => {
   assert.equal(merged.jobs[0].state.lastRunStatus, "ok");
 });
 
-test("sanitize-live-config redacts hitl cdpUrl token placeholder", () => {
+test("sanitize-live-config redacts hitl cdpUrl token but preserves public hostname", () => {
   const input = JSON.stringify({
     browser: {
       profiles: {
-        hitl: { cdpUrl: "ws://localhost:3000?token=super-secret-token", color: "#F97316" },
+        hitl: { cdpUrl: "wss://browser-2ca0d4.sonofwolf.org?token=super-secret-token", color: "#F97316" },
       },
     },
     gateway: { auth: { token: "real-gateway-token" } },
@@ -69,8 +69,8 @@ test("sanitize-live-config redacts hitl cdpUrl token placeholder", () => {
   const out = JSON.parse(result.stdout);
   assert.equal(
     out.browser.profiles.hitl.cdpUrl,
-    "ws://localhost:3000?token=REPLACE_ME_BROWSERLESS_TOKEN",
-    "hitl cdpUrl token should be redacted",
+    "wss://browser-2ca0d4.sonofwolf.org?token=REPLACE_ME_BROWSERLESS_TOKEN",
+    "hitl cdpUrl should preserve hostname but redact token",
   );
   assert.equal(out.gateway.auth.token, "REPLACE_ME_LONG_HEX_GATEWAY_TOKEN");
   assert.equal(out.hooks.token, "REPLACE_ME_HOOKS_SHARED_SECRET");

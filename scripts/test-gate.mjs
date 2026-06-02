@@ -405,7 +405,7 @@ function validateCaddyfile() {
     if (depth < 0) fail(`${caddyPath}: closing brace appears before an opening brace`);
   }
   assert(depth === 0, `${caddyPath}: braces should be balanced`);
-  for (const expected of ["board.sonofwolf.org", "not path /manifest.json /sw.js /icon.svg", "basic_auth @protected", "{env.BOARD_BASICAUTH_HASH}", "ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:3334", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
+  for (const expected of ["board.sonofwolf.org", "not path /manifest.json /sw.js /icon.svg", "basic_auth @protected", "{env.BOARD_BASICAUTH_HASH}", "ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:3334", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1", "reverse_proxy 127.0.0.1:3000"]) {
     assert(source.includes(expected), `${caddyPath}: expected ${expected}`);
   }
   pass(`${caddyPath}: static Caddyfile checks completed`);
@@ -446,14 +446,14 @@ function validateExampleConfig() {
     "config/openclaw.example.json: hitl cdpUrl must contain REPLACE_ME_BROWSERLESS_TOKEN placeholder",
   );
   assert(
-    config.browser?.profiles?.hitl?.cdpUrl?.startsWith("ws://localhost:3000"),
-    "config/openclaw.example.json: hitl cdpUrl must point at local Browserless (ws://localhost:3000)",
+    config.browser?.profiles?.hitl?.cdpUrl?.startsWith("wss://REPLACE_ME_BROWSERLESS_HOST"),
+    "config/openclaw.example.json: hitl cdpUrl must use wss://REPLACE_ME_BROWSERLESS_HOST placeholder",
   );
 
-  // SSRF policy: allow local Browserless, not Browserbase
+  // SSRF policy: allow Browserless public host placeholder, not Browserbase
   const allowedHostnames = config.browser?.ssrfPolicy?.allowedHostnames ?? [];
   assert(!allowedHostnames.includes("connect.browserbase.com"), "config/openclaw.example.json: ssrfPolicy must not allow connect.browserbase.com");
-  assert(allowedHostnames.includes("localhost"), "config/openclaw.example.json: ssrfPolicy must allow localhost for Browserless");
+  assert(allowedHostnames.includes("REPLACE_ME_BROWSERLESS_HOST"), "config/openclaw.example.json: ssrfPolicy must include REPLACE_ME_BROWSERLESS_HOST placeholder");
 
   pass("config/openclaw.example.json: template safety checks completed");
 }

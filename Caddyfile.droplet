@@ -10,6 +10,21 @@ board.sonofwolf.org {
 	reverse_proxy 127.0.0.1:3334
 }
 
+browser-2ca0d4.sonofwolf.org {
+	@websockets {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	handle @websockets {
+		reverse_proxy 127.0.0.1:3000 {
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}
+
 ai.sonofwolf.org {
 	handle_path /gmail-pubsub* {
 		reverse_proxy 127.0.0.1:8788
