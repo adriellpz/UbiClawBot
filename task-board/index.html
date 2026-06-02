@@ -337,6 +337,38 @@ header {
 .col-Done .card        { border-left-color: #28283a; opacity: 0.55; }
 .col-AdrielFocus .card { border-left-color: #604090; }
 
+/* blocked cards (any column) */
+.card[data-blocked]    { border-left-color: #8c3030; }
+
+.tag-blocked { background: rgba(140,48,48,0.14); color: #c06060; border-color: rgba(140,48,48,0.3); }
+
+/* ── Links panel ─────────────────────────────────────────────────────────── */
+
+.links-group { margin-bottom: 10px; }
+.links-group:last-child { margin-bottom: 0; }
+.links-group-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 5px;
+}
+.links-items { display: flex; flex-wrap: wrap; gap: 4px; }
+.link-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 2px;
+  padding: 4px 9px;
+  font-size: 10px;
+  font-family: var(--font);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  letter-spacing: 0.2px;
+}
+.link-item:hover { background: rgba(232,160,32,0.08); border-color: rgba(232,160,32,0.2); color: var(--amber); }
+
 /* ── Modal ──────────────────────────────────────────────────────────────── */
 
 .overlay {
@@ -1681,6 +1713,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
           <div class="detail-created" id="d-created">—</div>
         </div>
       </div>
+      <div id="d-links-section" style="display:none">
+        <div class="detail-separator"></div>
+        <div class="detail-body-label" style="margin-bottom:8px">Links</div>
+        <div id="d-links-content"></div>
+      </div>
       <div class="detail-separator" id="d-sep-notes"></div>
       <div id="d-notes-section">
         <div class="section-header">
@@ -1983,10 +2020,12 @@ function render() {
         <div class="card"
           draggable="true"
           data-file="${esc(t.filename)}"
+          ${t.isBlocked ? 'data-blocked' : ''}
           style="animation-delay:${i * 28}ms">
           ${tag ? `<div class="card-cover" ${coverStyle}></div>` : ''}
           <div class="card-title">${esc(t.title)}</div>
           <div class="card-meta">
+            ${t.isBlocked ? '<span class="tag tag-blocked">blocked</span>' : ''}
             ${t.priority ? `<span class="tag tag-priority tag-priority-${esc(t.priority)}">P${esc(t.priority)}</span>` : ''}
             ${t.due ? `<span class="tag tag-due${isOverdue(t.due) ? ' overdue' : ''}">
               ${isOverdue(t.due) ? '! ' : ''}${esc(fmtDue(t.due))}</span>` : ''}
@@ -2583,6 +2622,7 @@ async function openDetail(filename) {
 
   renderComments(parseComments(commentsRaw))
   renderHistory(parseHistory(historyRaw))
+  renderLinks(task)
 
   unfocusSection()
   clearTimeout(autoSaveTimer)
@@ -2598,6 +2638,46 @@ async function openDetail(filename) {
   document.getElementById('detail-overlay').classList.add('open')
   setTimeout(() => document.getElementById('d-title').focus(), 30)
   bar(`${filename}`)
+}
+
+function parseLinksForDisplay(val) {
+  const items = Array.isArray(val) ? val : [val]
+  return items
+    .map(s => {
+      if (typeof s !== 'string') return null
+      const inner = s.replace(/^\[\[/, '').replace(/\]\]$/, '')
+      const pipeIdx = inner.indexOf('|')
+      if (pipeIdx === -1) return { filename: inner, title: inner }
+      return { filename: inner.slice(0, pipeIdx), title: inner.slice(pipeIdx + 1) }
+    })
+    .filter(Boolean)
+}
+
+function renderLinks(task) {
+  const section = document.getElementById('d-links-section')
+  const content = document.getElementById('d-links-content')
+  const GROUPS = [
+    { key: 'blocked-by', label: 'Blocked by' },
+    { key: 'blocks',     label: 'Blocks' },
+    { key: 'parent',     label: 'Parent' },
+    { key: 'children',   label: 'Children' },
+    { key: 'related',    label: 'Related' },
+  ]
+  let html = ''
+  for (const { key, label } of GROUPS) {
+    const val = task[key]
+    if (!val) continue
+    const links = parseLinksForDisplay(val)
+    if (!links.length) continue
+    html += `<div class="links-group">
+      <div class="links-group-label">${esc(label)}</div>
+      <div class="links-items">${links.map(l =>
+        `<button class="link-item" onclick="openDetail(${JSON.stringify(l.filename + '.md')})">${esc(l.title)}</button>`
+      ).join('')}</div>
+    </div>`
+  }
+  content.innerHTML = html
+  section.style.display = html ? '' : 'none'
 }
 
 function closeDetail() {
