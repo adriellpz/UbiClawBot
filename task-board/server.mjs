@@ -8,6 +8,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomBytes } from 'node:crypto'
 import webpush from 'web-push'
+import { parseLinkList, formatWikilink, formatLinkList, checkCascadeRules } from './link-utils.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TASKS_DIR = process.env.TASKS_DIR || path.resolve(__dirname, '../../agent-workspace-vault/tasks')
@@ -117,22 +118,52 @@ function parseFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
   if (!match) return { fm: {}, body: content }
   const fm = {}
+  let currentListKey = null
   for (const line of match[1].split(/\r?\n/)) {
+    const listItem = line.match(/^\s+-\s(.*)$/)
+    if (listItem) {
+      if (currentListKey) {
+        if (!Array.isArray(fm[currentListKey])) fm[currentListKey] = []
+        fm[currentListKey].push(listItem[1])
+        continue
+      }
+    }
     const i = line.indexOf(':')
-    if (i === -1) continue
+    if (i === -1) { currentListKey = null; continue }
     const key = line.slice(0, i).trim()
     const val = line.slice(i + 1).trim()
-    if (key) fm[key] = val
+    if (!key) { currentListKey = null; continue }
+    if (val === '') {
+      currentListKey = key
+      if (!fm[key]) fm[key] = []
+    } else {
+      currentListKey = null
+      fm[key] = val
+    }
   }
   // migrate legacy tags:[] array to tag:string
   if (!fm.tag && fm.tags) {
-    try { const a = JSON.parse(fm.tags); fm.tag = Array.isArray(a) && a.length ? a[0] : '' } catch { fm.tag = '' }
+    if (Array.isArray(fm.tags)) {
+      fm.tag = fm.tags.length ? fm.tags[0] : ''
+    } else {
+      try { const a = JSON.parse(fm.tags); fm.tag = Array.isArray(a) && a.length ? a[0] : '' } catch { fm.tag = '' }
+    }
   }
   return { fm, body: match[2] }
 }
 
 function serializeFile(fm, body) {
-  const lines = Object.entries(fm).map(([k, v]) => `${k}: ${v}`)
+  const lines = []
+  for (const [k, v] of Object.entries(fm)) {
+    if (v == null) continue
+    if (Array.isArray(v)) {
+      if (v.length === 0) continue
+      lines.push(`${k}:`)
+      for (const item of v) lines.push(`  - ${item}`)
+    } else {
+      lines.push(`${k}: ${v}`)
+    }
+  }
   return `---\n${lines.join('\n')}\n---\n${body}`
 }
 
@@ -293,14 +324,21 @@ function watchTasks() {
 
 // ── Task CRUD ────────────────────────────────────────────────────────────────
 
+const LINK_KEYS = ['blocks', 'blocked-by', 'parent', 'children', 'related']
+
+// Resolves a wikilink stem to a full .md filename for lookups
+function stemToFilename(stem) {
+  return stem.endsWith('.md') ? stem : stem + '.md'
+}
+
 function readTasks() {
-  return fs.readdirSync(TASKS_DIR)
+  const rawTasks = fs.readdirSync(TASKS_DIR)
     .filter(f => f.endsWith('.md'))
     .map(filename => {
       try {
         const content = fs.readFileSync(path.join(TASKS_DIR, filename), 'utf8')
         const { fm, body } = parseFrontmatter(content)
-        return {
+        const task = {
           filename,
           id: fm.id || '',
           title: fm.title || filename,
@@ -314,9 +352,23 @@ function readTasks() {
           priority: fm.priority || '',
           body,
         }
+        for (const k of LINK_KEYS) task[k] = fm[k] || null
+        return task
       } catch { return null }
     })
     .filter(Boolean)
+
+  const byFilename = new Map(rawTasks.map(t => [t.filename, t]))
+
+  for (const task of rawTasks) {
+    const blockedByLinks = parseLinkList(task['blocked-by'])
+    task.isBlocked = blockedByLinks.some(link => {
+      const blocker = byFilename.get(stemToFilename(link.filename))
+      return blocker != null && blocker.status !== 'Done'
+    })
+  }
+
+  return rawTasks
 }
 
 function getTask(filename) {
@@ -324,7 +376,7 @@ function getTask(filename) {
   if (!filepath) throw Object.assign(new Error('forbidden'), { status: 403 })
   const content = fs.readFileSync(filepath, 'utf8')
   const { fm, body } = parseFrontmatter(content)
-  return {
+  const task = {
     filename,
     id: fm.id || '',
     title: fm.title || filename,
@@ -338,6 +390,19 @@ function getTask(filename) {
     priority: fm.priority || '',
     body,
   }
+  for (const k of LINK_KEYS) task[k] = fm[k] || null
+
+  const blockedByLinks = parseLinkList(task['blocked-by'])
+  task.isBlocked = blockedByLinks.some(link => {
+    const blockerPath = safeTaskPath(stemToFilename(link.filename))
+    if (!blockerPath) return false
+    try {
+      const { fm: bFm } = parseFrontmatter(fs.readFileSync(blockerPath, 'utf8'))
+      return (bFm.status || 'Backlog') !== 'Done'
+    } catch { return false }
+  })
+
+  return task
 }
 
 function findTaskByCardId(cardId) {
@@ -372,12 +437,65 @@ function appendComment(filename, { text, author }) {
 
 const PATCH_ALLOWED = new Set(['title', 'status', 'due', 'agent', 'tag', 'time_needed', 'calendar_link', 'priority'])
 
+// Builds a cascade index from a task list: Map<filename, { status, children: [{filename, title}] }>
+// Children filenames are normalized to full .md filenames to match index keys.
+function buildCascadeIndex(tasks) {
+  return new Map(tasks.map(t => [
+    t.filename,
+    {
+      status: t.status,
+      children: parseLinkList(t['children']).map(l => ({
+        ...l,
+        filename: stemToFilename(l.filename),
+      })),
+    },
+  ]))
+}
+
+function autoAdvanceParent(childFilename, childFm) {
+  const parentLink = parseLinkList(childFm.parent)[0]
+  if (!parentLink) return
+  const parentFilename = stemToFilename(parentLink.filename)
+  const parentPath = safeTaskPath(parentFilename)
+  if (!parentPath) return
+  try {
+    const parentContent = fs.readFileSync(parentPath, 'utf8')
+    const { fm: parentFm } = parseFrontmatter(parentContent)
+    if ((parentFm.status || 'Backlog') === 'Done') return
+
+    const siblings = parseLinkList(parentFm.children)
+    const tasks = readTasks()
+    const byFilename = new Map(tasks.map(t => [t.filename, t]))
+
+    const allDone = siblings.every(s => {
+      const sibFilename = stemToFilename(s.filename)
+      if (sibFilename === childFilename) return true  // the one we just completed
+      const sib = byFilename.get(sibFilename)
+      return sib == null || sib.status === 'Done'  // absent = archived = done
+    })
+
+    if (allDone) patchTask(parentFilename, { status: 'Done' })
+  } catch (e) {
+    console.error('autoAdvanceParent failed:', e.message)
+  }
+}
+
 function patchTask(filename, fields) {
   const filepath = safeTaskPath(filename)
   if (!filepath) throw Object.assign(new Error('forbidden'), { status: 403 })
   const content = fs.readFileSync(filepath, 'utf8')
   const { fm, body: existingBody } = parseFrontmatter(content)
   const { body: newBody, ...fmFields } = fields
+
+  if (fmFields.status === 'Done') {
+    const tasks = readTasks()
+    const cascadeIndex = buildCascadeIndex(tasks)
+    const check = checkCascadeRules(filename, 'Done', cascadeIndex)
+    if (!check.ok) {
+      throw Object.assign(new Error(check.error), { status: 409, data: { blocking: check.blocking } })
+    }
+  }
+
   for (const [k, v] of Object.entries(fmFields)) {
     if (PATCH_ALLOWED.has(k)) fm[k] = v
   }
@@ -386,6 +504,8 @@ function patchTask(filename, fields) {
   const snap = captureSnapshot(filename)
   if (snap) taskSnapshots.set(filename, snap)
   setTimeout(() => ownWrites.delete(filename), 500)
+
+  if (fmFields.status === 'Done') autoAdvanceParent(filename, fm)
 }
 
 function genId() {
@@ -403,6 +523,111 @@ function createTask({ title, status = 'Backlog', due = '', agent = '', tag = '' 
   )
   fs.writeFileSync(path.join(TASKS_DIR, filename), content)
   return filename
+}
+
+// ── Link operations ───────────────────────────────────────────────────────────
+
+const LINK_TYPES = new Set(['blocks', 'parent', 'related'])
+
+function linkTask(filename, { type, targetFilename }) {
+  if (!LINK_TYPES.has(type)) throw Object.assign(new Error('invalid_type'), { status: 400 })
+
+  const srcPath = safeTaskPath(filename)
+  if (!srcPath) throw Object.assign(new Error('forbidden'), { status: 403 })
+
+  const tgtPath = safeTaskPath(targetFilename)
+  if (!tgtPath) throw Object.assign(new Error('forbidden'), { status: 403 })
+
+  const srcContent = fs.readFileSync(srcPath, 'utf8')
+  const { fm: srcFm, body: srcBody } = parseFrontmatter(srcContent)
+
+  const tgtContent = fs.readFileSync(tgtPath, 'utf8')
+  const { fm: tgtFm, body: tgtBody } = parseFrontmatter(tgtContent)
+
+  const srcStem = filename.replace(/\.md$/, '')
+  const tgtStem = targetFilename.replace(/\.md$/, '')
+  const srcTitle = srcFm.title || srcStem
+  const tgtTitle = tgtFm.title || tgtStem
+
+  if (type === 'parent') {
+    if (srcFm.parent) throw Object.assign(new Error('already_has_parent'), { status: 409 })
+    if ((tgtFm.status || 'Backlog') === 'Done') throw Object.assign(new Error('parent_done'), { status: 409 })
+
+    srcFm.parent = formatWikilink(tgtStem, tgtTitle)
+    const tgtChildren = parseLinkList(tgtFm.children)
+    tgtChildren.push({ filename: srcStem, title: srcTitle })
+    tgtFm.children = formatLinkList(tgtChildren)
+  } else if (type === 'blocks') {
+    const srcBlocks = parseLinkList(srcFm.blocks)
+    srcBlocks.push({ filename: tgtStem, title: tgtTitle })
+    srcFm.blocks = formatLinkList(srcBlocks)
+
+    const tgtBlockedBy = parseLinkList(tgtFm['blocked-by'])
+    tgtBlockedBy.push({ filename: srcStem, title: srcTitle })
+    tgtFm['blocked-by'] = formatLinkList(tgtBlockedBy)
+  } else if (type === 'related') {
+    const srcRelated = parseLinkList(srcFm.related)
+    srcRelated.push({ filename: tgtStem, title: tgtTitle })
+    srcFm.related = formatLinkList(srcRelated)
+
+    const tgtRelated = parseLinkList(tgtFm.related)
+    tgtRelated.push({ filename: srcStem, title: srcTitle })
+    tgtFm.related = formatLinkList(tgtRelated)
+  }
+
+  ownWrites.add(filename)
+  ownWrites.add(targetFilename)
+  fs.writeFileSync(srcPath, serializeFile(srcFm, srcBody))
+  fs.writeFileSync(tgtPath, serializeFile(tgtFm, tgtBody))
+  setTimeout(() => { ownWrites.delete(filename); ownWrites.delete(targetFilename) }, 500)
+}
+
+function unlinkTask(filename, { type, targetFilename }) {
+  if (!LINK_TYPES.has(type)) throw Object.assign(new Error('invalid_type'), { status: 400 })
+
+  const srcPath = safeTaskPath(filename)
+  if (!srcPath) throw Object.assign(new Error('forbidden'), { status: 403 })
+
+  const tgtPath = safeTaskPath(targetFilename)
+  if (!tgtPath) throw Object.assign(new Error('forbidden'), { status: 403 })
+
+  const srcContent = fs.readFileSync(srcPath, 'utf8')
+  const { fm: srcFm, body: srcBody } = parseFrontmatter(srcContent)
+
+  const tgtContent = fs.readFileSync(tgtPath, 'utf8')
+  const { fm: tgtFm, body: tgtBody } = parseFrontmatter(tgtContent)
+
+  const srcStem = filename.replace(/\.md$/, '')
+  const tgtStem = targetFilename.replace(/\.md$/, '')
+
+  if (type === 'parent') {
+    delete srcFm.parent
+    const remaining = parseLinkList(tgtFm.children).filter(l => l.filename !== srcStem)
+    if (remaining.length) tgtFm.children = formatLinkList(remaining)
+    else delete tgtFm.children
+  } else if (type === 'blocks') {
+    const srcBlocks = parseLinkList(srcFm.blocks).filter(l => l.filename !== tgtStem)
+    if (srcBlocks.length) srcFm.blocks = formatLinkList(srcBlocks)
+    else delete srcFm.blocks
+
+    const tgtBlockedBy = parseLinkList(tgtFm['blocked-by']).filter(l => l.filename !== srcStem)
+    if (tgtBlockedBy.length) tgtFm['blocked-by'] = formatLinkList(tgtBlockedBy)
+    else delete tgtFm['blocked-by']
+  } else if (type === 'related') {
+    const srcRelated = parseLinkList(srcFm.related).filter(l => l.filename !== tgtStem)
+    if (srcRelated.length) srcFm.related = formatLinkList(srcRelated)
+    else delete srcFm.related
+
+    const tgtRelated = parseLinkList(tgtFm.related).filter(l => l.filename !== srcStem)
+    if (tgtRelated.length) tgtFm.related = formatLinkList(tgtRelated)
+    else delete tgtFm.related
+  }
+
+  ownWrites.add(filename)
+  ownWrites.add(targetFilename)
+  fs.writeFileSync(srcPath, serializeFile(srcFm, srcBody))
+  fs.writeFileSync(tgtPath, serializeFile(tgtFm, tgtBody))
+  setTimeout(() => { ownWrites.delete(filename); ownWrites.delete(targetFilename) }, 500)
 }
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
@@ -523,6 +748,33 @@ http.createServer(async (req, res) => {
     }
   }
 
+  const linksRoute = url.pathname.match(/^\/api\/tasks\/(.+)\/links$/)
+  if (linksRoute) {
+    const filename = decodeURIComponent(linksRoute[1])
+    if (req.method === 'POST') {
+      try {
+        const data = await body(req)
+        linkTask(filename, data)
+        res.writeHead(200, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ ok: true }))
+      } catch (e) {
+        res.writeHead(e.status || 500, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ error: e.message, ...(e.data || {}) }))
+      }
+    }
+    if (req.method === 'DELETE') {
+      try {
+        const data = await body(req)
+        unlinkTask(filename, data)
+        res.writeHead(200, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ ok: true }))
+      } catch (e) {
+        res.writeHead(e.status || 500, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ error: e.message, ...(e.data || {}) }))
+      }
+    }
+  }
+
   const taskRoute = url.pathname.match(/^\/api\/tasks\/(.+)$/)
   if (taskRoute) {
     const filename = decodeURIComponent(taskRoute[1])
@@ -542,8 +794,8 @@ http.createServer(async (req, res) => {
         res.writeHead(200, { 'content-type': 'application/json' })
         return res.end(JSON.stringify({ ok: true }))
       } catch (e) {
-        res.writeHead(e.status || 500)
-        return res.end(e.message)
+        res.writeHead(e.status || 500, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ error: e.message, ...(e.data || {}) }))
       }
     }
     if (req.method === 'DELETE') {
@@ -595,8 +847,9 @@ http.createServer(async (req, res) => {
 
   res.writeHead(404)
   res.end('not found')
-}).listen(PORT, () => {
-  console.log(`Task board → http://localhost:${PORT}`)
+}).listen(PORT, function () {
+  const actualPort = this.address().port
+  console.log(`Task board → http://localhost:${actualPort}`)
   console.log(`Tasks dir  → ${TASKS_DIR}`)
   initSnapshots()
   watchTasks()
