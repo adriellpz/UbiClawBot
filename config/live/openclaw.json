@@ -426,7 +426,7 @@
           "enabled": true
         },
         "skill-read-tracker": {
-          "enabled": false
+          "enabled": true
         }
       }
     },
