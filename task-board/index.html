@@ -391,12 +391,31 @@ header {
   color: var(--text); padding: 5px 7px; outline: none; flex-shrink: 0;
 }
 .links-type-sel:focus { border-color: var(--amber-border); }
-.links-target-sel {
-  background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08);
+.links-target-wrap { position: relative; flex: 1; min-width: 0; }
+.links-target-search {
+  width: 100%; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 2px; font-size: 9.5px; font-family: var(--font);
-  color: var(--text); padding: 5px 7px; outline: none; flex: 1; min-width: 0;
+  color: var(--text); padding: 5px 7px; outline: none;
 }
-.links-target-sel:focus { border-color: var(--amber-border); }
+.links-target-search:focus { border-color: var(--amber-border); }
+.links-target-search::placeholder { color: var(--text-dim); }
+.links-suggestions {
+  position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 300;
+  background: #0e0e15; border: 1px solid rgba(232,160,32,0.2);
+  border-radius: 2px; max-height: 160px; overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  scrollbar-width: thin;
+}
+.links-suggestions::-webkit-scrollbar { width: 3px; }
+.links-suggestions::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); }
+.links-suggestion {
+  padding: 6px 9px; font-size: 10px; font-family: var(--font);
+  color: var(--text); cursor: pointer; transition: background 0.08s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.links-suggestion:hover, .links-suggestion.selected {
+  background: rgba(232,160,32,0.1); color: var(--amber-dim);
+}
 .btn-link-submit {
   background: rgba(232,160,32,0.08); border: 1px solid rgba(232,160,32,0.2);
   border-radius: 2px; color: var(--amber-dim); font-size: 9px; font-family: var(--font);
@@ -2742,10 +2761,10 @@ function renderLinks(task) {
           <option value="blocks">Blocks</option>
           <option value="related">Related</option>
         </select>
-        <select class="links-target-sel" id="d-link-target">
-          <option value="">— select task —</option>
-          ${otherTasks.map(t => `<option value="${esc(t.filename)}">${esc(t.title)}</option>`).join('')}
-        </select>
+        <div class="links-target-wrap">
+          <input class="links-target-search" id="d-link-search" type="text" placeholder="search tasks…" autocomplete="off">
+          <div class="links-suggestions" id="d-link-suggestions" style="display:none"></div>
+        </div>
         <button class="btn-link-submit" onclick="submitAddLink()">Link</button>
         <button class="btn-link-cancel" onclick="toggleAddLinkForm(false)" title="Cancel">✕</button>
       </div>
@@ -2754,6 +2773,35 @@ function renderLinks(task) {
 
   content.innerHTML = html
   section.style.display = ''
+  setupLinkSearch(otherTasks)
+}
+
+let _linkTarget = ''  // filename selected via search
+
+function setupLinkSearch(otherTasks) {
+  const input       = document.getElementById('d-link-search')
+  const suggestions = document.getElementById('d-link-suggestions')
+  if (!input || !suggestions) return
+  input.oninput = () => {
+    _linkTarget = ''
+    const q = input.value.trim().toLowerCase()
+    if (!q) { suggestions.style.display = 'none'; return }
+    const hits = otherTasks.filter(t => t.title.toLowerCase().includes(q)).slice(0, 8)
+    if (!hits.length) { suggestions.style.display = 'none'; return }
+    suggestions.innerHTML = hits.map(t =>
+      `<div class="links-suggestion" onmousedown="pickLinkTarget('${esc(t.filename)}','${esc(t.title)}')">${esc(t.title)}</div>`
+    ).join('')
+    suggestions.style.display = ''
+  }
+  input.onblur = () => setTimeout(() => { suggestions.style.display = 'none' }, 150)
+}
+
+function pickLinkTarget(filename, title) {
+  _linkTarget = filename
+  const input = document.getElementById('d-link-search')
+  if (input) input.value = title
+  const suggestions = document.getElementById('d-link-suggestions')
+  if (suggestions) suggestions.style.display = 'none'
 }
 
 function toggleAddLinkForm(show) {
@@ -2761,12 +2809,16 @@ function toggleAddLinkForm(show) {
   const toggle = document.getElementById('d-links-add-toggle')
   if (form)   form.style.display   = show ? '' : 'none'
   if (toggle) toggle.style.display = show ? 'none' : ''
-  if (show) document.getElementById('d-link-target')?.focus()
+  if (show) {
+    _linkTarget = ''
+    const search = document.getElementById('d-link-search')
+    if (search) { search.value = ''; search.focus() }
+  }
 }
 
 async function submitAddLink() {
   const type           = document.getElementById('d-link-type')?.value
-  const targetFilename = document.getElementById('d-link-target')?.value
+  const targetFilename = _linkTarget
   if (!targetFilename) { bar('select a task to link', 'err'); return }
   // "child" and "blocked-by" are expressed from the target's perspective
   let url, body
