@@ -20,7 +20,7 @@ const SECRET_PATHS = [
   ["gateway", "auth", "token"],
   ["hooks", "token"],
   ["hooks", "gmail", "pushToken"],
-  ["browser", "profiles", "browserbase", "cdpUrl"],
+  ["browser", "profiles", "hitl", "cdpUrl"],
 ];
 
 function getAt(obj, keys) {
@@ -82,7 +82,7 @@ function mergeCron(livePath, templatePath, outPath) {
   writeFileSync(outPath, `${JSON.stringify({ ...template, jobs }, null, 2)}\n`);
 }
 
-export { mergeCron, deepMerge };
+export { mergeCron, deepMerge, SECRET_PATHS };
 
 function main() {
   if (!existsSync(LIVE_DIR)) {

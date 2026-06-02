@@ -352,7 +352,7 @@
     "ssrfPolicy": {
       "allowedHostnames": [
         "host.docker.internal",
-        "localhost"
+        "chrome.sonofwolf.org"
       ],
       "dangerouslyAllowPrivateNetwork": false
     },
@@ -361,7 +361,7 @@
     "headless": true,
     "profiles": {
       "hitl": {
-        "cdpUrl": "ws://localhost:3000?token=REPLACE_ME_BROWSERLESS_TOKEN",
+        "cdpUrl": "wss://chrome.sonofwolf.org?token=REPLACE_ME_BROWSERLESS_TOKEN",
         "color": "#F97316"
       }
     }

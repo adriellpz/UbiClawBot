@@ -19,8 +19,9 @@ if (mode === "openclaw") {
       data.hooks.gmail.pushToken = "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN";
     }
   }
-  if (data.browser?.profiles?.hitl) {
-    data.browser.profiles.hitl.cdpUrl = "ws://localhost:3000?token=REPLACE_ME_BROWSERLESS_TOKEN";
+  if (data.browser?.profiles?.hitl?.cdpUrl) {
+    // Preserve the public hostname, redact only the token value.
+    data.browser.profiles.hitl.cdpUrl = data.browser.profiles.hitl.cdpUrl.replace(/\btoken=[^&#\s]+/, "token=REPLACE_ME_BROWSERLESS_TOKEN");
   }
   if (Array.isArray(data.commands?.ownerAllowFrom)) {
     data.commands.ownerAllowFrom = ["telegram:REPLACE_ME_TELEGRAM_USER_ID"];
