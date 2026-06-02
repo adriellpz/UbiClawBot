@@ -205,6 +205,9 @@ cp "${OPENCLAW_ROOT}/.deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.ym
 
 install_bridge_watchdog_cron
 
+mkdir -p "${OPENCLAW_ROOT}/hitl"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-hitl/hitl/"* "${OPENCLAW_ROOT}/hitl/"
+
 mkdir -p "${OPENCLAW_ROOT}/task-board"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-task-board/task-board/"* "${OPENCLAW_ROOT}/task-board/"
 if [ -f "${OPENCLAW_ROOT}/task-board/package.json" ]; then
@@ -238,13 +241,14 @@ smoke_required_file "scripts/monitor-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
 smoke_required_file "task-board/server.mjs"
+smoke_required_file "hitl/handoff.mjs"
 
 cd "${OPENCLAW_ROOT}"
 bash scripts/sync-live-config.sh
 
 cd "${OPENCLAW_ROOT}"
 docker compose build openclaw-gateway trello-gateway task-board
-docker compose up -d --force-recreate --remove-orphans openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines task-board
+docker compose up -d --force-recreate --remove-orphans openclaw-gateway openclaw-cli trello-bridge github-pr-bridge gmail-hook-bridge gog-canary-bridge trello-gateway trello-queue-worker trello-routines task-board browserless
 
 # Sync OPENCLAW_IMAGE version in .env to match the version baked into the image.
 OPENCLAW_IMAGE_TARGET="ghcr.io/openclaw/openclaw:2026.5.28"

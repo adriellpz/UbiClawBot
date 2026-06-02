@@ -20,3 +20,5 @@ All agents share one persistent `--user-data-dir` on the droplet so login state 
 - Session completion is detected by DOM polling first; if the expected condition doesn't resolve, Ubi sends a Telegram follow-up and waits for an "N done" reply.
 - Inline Telegram buttons (per-session "Mark done") are post-MVP — text replies are the fallback for now.
 - Per-session token rotation requires a thin auth proxy in front of Browserless; deferred until the static token posture becomes a concern.
+- The Cloudflare Tunnel is configured externally on the droplet via the `cloudflared` daemon — not in compose. The tunnel routes a private subdomain (`browser-<random>.domain.com`) to `localhost:3000`. This is intentional: the tunnel config holds credentials that don't belong in the repo.
+- The `ubi-dev-safety` guard ("do not use browser tools without explicit permission") must be removed manually from Ubi's agent vault (`ubi-dev-safety` policy file in the agent-vault). This repo change is the infrastructure half; the policy update is the runtime half. Until both are applied, Ubi will not auto-trigger HITL.

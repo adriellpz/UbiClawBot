@@ -345,6 +345,12 @@ services:
       trello-gateway:
         condition: service_healthy
 
+  # Self-hosted Browserless for HITL browser handoffs (replaces Browserbase).
+  # Port 3000 binds to loopback only. Public access is via a Cloudflare Tunnel
+  # configured externally on the droplet (cloudflared daemon, not in compose):
+  #   tunnel route dns <tunnel-id> browser-<random>.your-domain.com
+  #   ingress: { hostname: browser-<random>.your-domain.com, service: http://localhost:3000 }
+  # Set BROWSERLESS_TOKEN in .env — agents embed it in the CDP WebSocket URL.
   browserless:
     image: browserless/chrome:1-chrome-stable
     restart: unless-stopped
