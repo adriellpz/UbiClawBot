@@ -2264,6 +2264,45 @@ function attachListeners() {
   })
 }
 
+// ── Board pan (click-drag on empty space) ─────────────────────────────────
+
+;(function () {
+  const board = document.getElementById('board')
+  let panning = false, startX = 0, startScroll = 0
+
+  board.addEventListener('mousedown', e => {
+    // Only pan on left-button clicks on the board background or column body, not on interactive elements
+    if (e.button !== 0) return
+    if (e.target.closest('.card, button, input, select, a, [draggable="true"]')) return
+    panning = true
+    startX = e.clientX
+    startScroll = board.scrollLeft
+    board.style.cursor = 'grabbing'
+    board.style.userSelect = 'none'
+    e.preventDefault()
+  })
+
+  document.addEventListener('mousemove', e => {
+    if (!panning) return
+    board.scrollLeft = startScroll - (e.clientX - startX)
+  })
+
+  document.addEventListener('mouseup', () => {
+    if (!panning) return
+    panning = false
+    board.style.cursor = ''
+    board.style.userSelect = ''
+  })
+
+  // Cancel if mouse leaves the window
+  document.addEventListener('mouseleave', () => {
+    if (!panning) return
+    panning = false
+    board.style.cursor = ''
+    board.style.userSelect = ''
+  })
+})()
+
 // ── Load ──────────────────────────────────────────────────────────────────
 
 function renderStatusBar() {
