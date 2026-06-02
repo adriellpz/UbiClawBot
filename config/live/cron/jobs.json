@@ -185,6 +185,7 @@
         "message": "Use skill: ubi-memory-audit.\n\nNightly memory audit (light pass). Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
@@ -224,6 +225,7 @@
         "message": "Use skill: ubi-memory-audit.\n\nWeekly memory audit (deep pass). Follow the skill weekly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
@@ -264,6 +266,7 @@
         "message": "Use skill: marcos-memory-audit.\n\nNightly memory audit (light pass). Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
@@ -303,6 +306,7 @@
         "message": "Use skill: marcos-memory-audit.\n\nWeekly memory audit (deep pass). Follow the skill weekly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
@@ -421,6 +425,7 @@
         "message": "Use skill: cheryl-memory-audit.\n\nNightly memory audit (light pass). Do not run wiki ingest or wiki lint. Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
@@ -460,6 +465,7 @@
         "message": "Use skill: cheryl-memory-audit.\n\nWeekly memory audit (deep pass). Do not run wiki ingest or wiki lint. Follow the skill weekly mode. Always send a brief Telegram summary.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
+          "exec",
           "read",
           "write",
           "edit",
