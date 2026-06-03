@@ -24,7 +24,7 @@ Verified against `/root/openclaw/data/config/openclaw.json`:
 |-------------|--------------|------|-------|
 | `main` | `ubi/` | Ubi | `opencode-go/deepseek-v4-flash` |
 | `scheduler` | `cheryl/` | Cheryl (scheduling + **wiki curator** cron) | `opencode-go/deepseek-v4-flash` |
-| `marcos` | `marcos/` | Marcos | `opencode-go/deepseek-v4-pro` |
+| `marcos` | `marcos/` | Marcos | `openai/gpt-5.5` only (Codex OAuth, OpenClaw runtime for Telegram `message`; strict string model = no fallbacks) |
 
 **Defaults** in the same file set `primary: openai-codex/gpt-5.5` for agents without an explicit `model` override. All three production agents above **override** the default.
 
