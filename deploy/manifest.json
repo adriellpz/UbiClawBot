@@ -177,8 +177,7 @@
     "trello-gateway",
     "trello-queue-worker",
     "trello-routines",
-    "task-board",
-    "browserless"
+    "task-board"
   ],
   "smokeChecks": {
     "requiredFiles": [

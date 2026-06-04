@@ -405,7 +405,7 @@ function validateCaddyfile() {
     if (depth < 0) fail(`${caddyPath}: closing brace appears before an opening brace`);
   }
   assert(depth === 0, `${caddyPath}: braces should be balanced`);
-  for (const expected of ["board.sonofwolf.org", "not path /manifest.json /sw.js /icon.svg", "basic_auth @protected", "{env.BOARD_BASICAUTH_HASH}", "ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:3334", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1", "reverse_proxy 127.0.0.1:3000"]) {
+  for (const expected of ["board.sonofwolf.org", "not path /manifest.json /sw.js /icon.svg", "basic_auth @protected", "{env.BOARD_BASICAUTH_HASH}", "ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:3334", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
     assert(source.includes(expected), `${caddyPath}: expected ${expected}`);
   }
   pass(`${caddyPath}: static Caddyfile checks completed`);
@@ -438,50 +438,20 @@ function validateExampleConfig() {
   assert(config.gateway?.auth?.token === "REPLACE_ME_LONG_HEX_GATEWAY_TOKEN", "config/openclaw.example.json: gateway token must remain a placeholder");
   assert(config.gateway?.controlUi?.dangerouslyDisableDeviceAuth === false, "config/openclaw.example.json: device auth should not be disabled in the template");
 
-  // hitl profile replaces browserbase
-  assert(!config.browser?.profiles?.browserbase, "config/openclaw.example.json: browserbase profile must be removed (replaced by hitl)");
+  // hitl profile: local Chrome via SSH reverse tunnel (ws://172.18.0.1:9222 — Docker bridge gateway to host)
+  assert(!config.browser?.profiles?.browserbase, "config/openclaw.example.json: browserbase profile must be removed");
   assert(config.browser?.profiles?.hitl, "config/openclaw.example.json: hitl browser profile must be present");
   assert(
-    config.browser?.profiles?.hitl?.cdpUrl?.includes("REPLACE_ME_BROWSERLESS_TOKEN"),
-    "config/openclaw.example.json: hitl cdpUrl must contain REPLACE_ME_BROWSERLESS_TOKEN placeholder",
-  );
-  assert(
-    config.browser?.profiles?.hitl?.cdpUrl?.startsWith("wss://REPLACE_ME_BROWSERLESS_HOST"),
-    "config/openclaw.example.json: hitl cdpUrl must use wss://REPLACE_ME_BROWSERLESS_HOST placeholder",
+    config.browser?.profiles?.hitl?.cdpUrl === "ws://172.18.0.1:9222",
+    "config/openclaw.example.json: hitl cdpUrl must be ws://172.18.0.1:9222 (local Chrome via SSH tunnel)",
   );
 
-  // SSRF policy: allow Browserless public host placeholder, not Browserbase
+  // SSRF policy: allow Docker bridge IP for local Chrome tunnel, not Browserbase or Browserless hosts
   const allowedHostnames = config.browser?.ssrfPolicy?.allowedHostnames ?? [];
   assert(!allowedHostnames.includes("connect.browserbase.com"), "config/openclaw.example.json: ssrfPolicy must not allow connect.browserbase.com");
-  assert(allowedHostnames.includes("REPLACE_ME_BROWSERLESS_HOST"), "config/openclaw.example.json: ssrfPolicy must include REPLACE_ME_BROWSERLESS_HOST placeholder");
+  assert(allowedHostnames.includes("172.18.0.1"), "config/openclaw.example.json: ssrfPolicy must include 172.18.0.1 for local Chrome tunnel");
 
   pass("config/openclaw.example.json: template safety checks completed");
-}
-
-function validateBrowserlessCompose() {
-  const composePath = "workspace/docker-compose.droplet.yml";
-  const source = readText(composePath);
-  const compose = JSON.parse(JSON.stringify(parseYamlFile(composePath) ?? {}));
-  const services = compose.services ?? {};
-
-  assert(services["browserless"], `${composePath}: browserless service must be defined`);
-  const bl = services["browserless"] ?? {};
-  assert(bl.image?.startsWith("browserless/chrome"), `${composePath}: browserless should use browserless/chrome image`);
-  assert(bl.restart === "unless-stopped", `${composePath}: browserless should restart unless stopped`);
-
-  const blEnv = bl.environment ?? {};
-  assert(blEnv.TOKEN !== undefined, `${composePath}: browserless must accept a TOKEN for auth`);
-  assert(blEnv.MAX_CONCURRENT_SESSIONS !== undefined, `${composePath}: browserless must set MAX_CONCURRENT_SESSIONS`);
-
-  // Port must only bind to loopback (Cloudflare Tunnel proxies it publicly — no direct internet exposure)
-  const blPorts = (bl.ports ?? []).map(String);
-  assert(blPorts.every((p) => p.startsWith("127.0.0.1:")), `${composePath}: browserless ports must bind to 127.0.0.1`);
-
-  // Persistent user-data-dir volume for login state survival
-  const blVolumes = (bl.volumes ?? []).map(String);
-  assert(blVolumes.some((v) => v.includes("browserless")), `${composePath}: browserless must mount a named volume for persistent user-data-dir`);
-
-  pass(`${composePath}: browserless service checks completed`);
 }
 
 function validateGithubPrBridge() {
@@ -541,7 +511,6 @@ validateTrelloPipelineDir();
 validateCaddyfile();
 validateDockerfile();
 validateExampleConfig();
-validateBrowserlessCompose();
 validateGithubPrBridge();
 optionalToolChecks();
 
