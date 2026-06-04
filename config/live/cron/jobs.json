@@ -166,7 +166,7 @@
       "state": {}
     },
     {
-      "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
+      "id": "73d0d49e-aa75-417a-978c-1011985aa3cb",
       "agentId": "main",
       "name": "Ubi nightly memory audit",
       "description": "Nightly 1:00 AM MT: deep pass — trim MEMORY.md, archive aged entries, promote cross-agent facts, reverse-scan wiki/ubi/ for promotable rules. Always Telegram summary.",
@@ -207,7 +207,7 @@
       "state": {}
     },
     {
-      "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
+      "id": "fdaf7253-52a9-42bb-ba1d-6c0172b4c717",
       "agentId": "marcos",
       "name": "Marcos nightly memory audit",
       "description": "Nightly 3:15 AM MT: deep pass — trim MEMORY.md, archive aged entries, promote cross-agent facts, reverse-scan wiki/marcos/ for promotable rules. Always Telegram summary.",
@@ -326,7 +326,7 @@
       "state": {}
     },
     {
-      "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
+      "id": "e01c1f46-4e0c-4f41-b157-c216688fb39c",
       "agentId": "scheduler",
       "name": "Cheryl nightly memory audit",
       "description": "Nightly 5:15 AM MT: deep pass — trim MEMORY.md, archive aged entries, promote cross-agent facts, reverse-scan wiki/cheryl/ for promotable rules. Always Telegram summary.",
