@@ -404,6 +404,120 @@
         "cooldownMs": 3600000
       },
       "state": {}
+    },
+    {
+      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "agentId": "main",
+      "name": "Ubi nightly research",
+      "description": "Nightly 8:00 PM MT: grow wiki/ubi/ with one sourced page on a topic not yet covered.",
+      "enabled": true,
+      "createdAtMs": 1780800000000,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 20 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Nightly research pass for Ubi.\n\nGrow wiki/ubi/ with one sourced page on a topic not yet covered.\nDo not run Trello sweeps, calendar checks, or maintenance work.\n\n## Step 1 \u2014 Find a gap\n\nRead /home/node/.openclaw/agent-vault/wiki/ubi/ubi-index.md and scan page titles under wiki/ubi/. Find a topic not yet covered \u2014 an angle left open by an existing page, a concept mentioned but never written up, or a craft area (delegation, communication, decision-making, productivity) with a thin or missing page.\n\nRun: qmd search wiki/ubi/ \"{2-3 terms from your chosen topic}\" --limit 2\nRead the top results fully before proceeding. Don't repeat what's already there.\n\nIf the wiki has no meaningful gap today \u2192 reply NO_REPLY.\n\n## Step 2 \u2014 Research with sources\n\nEvery claim must be grounded in at least 3 external sources.\n\nCheck wiki/sources/ first \u2014 if a source on the same URL or topic already exists, reference it instead of fetching a new copy. Fetch each source via web_fetch or web_search. Save verbatim to wiki/sources/ubi-{YYYY-MM-DD}-{slug}.md.\n\nIf you cannot find 3 real external sources, narrow the topic or pick a different gap. Do not write unsourced pages.\n\n## Step 3 \u2014 Drop to raw-input\n\nDrop the page as ubi-{YYYY-MM-DD}-{slug}.md with frontmatter:\n\n  destination: wiki/ubi/\n  type: personal\n  sources:\n    - wiki/sources/ubi-{YYYY-MM-DD}-{slug}.md\n\nCite sources inline in the body. Keep under 800 words. Do not write directly to wiki/.\n\n## Step 4 \u2014 Self-apply\n\nDoes the research contain a rule or principle that should change how you operate? If yes, distil it to one or two lines and append to MEMORY.md. Skip silently if nothing operational emerged.\n\nReply NO_REPLY if no page was produced.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "read",
+          "write",
+          "web_search",
+          "web_fetch",
+          "exec"
+        ]
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "last"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      },
+      "state": {}
+    },
+    {
+      "id": "c2b3d4e5-f6a7-8901-bcde-f12345678901",
+      "agentId": "marcos",
+      "name": "Marcos nightly research",
+      "description": "Nightly 9:00 PM MT: grow wiki/marcos/ with one sourced page on a dev/security/architecture topic not yet covered.",
+      "enabled": true,
+      "createdAtMs": 1780800000001,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 21 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "model": "opencode-go/deepseek-v4-flash",
+        "message": "Nightly research pass for Marcos.\n\nGrow wiki/marcos/ with one sourced page on a dev, security, or architecture topic not yet covered. Do not run repo checks, dependency scans, or duplicate the 2:30 AM maintenance pass.\n\n## Step 1 \u2014 Find a gap\n\nRead /home/node/.openclaw/agent-vault/wiki/marcos/marcos-index.md and scan page titles under wiki/marcos/. Find a gap \u2014 a design pattern, architectural concept, security topic, or tooling area not yet covered or only thinly treated.\n\nRun: qmd search wiki/marcos/ \"{2-3 terms from your chosen topic}\" --limit 2\nRead the top results fully before proceeding.\n\nIf the wiki has no meaningful gap today \u2192 reply NO_REPLY.\n\n## Step 2 \u2014 Research with sources\n\nEvery claim must be grounded in at least 2 external sources.\n\nCheck wiki/sources/ first for existing source files on the same topic. Fetch each source via web_fetch or web_search. Save verbatim to wiki/sources/marcos-{YYYY-MM-DD}-{slug}.md.\n\nIf you cannot find 2 real external sources, narrow or pick a different gap.\n\n## Step 3 \u2014 Drop to raw-input\n\nDrop the page as marcos-{YYYY-MM-DD}-{slug}.md with frontmatter:\n\n  destination: wiki/marcos/\n  type: personal\n  sources:\n    - wiki/sources/marcos-{YYYY-MM-DD}-{slug}.md\n\nCite sources inline. Keep under 800 words. Do not write directly to wiki/.\n\n## Step 4 \u2014 Self-apply\n\nDistil any actionable operational rule to MEMORY.md (one or two lines max). Skip silently if nothing operational emerged.\n\nReply NO_REPLY if no page was produced.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "read",
+          "write",
+          "web_search",
+          "web_fetch",
+          "exec"
+        ]
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "last"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      },
+      "state": {}
+    },
+    {
+      "id": "d3c4e5f6-a7b8-9012-cdef-123456789012",
+      "agentId": "scheduler",
+      "name": "Cheryl nightly research",
+      "description": "Nightly 7:30 PM MT: grow wiki/cheryl/ with one sourced page on a scheduling, calendar UX, or agent-pattern topic not yet covered.",
+      "enabled": true,
+      "createdAtMs": 1780800000002,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 19 * * *",
+        "tz": "America/Denver"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now",
+      "payload": {
+        "kind": "agentTurn",
+        "message": "Nightly research pass for Cheryl.\n\nGrow wiki/cheryl/ with one sourced page on a scheduling, calendar UX, time management, or agent-pattern topic not yet covered. This is not curator work \u2014 do not run wiki ingest or lint.\n\n## Step 1 \u2014 Find a gap\n\nRead /home/node/.openclaw/agent-vault/wiki/cheryl/cheryl-index.md and scan page titles under wiki/cheryl/. Find a gap \u2014 a topic not yet covered or only thinly treated.\n\nRun: qmd search wiki/cheryl/ \"{2-3 terms from your chosen topic}\" --limit 2\nRead the top results fully before proceeding.\n\nIf the wiki has no meaningful gap today \u2192 reply NO_REPLY.\n\n## Step 2 \u2014 Research with sources\n\nEvery claim must be grounded in at least 2 external sources.\n\nCheck wiki/sources/ first for existing source files on the same topic. Fetch each source via web_fetch or web_search. Save verbatim to wiki/sources/cheryl-{YYYY-MM-DD}-{slug}.md.\n\n## Step 3 \u2014 Drop to raw-input\n\nDrop the page as cheryl-{YYYY-MM-DD}-{slug}.md with frontmatter:\n\n  destination: wiki/cheryl/\n  type: personal\n  sources:\n    - wiki/sources/cheryl-{YYYY-MM-DD}-{slug}.md\n\nCite sources inline. Keep under 800 words. Do not write directly to wiki/.\n\n## Step 4 \u2014 Self-apply\n\nDistil any scheduling rule or constraint to MEMORY.md (one or two lines). Skip silently if nothing operational emerged.\n\nReply NO_REPLY if no page was produced.",
+        "timeoutSeconds": 1200,
+        "toolsAllow": [
+          "read",
+          "write",
+          "web_search",
+          "web_fetch"
+        ]
+      },
+      "delivery": {
+        "mode": "none",
+        "channel": "last"
+      },
+      "failureAlert": {
+        "after": 2,
+        "channel": "telegram",
+        "to": "8045915111",
+        "cooldownMs": 3600000
+      },
+      "state": {}
     }
   ]
 }

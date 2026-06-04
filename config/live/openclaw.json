@@ -98,7 +98,10 @@
         "name": "marcos",
         "workspace": "/home/node/.openclaw/agent-vault/marcos",
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
-        "model": "openai-codex/gpt-5.5",
+        "model": {
+          "primary": "openai-codex/gpt-5.5",
+          "fallbacks": ["opencode-go/deepseek-v4-pro"]
+        },
         "tools": {
           "alsoAllow": [
             "message",
