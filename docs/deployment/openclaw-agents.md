@@ -51,6 +51,14 @@ Six isolated jobs in `cron/jobs.json` (see ADR `0005-memory-audit-cadence`). Vau
 
 Weekly jobs no-op on the 1st (monthly replaces). Config: `memorySearch.experimental.sessionMemory` in `openclaw.json`.
 
+## Codex OAuth model pattern
+
+Agents that use `openai-codex/<model>` (e.g. `openai-codex/gpt-5.5`) are routed through the OpenClaw Codex plugin, which handles OAuth via a stored profile (`auth.profiles["openai-codex:<account>"]`) rather than an API key. The plugin also carries native agent-runtime identity so no separate `agentRuntime` binding is needed in the agent config.
+
+**Marcos tool allowlist rationale:** Marcos's `tools.alsoAllow` includes only the tools that work in the OpenClaw runtime path (`message`, `browser`, `exec`, `read`, `write`, `edit`, `memory_search`, `memory_get`). Tools that would invoke the Codex-side model (e.g. `web_search`, `web_fetch`, `sessions_spawn`, `subagents`) are intentionally excluded — Marcos's AGENTS.md lists them but they are disabled in this config to keep model calls within the Codex OAuth path. Add them only if the Codex runtime supports them.
+
+**`hooks.gmail.model` must never be set.** Setting it activates the `gmail-model` sidecar which makes a blocking `loadModelCatalog` HTTP call every 30 s, saturating the event loop and causing all concurrent model calls to stall and abort. `sync-live-config.mjs` and `sanitize-live-config.mjs` both strip the field automatically. If you need per-account gmail routing, use `hooks.mappings` instead. A runtime startup guard is not yet implemented in the OpenClaw core — the sync/sanitize strips are the only protection.
+
 ## Changing a model
 
 1. Edit `config/live/openclaw.json` in git (or refresh from droplet — see [`droplet-backup.md`](./droplet-backup.md)).  
