@@ -108,7 +108,9 @@
             "write",
             "edit",
             "memory_search",
-            "memory_get"
+            "memory_get",
+            "web_search",
+            "web_fetch"
           ]
         },
         "heartbeat": {
