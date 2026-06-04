@@ -47,6 +47,13 @@
       {
         "id": "main",
         "model": "opencode-go/deepseek-v4-flash",
+        "heartbeat": {
+          "every": "1h",
+          "model": "opencode-go/deepseek-v4-flash",
+          "isolatedSession": true,
+          "lightContext": true,
+          "target": "none"
+        },
         "tools": {
           "alsoAllow": [
             "browser",
@@ -70,6 +77,13 @@
         "workspace": "/home/node/.openclaw/agent-vault/cheryl",
         "model": "opencode-go/deepseek-v4-flash",
         "thinkingDefault": "medium",
+        "heartbeat": {
+          "every": "1h",
+          "model": "opencode-go/deepseek-v4-flash",
+          "isolatedSession": true,
+          "lightContext": true,
+          "target": "none"
+        },
         "tools": {
           "alsoAllow": [
             "exec",
@@ -105,6 +119,13 @@
             "memory_search",
             "memory_get"
           ]
+        },
+        "heartbeat": {
+          "every": "1h",
+          "model": "opencode-go/deepseek-v4-flash",
+          "isolatedSession": true,
+          "lightContext": true,
+          "target": "none"
         }
       }
     ]
