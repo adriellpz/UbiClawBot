@@ -11,10 +11,7 @@ export function shouldSkipIndexTree(relPath) {
 }
 
 // Dirs skipped when traversing non-wiki vault directories
-const SKIP_NON_WIKI_DIRS = new Set(["raw-input", "wiki", ".obsidian"]);
-
-// Dirs excluded from the vault root index (no generated index to link to)
-const SKIP_ROOT_INDEX_DIRS = new Set(["raw-input", ".obsidian"]);
+const SKIP_NON_WIKI_DIRS = new Set(["wiki", ".obsidian"]);
 
 function shouldSkipNonWikiDir(name) {
   return name.startsWith(".") || SKIP_NON_WIKI_DIRS.has(name);
@@ -77,7 +74,7 @@ async function generateVaultRootIndex(vaultRoot, generatedAt) {
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      if (!entry.name.startsWith(".") && !SKIP_ROOT_INDEX_DIRS.has(entry.name)) subdirNames.push(entry.name);
+      if (!entry.name.startsWith(".")) subdirNames.push(entry.name);
     } else if (entry.name.endsWith(".md") && !entry.name.endsWith("-index.md")) {
       fileBasenames.push(path.basename(entry.name, ".md"));
     }

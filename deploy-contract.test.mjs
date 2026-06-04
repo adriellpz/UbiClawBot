@@ -188,26 +188,27 @@ test("deploy ssh script installs vault-reindex cron via sudo_deploy install (not
   );
 });
 
-test("generated vault root index does not link to skipped directories", async () => {
+test("generated vault root index links all non-hidden dirs including raw-input", async () => {
   const { generateVaultIndexes } = await import("./runtime/cheryl/wiki-maintainer/lib/vault-index-generator.mjs");
   const { mkdtemp, mkdir, writeFile, readFile } = await import("node:fs/promises");
   const os = await import("node:os");
   const path = await import("node:path");
 
   const dir = await mkdtemp(path.join(os.tmpdir(), "vault-root-index-"));
-  // Populate: wiki/ (has wiki-index.md from wiki generator), raw-input/ (skipped), marcos/ (indexed)
   await mkdir(path.join(dir, "wiki"), { recursive: true });
   await mkdir(path.join(dir, "raw-input"), { recursive: true });
   await mkdir(path.join(dir, "marcos"), { recursive: true });
   await writeFile(path.join(dir, "marcos", "AGENTS.md"), "# AGENTS\n", "utf8");
+  await writeFile(path.join(dir, "raw-input", "inbox.md"), "# inbox\n", "utf8");
 
   const vaultName = path.basename(dir);
   await generateVaultIndexes(dir, { generatedAt: "2026-01-01T00:00:00Z" });
 
   const rootIndex = await readFile(path.join(dir, `${vaultName}-index.md`), "utf8");
-  assert.ok(!rootIndex.includes("[[raw-input/"), "root index must not link to raw-input — no index is generated for it");
-  assert.ok(rootIndex.includes("[[marcos/marcos-index]]"), "root index must link to marcos (has generated index)");
-  assert.ok(rootIndex.includes("[[wiki/wiki-index]]"), "root index must link to wiki (wiki-index.md is generated)");
+  assert.ok(rootIndex.includes("[[raw-input/raw-input-index]]"), "root index must link to raw-input (index is generated for it)");
+  assert.ok(rootIndex.includes("[[marcos/marcos-index]]"), "root index must link to marcos");
+  assert.ok(rootIndex.includes("[[wiki/wiki-index]]"), "root index must link to wiki");
+  assert.ok(!rootIndex.includes("[[.obsidian/"), "root index must not link to hidden dirs");
 });
 
 test("deploy ssh script passes bash -n", () => {
