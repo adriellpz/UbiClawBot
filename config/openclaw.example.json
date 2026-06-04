@@ -219,7 +219,7 @@
     "ssrfPolicy": {
       "allowedHostnames": [
         "host.docker.internal",
-        "REPLACE_ME_BROWSERLESS_HOST"
+        "172.18.0.1"
       ],
       "dangerouslyAllowPrivateNetwork": false
     },
@@ -228,7 +228,7 @@
     "headless": true,
     "profiles": {
       "hitl": {
-        "cdpUrl": "wss://REPLACE_ME_BROWSERLESS_HOST?token=REPLACE_ME_BROWSERLESS_TOKEN",
+        "cdpUrl": "ws://172.18.0.1:9222",
         "color": "#F97316"
       }
     }
