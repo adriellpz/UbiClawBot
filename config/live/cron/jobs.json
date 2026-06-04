@@ -406,7 +406,7 @@
       "state": {}
     },
     {
-      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "790a0aa0-4cdc-4655-a653-88d98526a7c4",
       "agentId": "main",
       "name": "Ubi nightly research",
       "description": "Nightly 8:00 PM MT: grow wiki/ubi/ with one sourced page on a topic not yet covered.",
@@ -444,7 +444,7 @@
       "state": {}
     },
     {
-      "id": "c2b3d4e5-f6a7-8901-bcde-f12345678901",
+      "id": "927f377f-255d-4baf-b740-6b63081fba25",
       "agentId": "marcos",
       "name": "Marcos nightly research",
       "description": "Nightly 9:00 PM MT: grow wiki/marcos/ with one sourced page on a dev/security/architecture topic not yet covered.",
@@ -483,7 +483,7 @@
       "state": {}
     },
     {
-      "id": "d3c4e5f6-a7b8-9012-cdef-123456789012",
+      "id": "25aca6eb-c1d6-4459-a076-89d3f2513d79",
       "agentId": "scheduler",
       "name": "Cheryl nightly research",
       "description": "Nightly 7:30 PM MT: grow wiki/cheryl/ with one sourced page on a scheduling, calendar UX, or agent-pattern topic not yet covered.",
