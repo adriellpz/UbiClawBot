@@ -17,9 +17,7 @@
         "opencode-go/deepseek-v4-flash": {},
         "opencode-go/deepseek-v4-pro": {},
         "opencode-go/qwen3.5-plus": {},
-        "opencode-go/kimi-k2.6": {},
-        "openai/gpt-5.5": {},
-        "anthropic/claude-sonnet-4-6": {}
+        "opencode-go/kimi-k2.6": {}
       },
       "compaction": {
         "memoryFlush": {
@@ -100,14 +98,7 @@
         "name": "marcos",
         "workspace": "/home/node/.openclaw/agent-vault/marcos",
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
-        "model": "openai/gpt-5.5",
-        "models": {
-          "openai/gpt-5.5": {
-            "agentRuntime": {
-              "id": "openclaw"
-            }
-          }
-        },
+        "model": "openai-codex/gpt-5.5",
         "tools": {
           "alsoAllow": [
             "message",
@@ -117,7 +108,9 @@
             "write",
             "edit",
             "memory_search",
-            "memory_get"
+            "memory_get",
+            "web_search",
+            "web_fetch"
           ]
         },
         "heartbeat": {

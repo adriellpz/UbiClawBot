@@ -755,6 +755,7 @@ http.createServer(async (req, res) => {
       try {
         const data = await body(req)
         linkTask(filename, data)
+        notifyClients(filename)
         res.writeHead(200, { 'content-type': 'application/json' })
         return res.end(JSON.stringify({ ok: true }))
       } catch (e) {
@@ -766,6 +767,7 @@ http.createServer(async (req, res) => {
       try {
         const data = await body(req)
         unlinkTask(filename, data)
+        notifyClients(filename)
         res.writeHead(200, { 'content-type': 'application/json' })
         return res.end(JSON.stringify({ ok: true }))
       } catch (e) {
@@ -791,6 +793,7 @@ http.createServer(async (req, res) => {
       try {
         const data = await body(req)
         patchTask(filename, data)
+        notifyClients(filename)
         res.writeHead(200, { 'content-type': 'application/json' })
         return res.end(JSON.stringify({ ok: true }))
       } catch (e) {

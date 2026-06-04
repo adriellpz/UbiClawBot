@@ -2070,7 +2070,7 @@ function render() {
 
   for (const col of COLS) {
     const colTasks = displayTasks
-      .filter(t => t.status === col)
+      .filter(t => (t.isBlocked ? 'Blocked' : t.status) === col)
       .sort((a, b) => {
         if (!a.due && !b.due) return 0
         if (!a.due) return 1
@@ -2095,7 +2095,7 @@ function render() {
           ${tag ? `<div class="card-cover" ${coverStyle}></div>` : ''}
           <div class="card-title">${esc(t.title)}</div>
           <div class="card-meta">
-            ${t.isBlocked ? '<span class="tag tag-blocked">blocked</span>' : ''}
+            ${t.isBlocked ? '<span class="tag tag-blocked">Blocked</span>' : ''}
             ${t.priority ? `<span class="tag tag-priority tag-priority-${esc(t.priority)}">P${esc(t.priority)}</span>` : ''}
             ${t.due ? `<span class="tag tag-due${isOverdue(t.due) ? ' overdue' : ''}">
               ${isOverdue(t.due) ? '! ' : ''}${esc(fmtDue(t.due))}</span>` : ''}
@@ -2263,6 +2263,45 @@ function attachListeners() {
     btn.addEventListener('click', () => openModal(btn.dataset.col))
   })
 }
+
+// ── Board pan (click-drag on empty space) ─────────────────────────────────
+
+;(function () {
+  const board = document.getElementById('board')
+  let panning = false, startX = 0, startScroll = 0
+
+  board.addEventListener('mousedown', e => {
+    // Only pan on left-button clicks on the board background or column body, not on interactive elements
+    if (e.button !== 0) return
+    if (e.target.closest('.card, button, input, select, a, [draggable="true"]')) return
+    panning = true
+    startX = e.clientX
+    startScroll = board.scrollLeft
+    board.style.cursor = 'grabbing'
+    board.style.userSelect = 'none'
+    e.preventDefault()
+  })
+
+  document.addEventListener('mousemove', e => {
+    if (!panning) return
+    board.scrollLeft = startScroll - (e.clientX - startX)
+  })
+
+  document.addEventListener('mouseup', () => {
+    if (!panning) return
+    panning = false
+    board.style.cursor = ''
+    board.style.userSelect = ''
+  })
+
+  // Cancel if mouse leaves the window
+  document.addEventListener('mouseleave', () => {
+    if (!panning) return
+    panning = false
+    board.style.cursor = ''
+    board.style.userSelect = ''
+  })
+})()
 
 // ── Load ──────────────────────────────────────────────────────────────────
 
