@@ -202,6 +202,10 @@ cp -r "${OPENCLAW_ROOT}/.deploy-tmp-cheryl-wiki-maintainer/runtime/cheryl/wiki-m
 find "${OPENCLAW_ROOT}/data/agent-runtime/cheryl/wiki-maintainer/bin" -name '*.mjs' -exec chmod +x {} + 2>/dev/null || true
 mkdir -p "${OPENCLAW_ROOT}/data/config/qmd"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.yml" "${OPENCLAW_ROOT}/data/config/qmd/index.yml"
+mkdir -p "${OPENCLAW_ROOT}/bin"
+cp "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/vault-reindex.sh" "${OPENCLAW_ROOT}/bin/vault-reindex.sh"
+chmod +x "${OPENCLAW_ROOT}/bin/vault-reindex.sh"
+sudo_deploy install -o root -g root -m 644 "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/openclaw-vault-reindex" /etc/cron.d/openclaw-vault-reindex
 
 install_bridge_watchdog_cron
 
@@ -237,6 +241,7 @@ smoke_required_file "scripts/monitor-github-pr-bridge.sh"
 smoke_required_file "scripts/monitor-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
+smoke_required_file "bin/vault-reindex.sh"
 smoke_required_file "task-board/server.mjs"
 
 cd "${OPENCLAW_ROOT}"

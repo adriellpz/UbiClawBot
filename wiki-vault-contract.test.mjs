@@ -335,8 +335,8 @@ test("OBSIDIAN_IGNORE_CONTENT includes raw-input", () => {
   assert.match(OBSIDIAN_IGNORE_CONTENT, /raw-input\//);
 });
 
-test("generateVaultIndexes does not index raw-input subtree", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "vault-raw-input-skip-"));
+test("generateVaultIndexes indexes raw-input like any other vault directory", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "vault-raw-input-index-"));
   await mkdir(path.join(root, "raw-input"), { recursive: true });
   await writeFile(path.join(root, "raw-input", "drop.md"), "# drop\n");
   await mkdir(path.join(root, "wiki", "reports"), { recursive: true });
@@ -344,11 +344,12 @@ test("generateVaultIndexes does not index raw-input subtree", async () => {
 
   const results = await generateVaultIndexes(root, { generatedAt: "2026-05-29" });
   const paths = new Set(results.map((r) => r.path));
-  assert.equal(paths.has("raw-input/raw-input-index.md"), false);
+  assert.ok(paths.has("raw-input/raw-input-index.md"), "raw-input should get an index like every other vault directory");
   assert.ok(paths.has("wiki/reports/reports-index.md"));
   assert.ok(paths.has("wiki/index.md"));
 
-  await assert.rejects(readFile(path.join(root, "raw-input", "raw-input-index.md"), "utf8"));
+  const idx = await readFile(path.join(root, "raw-input", "raw-input-index.md"), "utf8");
+  assert.ok(idx.includes("[[drop]]"));
 });
 
 test("generateVaultIndexes writes folder index with wikilink and blurb", async () => {
