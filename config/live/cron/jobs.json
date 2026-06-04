@@ -57,7 +57,6 @@
           "web_fetch"
         ],
         "timeoutSeconds": 900,
-        "model": "opencode-go/deepseek-v4-pro",
         "lightContext": true
       },
       "delivery": {

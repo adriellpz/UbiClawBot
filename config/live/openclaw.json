@@ -98,7 +98,21 @@
         "name": "marcos",
         "workspace": "/home/node/.openclaw/agent-vault/marcos",
         "agentDir": "/home/node/.openclaw/agents/marcos/agent",
-        "model": "opencode-go/deepseek-v4-pro",
+        "model": "openai-codex/gpt-5.5",
+        "tools": {
+          "alsoAllow": [
+            "message",
+            "browser",
+            "exec",
+            "read",
+            "write",
+            "edit",
+            "memory_search",
+            "memory_get",
+            "web_search",
+            "web_fetch"
+          ]
+        },
         "heartbeat": {
           "every": "1h",
           "model": "opencode-go/deepseek-v4-flash",

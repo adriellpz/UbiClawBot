@@ -24,7 +24,7 @@ Verified against `/root/openclaw/data/config/openclaw.json`:
 |-------------|--------------|------|-------|
 | `main` | `ubi/` | Ubi | `opencode-go/deepseek-v4-flash` |
 | `scheduler` | `cheryl/` | Cheryl (scheduling + **wiki curator** cron) | `opencode-go/deepseek-v4-flash` |
-| `marcos` | `marcos/` | Marcos | `opencode-go/deepseek-v4-pro` |
+| `marcos` | `marcos/` | Marcos | `openai-codex/gpt-5.5` (Codex OAuth) |
 
 **Defaults** in the same file set `primary: openai-codex/gpt-5.5` for agents without an explicit `model` override. All three production agents above **override** the default.
 
@@ -50,6 +50,14 @@ Six isolated jobs in `cron/jobs.json` (see ADR `0005-memory-audit-cadence`). Vau
 | Monthly memory audit | 1st 1:00 / 3:15 / 5:15 | Ubi / Marcos / Cheryl |
 
 Weekly jobs no-op on the 1st (monthly replaces). Config: `memorySearch.experimental.sessionMemory` in `openclaw.json`.
+
+## Codex OAuth model pattern
+
+Agents that use `openai-codex/<model>` (e.g. `openai-codex/gpt-5.5`) are routed through the OpenClaw Codex plugin, which handles OAuth via a stored profile (`auth.profiles["openai-codex:<account>"]`) rather than an API key. The plugin also carries native agent-runtime identity so no separate `agentRuntime` binding is needed in the agent config.
+
+**Marcos tool allowlist:** `message`, `browser`, `exec`, `read`, `write`, `edit`, `memory_search`, `memory_get`, `web_search`, `web_fetch`. Marcos gets the full set in every session — interactive and cron. Individual cron jobs may declare a narrower `toolsAllow` in their payload if they need to restrict beyond this baseline.
+
+**`hooks.gmail.model` must never be set.** Setting it activates the `gmail-model` sidecar which makes a blocking `loadModelCatalog` HTTP call every 30 s, saturating the event loop and causing all concurrent model calls to stall and abort. `sync-live-config.mjs` and `sanitize-live-config.mjs` both strip the field automatically. If you need per-account gmail routing, use `hooks.mappings` instead. A runtime startup guard is not yet implemented in the OpenClaw core — the sync/sanitize strips are the only protection.
 
 ## Changing a model
 
