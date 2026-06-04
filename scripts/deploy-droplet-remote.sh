@@ -239,7 +239,7 @@ smoke_required_file "scripts/monitor-github-pr-bridge.sh"
 smoke_required_file "scripts/monitor-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
-[ -f /root/openclaw/bin/vault-reindex.sh ] || { echo "smoke failed: missing file /root/openclaw/bin/vault-reindex.sh" >&2; exit 1; }
+sudo_deploy test -f /root/openclaw/bin/vault-reindex.sh || { echo "smoke failed: missing file /root/openclaw/bin/vault-reindex.sh" >&2; exit 1; }
 smoke_required_file "task-board/server.mjs"
 
 cd "${OPENCLAW_ROOT}"
