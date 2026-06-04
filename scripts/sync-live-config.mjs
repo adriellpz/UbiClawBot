@@ -71,6 +71,7 @@ function mergeOpenclaw(livePath, templatePath, outPath) {
   // Setting it triggers the gmail-model sidecar which blocks the event loop.
   if (merged.hooks?.gmail?.model !== undefined) delete merged.hooks.gmail.model;
   writeFileSync(outPath, `${JSON.stringify(merged, null, 2)}\n`);
+  return merged;
 }
 
 function mergeCron(livePath, templatePath, outPath) {
@@ -85,7 +86,7 @@ function mergeCron(livePath, templatePath, outPath) {
   writeFileSync(outPath, `${JSON.stringify({ ...template, jobs }, null, 2)}\n`);
 }
 
-export { mergeCron, deepMerge, SECRET_PATHS };
+export { mergeCron, mergeOpenclaw, deepMerge, SECRET_PATHS };
 
 function main() {
   if (!existsSync(LIVE_DIR)) {

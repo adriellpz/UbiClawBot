@@ -166,6 +166,15 @@ test("qmd-reindex.sh uses --max-docs-per-batch to prevent session expiry", () =>
   assert.match(script, /--max-docs-per-batch/, "qmd-reindex.sh: qmd embed must include --max-docs-per-batch flag");
 });
 
+test("config/live/openclaw.json template does not set hooks.gmail.model", () => {
+  const config = JSON.parse(readFileSync(new URL("config/live/openclaw.json", import.meta.url), "utf8"));
+  assert.equal(
+    config.hooks?.gmail?.model,
+    undefined,
+    "hooks.gmail.model must not be set in the live config template — it triggers the event-loop-blocking gmail-model sidecar",
+  );
+});
+
 test("deploy ssh script passes bash -n", () => {
   const script = getDeploySshScript();
   const result = spawnSync("bash", ["-n"], { input: script, encoding: "utf8" });

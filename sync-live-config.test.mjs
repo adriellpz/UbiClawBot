@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { mergeCron, SECRET_PATHS } from "./scripts/sync-live-config.mjs";
+import { mergeCron, mergeOpenclaw, SECRET_PATHS } from "./scripts/sync-live-config.mjs";
 
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 const sanitizeScript = path.join(repoRoot, "scripts", "sanitize-live-config.mjs");
@@ -80,6 +80,26 @@ test("SECRET_PATHS includes hitl cdpUrl and not the old browserbase path", () =>
   const paths = SECRET_PATHS.map((p) => p.join("."));
   assert.ok(paths.includes("browser.profiles.hitl.cdpUrl"), "SECRET_PATHS must preserve hitl cdpUrl");
   assert.ok(!paths.includes("browser.profiles.browserbase.cdpUrl"), "SECRET_PATHS must not reference removed browserbase profile");
+});
+
+test("mergeOpenclaw strips hooks.gmail.model even when set in live config", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "merge-openclaw-gmail-"));
+  const livePath = path.join(dir, "live.json");
+  const templatePath = path.join(dir, "template.json");
+  const outPath = path.join(dir, "out.json");
+
+  await writeFile(livePath, JSON.stringify({
+    hooks: { token: "real-hook-token", gmail: { model: "opencode-go/deepseek-v4-flash", pushToken: "real-push-token", account: "user@example.com" } },
+  }, null, 2) + "\n", "utf8");
+
+  await writeFile(templatePath, JSON.stringify({
+    hooks: { token: "REPLACE_ME_HOOKS_SHARED_SECRET", gmail: { pushToken: "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN", account: "user@example.com" } },
+  }, null, 2) + "\n", "utf8");
+
+  const merged = mergeOpenclaw(livePath, templatePath, outPath);
+  assert.equal(merged.hooks.gmail.model, undefined, "hooks.gmail.model must be stripped — it triggers the event-loop-blocking gmail-model sidecar");
+  assert.equal(merged.hooks.gmail.account, "user@example.com", "other gmail fields must be preserved");
+  assert.equal(merged.hooks.gmail.pushToken, "real-push-token", "gmail pushToken secret must be preserved from live config");
 });
 
 test("mergeOpenclaw preserves hitl cdpUrl from live config across sync", async () => {
