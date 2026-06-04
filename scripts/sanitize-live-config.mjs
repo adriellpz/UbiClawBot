@@ -17,6 +17,7 @@ if (mode === "openclaw") {
     data.hooks.token = "REPLACE_ME_HOOKS_SHARED_SECRET";
     if (data.hooks.gmail) {
       data.hooks.gmail.pushToken = "REPLACE_ME_GOOGLE_PUBSUB_VERIFICATION_TOKEN";
+      delete data.hooks.gmail.model; // must not be set; triggers event-loop-blocking sidecar
     }
   }
   if (data.browser?.profiles?.hitl?.cdpUrl) {

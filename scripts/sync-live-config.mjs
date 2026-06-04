@@ -67,6 +67,9 @@ function mergeOpenclaw(livePath, templatePath, outPath) {
   }
   if (live.commands?.ownerAllowFrom) merged.commands ??= {}, merged.commands.ownerAllowFrom = live.commands.ownerAllowFrom;
   if (live.auth?.profiles) merged.auth ??= {}, merged.auth.profiles = live.auth.profiles;
+  // hooks.gmail.model must not be set — gmail wakes use each agent's default model.
+  // Setting it triggers the gmail-model sidecar which blocks the event loop.
+  if (merged.hooks?.gmail?.model !== undefined) delete merged.hooks.gmail.model;
   writeFileSync(outPath, `${JSON.stringify(merged, null, 2)}\n`);
 }
 
