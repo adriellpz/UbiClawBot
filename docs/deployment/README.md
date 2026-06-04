@@ -39,6 +39,7 @@ The `deploy` user must run a few commands as root without a password (GitHub Act
 cat > /etc/sudoers.d/deploy-openclaw <<'EOF'
 deploy ALL=(root) NOPASSWD: /usr/bin/bash /home/deploy/openclaw/scripts/sync-live-config.sh
 deploy ALL=(root) NOPASSWD: /usr/bin/install
+deploy ALL=(root) NOPASSWD: /usr/bin/stat
 deploy ALL=(root) NOPASSWD: /usr/bin/tee /etc/caddy/environment
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl reload caddy
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart caddy
