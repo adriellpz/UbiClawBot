@@ -334,6 +334,12 @@
       },
       "opencode": {
         "enabled": true
+      },
+      "codex": {
+        "enabled": true,
+        "config": {
+          "codexDynamicToolsLoading": "direct"
+        }
       }
     }
   },

@@ -205,9 +205,7 @@ cp "${OPENCLAW_ROOT}/.deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.ym
 mkdir -p "${OPENCLAW_ROOT}/bin"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/vault-reindex.sh" "${OPENCLAW_ROOT}/bin/vault-reindex.sh"
 chmod +x "${OPENCLAW_ROOT}/bin/vault-reindex.sh"
-cp "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/openclaw-vault-reindex" /etc/cron.d/openclaw-vault-reindex
-chown root:root /etc/cron.d/openclaw-vault-reindex
-chmod 644 /etc/cron.d/openclaw-vault-reindex
+sudo_deploy install -o root -g root -m 644 "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/openclaw-vault-reindex" /etc/cron.d/openclaw-vault-reindex
 
 install_bridge_watchdog_cron
 
