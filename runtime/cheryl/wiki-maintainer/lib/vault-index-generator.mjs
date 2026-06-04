@@ -11,10 +11,10 @@ export function shouldSkipIndexTree(relPath) {
 }
 
 // Dirs skipped when traversing non-wiki vault directories
-const SKIP_NON_WIKI_DIRS = new Set(["raw-input", "wiki", ".obsidian", "node_modules"]);
+const SKIP_NON_WIKI_DIRS = new Set(["raw-input", "wiki", ".obsidian"]);
 
 // Dirs excluded from the vault root index (no generated index to link to)
-const SKIP_ROOT_INDEX_DIRS = new Set(["raw-input", ".obsidian", "node_modules"]);
+const SKIP_ROOT_INDEX_DIRS = new Set(["raw-input", ".obsidian"]);
 
 function shouldSkipNonWikiDir(name) {
   return name.startsWith(".") || SKIP_NON_WIKI_DIRS.has(name);
