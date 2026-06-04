@@ -1,5 +1,5 @@
 #!/bin/sh
-# Reindex the qmd "wiki" search collection from the droplet host.
+# Reindex all qmd collections (wiki + openclaw-docs) from the droplet host.
 #
 # Installed at /root/openclaw/bin/qmd-reindex.sh and driven by
 # /etc/cron.d/openclaw-qmd-reindex (3x/day, UTC). qmd lives inside the
@@ -8,9 +8,8 @@
 #
 # `qmd update` re-scans changed markdown (cheap); `qmd embed` fills any
 # pending vectors. flock keeps slow CPU-only embeds from overlapping the
-# next scheduled run. This exists because the in-tick reindex hook
-# (reindexWikiSearch) is currently a no-op stub, so nothing else keeps
-# the index fresh as Cheryl files new wiki pages.
+# next scheduled run. Covers both the wiki collection (curator-filed pages)
+# and the openclaw-docs collection (platform docs mirror).
 #
 # Cache path dependency: the container path /home/node/.cache/qmd is
 # bind-mounted from the host via $OPENCLAW_QMD_CACHE_DIR (default:

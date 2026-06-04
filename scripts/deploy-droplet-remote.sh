@@ -206,6 +206,9 @@ mkdir -p "${OPENCLAW_ROOT}/bin"
 cp "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/vault-reindex.sh" "${OPENCLAW_ROOT}/bin/vault-reindex.sh"
 chmod +x "${OPENCLAW_ROOT}/bin/vault-reindex.sh"
 sudo_deploy install -o root -g root -m 644 "${OPENCLAW_ROOT}/.deploy-tmp-vault-reindex-cron/deploy/host-cron/openclaw-vault-reindex" /etc/cron.d/openclaw-vault-reindex
+cp "${OPENCLAW_ROOT}/.deploy-tmp-qmd-reindex-cron/deploy/host-cron/qmd-reindex.sh" "${OPENCLAW_ROOT}/bin/qmd-reindex.sh"
+chmod +x "${OPENCLAW_ROOT}/bin/qmd-reindex.sh"
+sudo_deploy install -o root -g root -m 644 "${OPENCLAW_ROOT}/.deploy-tmp-qmd-reindex-cron/deploy/host-cron/openclaw-qmd-reindex" /etc/cron.d/openclaw-qmd-reindex
 
 install_bridge_watchdog_cron
 
@@ -242,6 +245,7 @@ smoke_required_file "scripts/monitor-bridge.sh"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs"
 smoke_required_file "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs"
 smoke_required_file "bin/vault-reindex.sh"
+smoke_required_file "bin/qmd-reindex.sh"
 smoke_required_file "task-board/server.mjs"
 
 cd "${OPENCLAW_ROOT}"

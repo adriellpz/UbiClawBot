@@ -165,6 +165,14 @@
         ".deploy-tmp-vault-reindex-cron/deploy/host-cron/vault-reindex.sh",
         ".deploy-tmp-vault-reindex-cron/deploy/host-cron/openclaw-vault-reindex"
       ]
+    },
+    {
+      "id": "qmd-reindex-cron",
+      "scpSource": "deploy/host-cron/qmd-reindex.sh,deploy/host-cron/openclaw-qmd-reindex",
+      "installMarkers": [
+        ".deploy-tmp-qmd-reindex-cron/deploy/host-cron/qmd-reindex.sh",
+        ".deploy-tmp-qmd-reindex-cron/deploy/host-cron/openclaw-qmd-reindex"
+      ]
     }
   ],
   "gatewayFiles": [
@@ -208,6 +216,7 @@
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs",
       "bin/vault-reindex.sh",
+      "bin/qmd-reindex.sh",
       "task-board/server.mjs"
     ],
     "httpEndpoints": [
