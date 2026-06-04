@@ -167,62 +167,22 @@
       "state": {}
     },
     {
-      "id": "73d0d49e-aa75-417a-978c-1011985aa3cb",
-      "agentId": "main",
-      "name": "Ubi nightly memory audit",
-      "description": "Nightly 1:00 AM MT: light pass — trim stale/superseded MEMORY.md entries (especially same-day heartbeat self-apply). NO_REPLY unless drift.",
-      "enabled": true,
-      "createdAtMs": 1780366524061,
-      "schedule": {
-        "kind": "cron",
-        "expr": "0 1 * * 2-7",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Use skill: ubi-memory-audit.\n\nNightly memory audit (light pass). Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
-        "timeoutSeconds": 1200,
-        "toolsAllow": [
-          "exec",
-          "read",
-          "write",
-          "edit",
-          "memory_search",
-          "memory_get"
-        ]
-      },
-      "delivery": {
-        "mode": "announce",
-        "channel": "telegram",
-        "to": "telegram:8045915111"
-      },
-      "failureAlert": {
-        "after": 2,
-        "channel": "telegram",
-        "to": "8045915111",
-        "cooldownMs": 3600000
-      },
-      "state": {}
-    },
-    {
       "id": "fd774fb3-74ed-47dc-ad22-02aaee140c0a",
       "agentId": "main",
-      "name": "Ubi weekly memory audit",
-      "description": "Monday 1:00 AM MT: deep pass — archive aged MEMORY.md, review old session notes, reverse-scan wiki/ubi/ for promotable rules. Always Telegram summary.",
+      "name": "Ubi nightly memory audit",
+      "description": "Nightly 1:00 AM MT: deep pass — trim MEMORY.md, archive aged entries, promote cross-agent facts, reverse-scan wiki/ubi/ for promotable rules. Always Telegram summary.",
       "enabled": true,
       "createdAtMs": 1780366524061,
       "schedule": {
         "kind": "cron",
-        "expr": "0 1 * * 1",
+        "expr": "0 1 * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: ubi-memory-audit.\n\nWeekly memory audit (deep pass). Follow the skill weekly mode. Always send a brief Telegram summary.",
+        "message": "Nightly memory audit — deep pass.\n\nWorkspace: /home/node/.openclaw/agent-vault/ubi/\n\n## Retention rules\n\nKeep in MEMORY.md:\n- Active preferences and rules applied every session\n- Anything still referenced in the last 30 days\n\nPromote to raw-input/ as ubi-YYYY-MM-DD-{slug}.md:\n- Cross-agent facts\n- Completed project outcomes\n- Infra or runbook-shaped content\n- Long rule sets (leave a one-line pointer in MEMORY.md)\n\nRemove or archive:\n- Past calendar dates\n- One-off session debugging notes\n- Superseded rules\n- Completed migrations\n\n## Steps\n\n1. Scan memory/ for notes from the past 24 hours. Trim stale and superseded lines from MEMORY.md.\n2. Create raw-input/ drops for any promotions.\n3. Archive or promote aged MEMORY.md sections.\n4. Review memory/ files older than 30 days; remove one-offs that never promoted.\n5. Reverse-scan wiki/ubi/ for pages containing operational rules or principles not yet in MEMORY.md. Propose additions via Telegram — do not auto-apply.\n6. Send a brief Telegram summary: files touched, promotions created, wiki rules found, drift notes.\n\n## Guardrails\n\n- Do not edit wiki/ directly.\n- Do not run Trello or calendar sweeps.\n- Do not expose secrets in promotions.\n- Do not auto-apply wiki-sourced rules to MEMORY.md — propose via Telegram only.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "exec",
@@ -248,62 +208,22 @@
       "state": {}
     },
     {
-      "id": "fdaf7253-52a9-42bb-ba1d-6c0172b4c717",
-      "agentId": "marcos",
-      "name": "Marcos nightly memory audit",
-      "description": "Nightly 3:15 AM MT: light pass — trim stale/superseded MEMORY.md entries (especially same-day heartbeat self-apply). NO_REPLY unless drift.",
-      "enabled": true,
-      "createdAtMs": 1780366524061,
-      "schedule": {
-        "kind": "cron",
-        "expr": "15 3 * * 2-7",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Use skill: marcos-memory-audit.\n\nNightly memory audit (light pass). Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
-        "timeoutSeconds": 1200,
-        "toolsAllow": [
-          "exec",
-          "read",
-          "write",
-          "edit",
-          "memory_search",
-          "memory_get"
-        ]
-      },
-      "delivery": {
-        "mode": "announce",
-        "channel": "telegram",
-        "to": "telegram:8045915111"
-      },
-      "failureAlert": {
-        "after": 2,
-        "channel": "telegram",
-        "to": "8045915111",
-        "cooldownMs": 3600000
-      },
-      "state": {}
-    },
-    {
       "id": "3196dad4-123e-435c-8c3d-dd3c21d29c76",
       "agentId": "marcos",
-      "name": "Marcos weekly memory audit",
-      "description": "Monday 3:15 AM MT: deep pass — archive aged MEMORY.md, review old session notes, reverse-scan wiki/marcos/ for promotable rules. Always Telegram summary.",
+      "name": "Marcos nightly memory audit",
+      "description": "Nightly 3:15 AM MT: deep pass — trim MEMORY.md, archive aged entries, promote cross-agent facts, reverse-scan wiki/marcos/ for promotable rules. Always Telegram summary.",
       "enabled": true,
       "createdAtMs": 1780366524061,
       "schedule": {
         "kind": "cron",
-        "expr": "15 3 * * 1",
+        "expr": "15 3 * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: marcos-memory-audit.\n\nWeekly memory audit (deep pass). Follow the skill weekly mode. Always send a brief Telegram summary.",
+        "message": "Nightly memory audit — deep pass.\n\nWorkspace: /home/node/.openclaw/agent-vault/marcos/\n\nNote: durable maintenance law lives in wiki/runbooks/marcos/ — promote via raw-input, keep MEMORY.md thin. Nightly repo maintenance reports are produced artifacts, not quick-reference entries.\n\n## Retention rules\n\nKeep in MEMORY.md:\n- Active preferences and rules applied every session\n- Anything still referenced in the last 30 days\n\nPromote to raw-input/ as marcos-YYYY-MM-DD-{slug}.md:\n- Cross-agent facts\n- Completed project outcomes\n- Infra or runbook-shaped content\n- Long rule sets (leave a one-line pointer in MEMORY.md)\n\nRemove or archive:\n- Past calendar dates\n- One-off session debugging notes\n- Superseded rules\n- Completed migrations\n\n## Steps\n\n1. Scan memory/ for notes from the past 24 hours. Trim stale and superseded lines from MEMORY.md.\n2. Create raw-input/ drops for any promotions.\n3. Archive or promote aged MEMORY.md sections.\n4. Review memory/ files older than 30 days; remove one-offs that never promoted.\n5. Reverse-scan wiki/marcos/ for pages containing operational rules or principles not yet in MEMORY.md. Propose additions via Telegram — do not auto-apply.\n6. Send a brief Telegram summary: files touched, promotions created, wiki rules found, drift notes.\n\n## Guardrails\n\n- Do not edit wiki/ directly.\n- Do not run nightly repo maintenance or duplicate the 2:30 AM maintenance pass.\n- Do not expose secrets in promotions.\n- Do not auto-apply wiki-sourced rules to MEMORY.md — propose via Telegram only.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "exec",
@@ -407,62 +327,22 @@
       "state": {}
     },
     {
-      "id": "e01c1f46-4e0c-4f41-b157-c216688fb39c",
-      "agentId": "scheduler",
-      "name": "Cheryl nightly memory audit",
-      "description": "Nightly 5:15 AM MT (Tue-Sun): light pass — trim stale MEMORY.md entries. NO_REPLY unless drift.",
-      "enabled": true,
-      "createdAtMs": 1780366845166,
-      "schedule": {
-        "kind": "cron",
-        "expr": "15 5 * * 2-7",
-        "tz": "America/Denver"
-      },
-      "sessionTarget": "isolated",
-      "wakeMode": "now",
-      "payload": {
-        "kind": "agentTurn",
-        "message": "Use skill: cheryl-memory-audit.\n\nNightly memory audit (light pass). Do not run wiki ingest or wiki lint. Follow the skill nightly mode. Reply NO_REPLY unless drift; otherwise brief Telegram summary.",
-        "timeoutSeconds": 1200,
-        "toolsAllow": [
-          "exec",
-          "read",
-          "write",
-          "edit",
-          "memory_search",
-          "memory_get"
-        ]
-      },
-      "delivery": {
-        "mode": "announce",
-        "channel": "telegram",
-        "to": "telegram:8045915111"
-      },
-      "failureAlert": {
-        "after": 2,
-        "channel": "telegram",
-        "to": "8045915111",
-        "cooldownMs": 3600000
-      },
-      "state": {}
-    },
-    {
       "id": "ce968c44-3bb0-4717-ab98-bdc2a00bea8e",
       "agentId": "scheduler",
-      "name": "Cheryl weekly memory audit",
-      "description": "Monday 5:15 AM MT: deep pass — archive aged MEMORY.md, review old session notes, reverse-scan wiki/cheryl/. Always Telegram summary.",
+      "name": "Cheryl nightly memory audit",
+      "description": "Nightly 5:15 AM MT: deep pass — trim MEMORY.md, archive aged entries, promote cross-agent facts, reverse-scan wiki/cheryl/ for promotable rules. Always Telegram summary.",
       "enabled": true,
       "createdAtMs": 1780366845166,
       "schedule": {
         "kind": "cron",
-        "expr": "15 5 * * 1",
+        "expr": "15 5 * * *",
         "tz": "America/Denver"
       },
       "sessionTarget": "isolated",
       "wakeMode": "now",
       "payload": {
         "kind": "agentTurn",
-        "message": "Use skill: cheryl-memory-audit.\n\nWeekly memory audit (deep pass). Do not run wiki ingest or wiki lint. Follow the skill weekly mode. Always send a brief Telegram summary.",
+        "message": "Nightly memory audit — deep pass.\n\nWorkspace: /home/node/.openclaw/agent-vault/cheryl/\n\nScope: audit only cheryl/MEMORY.md and cheryl/memory/. Do not run wiki ingest, wiki maintenance, wiki lint, or edit wiki/ — that is the wiki maintainer cron.\n\n## Retention rules\n\nKeep in MEMORY.md:\n- Active preferences and rules applied every session\n- Anything still referenced in the last 30 days\n\nPromote to raw-input/ as cheryl-YYYY-MM-DD-{slug}.md:\n- Cross-agent facts\n- Completed project outcomes\n- Infra or runbook-shaped content\n- Long rule sets (leave a one-line pointer in MEMORY.md)\n\nRemove or archive:\n- Past calendar dates\n- One-off session debugging notes\n- Superseded rules\n- Completed migrations\n\n## Steps\n\n1. Scan memory/ for notes from the past 24 hours. Trim stale and superseded lines from MEMORY.md.\n2. Create raw-input/ drops for any promotions.\n3. Archive or promote aged MEMORY.md sections.\n4. Review memory/ files older than 30 days; remove one-offs that never promoted.\n5. Reverse-scan wiki/cheryl/ for pages containing operational rules or principles not yet in MEMORY.md. Propose additions via Telegram — do not auto-apply.\n6. Send a brief Telegram summary: files touched, promotions created, wiki rules found, drift notes.\n\n## Guardrails\n\n- Do not edit wiki/ or run curator pipeline steps.\n- Do not expose secrets in promotions.\n- Do not auto-apply wiki-sourced rules to MEMORY.md — propose via Telegram only.",
         "timeoutSeconds": 1200,
         "toolsAllow": [
           "exec",
@@ -470,7 +350,8 @@
           "write",
           "edit",
           "memory_search",
-          "memory_get"
+          "memory_get",
+          "web_search"
         ]
       },
       "delivery": {
