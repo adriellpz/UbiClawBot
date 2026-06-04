@@ -37,30 +37,33 @@ async function generateNonWikiDirIndexes(vaultRoot, dirRel, generatedAt) {
     return results;
   }
 
-  const subdirNames = [];
+  const indexedSubdirNames = [];
   const fileBasenames = [];
 
   for (const entry of entries) {
     if (entry.isDirectory()) {
       if (!shouldSkipNonWikiDir(entry.name)) {
-        subdirNames.push(entry.name);
-        results.push(...(await generateNonWikiDirIndexes(vaultRoot, `${dirRel}/${entry.name}`, generatedAt)));
+        const childResults = await generateNonWikiDirIndexes(vaultRoot, `${dirRel}/${entry.name}`, generatedAt);
+        results.push(...childResults);
+        if (childResults.length > 0) {
+          indexedSubdirNames.push(entry.name);
+        }
       }
     } else if (entry.name.endsWith(".md") && !entry.name.endsWith("-index.md")) {
       fileBasenames.push(path.basename(entry.name, ".md"));
     }
   }
 
-  if (subdirNames.length || fileBasenames.length) {
+  if (indexedSubdirNames.length || fileBasenames.length) {
     const indexRel = `${dirRel}/${dirName}-index.md`;
-    await writeFile(path.join(vaultRoot, indexRel), buildSimpleDirIndexBody(dirName, subdirNames, fileBasenames, generatedAt), "utf8");
+    await writeFile(path.join(vaultRoot, indexRel), buildSimpleDirIndexBody(dirName, indexedSubdirNames, fileBasenames, generatedAt), "utf8");
     results.push({ path: indexRel.replace(/\\/g, "/") });
   }
 
   return results;
 }
 
-async function generateVaultRootIndex(vaultRoot, generatedAt) {
+async function generateVaultRootIndex(vaultRoot, indexedSubdirNames, generatedAt) {
   let entries;
   try {
     entries = await readdir(vaultRoot, { withFileTypes: true });
@@ -69,13 +72,10 @@ async function generateVaultRootIndex(vaultRoot, generatedAt) {
   }
 
   const vaultName = path.posix.basename(vaultRoot);
-  const subdirNames = [];
   const fileBasenames = [];
 
   for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (!entry.name.startsWith(".")) subdirNames.push(entry.name);
-    } else if (entry.name.endsWith(".md") && !entry.name.endsWith("-index.md")) {
+    if (!entry.isDirectory() && entry.name.endsWith(".md") && !entry.name.endsWith("-index.md")) {
       fileBasenames.push(path.basename(entry.name, ".md"));
     }
   }
@@ -85,7 +85,7 @@ async function generateVaultRootIndex(vaultRoot, generatedAt) {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
   const lines = [`# ${title}`, "", "## Contents", ""];
-  for (const sub of [...subdirNames].sort()) lines.push(`- [[${sub}/${sub}-index]]`);
+  for (const sub of [...indexedSubdirNames].sort()) lines.push(`- [[${sub}/${sub}-index]]`);
   for (const base of [...fileBasenames].sort()) lines.push(`- [[${base}]]`);
   lines.push("", "---", "", `*Index generated ${generatedAt}. Regenerate with \`generate-vault-indexes\`.*`, "");
 
@@ -242,19 +242,29 @@ export async function generateVaultIndexes(vaultRoot, { generatedAt, folders: to
     await writeFile(path.join(vaultRoot, masterRel), masterBody, "utf8");
     results.push({ path: masterRel });
 
-    // Generate indexes for non-wiki vault directories and the vault root
+    // Generate indexes for non-wiki vault directories and the vault root.
+    // Only include a directory in the root index if it actually got an index generated.
     let topEntries;
     try {
       topEntries = await readdir(vaultRoot, { withFileTypes: true });
     } catch {
       topEntries = [];
     }
+    const indexedTopDirs = [];
+    // wiki is indexed iff at least one wiki folder index was generated (i.e. wiki has pages)
+    if (results.some((r) => r.path !== masterRel && r.path.startsWith("wiki/"))) {
+      indexedTopDirs.push("wiki");
+    }
     for (const entry of topEntries) {
       if (entry.isDirectory() && !shouldSkipNonWikiDir(entry.name)) {
-        results.push(...(await generateNonWikiDirIndexes(vaultRoot, entry.name, ts)));
+        const dirResults = await generateNonWikiDirIndexes(vaultRoot, entry.name, ts);
+        results.push(...dirResults);
+        if (dirResults.length > 0) {
+          indexedTopDirs.push(entry.name);
+        }
       }
     }
-    results.push(...(await generateVaultRootIndex(vaultRoot, ts)));
+    results.push(...(await generateVaultRootIndex(vaultRoot, indexedTopDirs, ts)));
   }
 
   return results;
