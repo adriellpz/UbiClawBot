@@ -408,6 +408,7 @@ function validateCaddyfile() {
   for (const expected of ["board.sonofwolf.org", "not path /manifest.json /sw.js /icon.svg", "basic_auth @protected", "{env.BOARD_BASICAUTH_HASH}", "ai.sonofwolf.org", "handle_path /gmail-pubsub*", "handle /github-pr*", "reverse_proxy 127.0.0.1:3334", "reverse_proxy 127.0.0.1:8788", "reverse_proxy 127.0.0.1:18990", "reverse_proxy 127.0.0.1:19091", "reverse_proxy 127.0.0.1:18789", "header Upgrade websocket", "flush_interval -1"]) {
     assert(source.includes(expected), `${caddyPath}: expected ${expected}`);
   }
+  assert(!source.includes("reverse_proxy 127.0.0.1:3000"), `${caddyPath}: port 3000 Caddy proxy should not be present (was browserless, now removed)`);
   pass(`${caddyPath}: static Caddyfile checks completed`);
 }
 

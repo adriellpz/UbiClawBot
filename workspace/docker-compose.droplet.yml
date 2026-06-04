@@ -511,4 +511,4 @@ services:
       retries: 3
       start_period: 5m
 
-volumes: {}
+# No named volumes — browserless-userdata removed with the browserless service.
