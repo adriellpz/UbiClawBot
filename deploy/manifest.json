@@ -157,6 +157,14 @@
         "mkdir -p \"${OPENCLAW_ROOT}/data/config/qmd\"",
         ".deploy-tmp-qmd-host-config/deploy/host-config/qmd/index.yml"
       ]
+    },
+    {
+      "id": "vault-reindex-cron",
+      "scpSource": "deploy/host-cron/vault-reindex.sh,deploy/host-cron/openclaw-vault-reindex",
+      "installMarkers": [
+        ".deploy-tmp-vault-reindex-cron/deploy/host-cron/vault-reindex.sh",
+        ".deploy-tmp-vault-reindex-cron/deploy/host-cron/openclaw-vault-reindex"
+      ]
     }
   ],
   "gatewayFiles": [
@@ -199,6 +207,7 @@
       "scripts/monitor-github-pr-bridge.sh",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-preflight.mjs",
       "data/agent-runtime/cheryl/wiki-maintainer/bin/wiki-log-register.mjs",
+      "bin/vault-reindex.sh",
       "task-board/server.mjs"
     ],
     "httpEndpoints": [

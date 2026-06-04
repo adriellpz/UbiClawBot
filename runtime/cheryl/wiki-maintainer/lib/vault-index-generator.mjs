@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { shouldSkipWikiPage } from "./wiki-log-registry.mjs";
 
@@ -8,6 +8,90 @@ export function shouldSkipIndexTree(relPath) {
   if (relPath === "sources" || relPath.startsWith("sources/")) return true;
   if (relPath.startsWith("_superseded-sources-")) return true;
   return false;
+}
+
+// Dirs skipped when traversing non-wiki vault directories
+const SKIP_NON_WIKI_DIRS = new Set(["raw-input", "wiki", ".obsidian", "node_modules"]);
+
+function shouldSkipNonWikiDir(name) {
+  return name.startsWith(".") || SKIP_NON_WIKI_DIRS.has(name);
+}
+
+function buildSimpleDirIndexBody(dirName, subdirNames, fileBasenames, generatedAt) {
+  const lines = [`# ${dirName}`, "", "## Contents", ""];
+  for (const sub of [...subdirNames].sort()) lines.push(`- [[${sub}/${sub}-index]]`);
+  for (const base of [...fileBasenames].sort()) lines.push(`- [[${base}]]`);
+  lines.push("", "---", "", `*Index generated ${generatedAt}. Regenerate with \`generate-vault-indexes\`.*`, "");
+  return lines.join("\n");
+}
+
+async function generateNonWikiDirIndexes(vaultRoot, dirRel, generatedAt) {
+  const results = [];
+  const dirAbs = path.join(vaultRoot, dirRel);
+  const dirName = path.posix.basename(dirRel);
+
+  let entries;
+  try {
+    entries = await readdir(dirAbs, { withFileTypes: true });
+  } catch {
+    return results;
+  }
+
+  const subdirNames = [];
+  const fileBasenames = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (!shouldSkipNonWikiDir(entry.name)) {
+        subdirNames.push(entry.name);
+        results.push(...(await generateNonWikiDirIndexes(vaultRoot, `${dirRel}/${entry.name}`, generatedAt)));
+      }
+    } else if (entry.name.endsWith(".md") && !entry.name.endsWith("-index.md")) {
+      fileBasenames.push(path.basename(entry.name, ".md"));
+    }
+  }
+
+  if (subdirNames.length || fileBasenames.length) {
+    const indexRel = `${dirRel}/${dirName}-index.md`;
+    await writeFile(path.join(vaultRoot, indexRel), buildSimpleDirIndexBody(dirName, subdirNames, fileBasenames, generatedAt), "utf8");
+    results.push({ path: indexRel.replace(/\\/g, "/") });
+  }
+
+  return results;
+}
+
+async function generateVaultRootIndex(vaultRoot, generatedAt) {
+  let entries;
+  try {
+    entries = await readdir(vaultRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const vaultName = path.posix.basename(vaultRoot);
+  const subdirNames = [];
+  const fileBasenames = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (!entry.name.startsWith(".")) subdirNames.push(entry.name);
+    } else if (entry.name.endsWith(".md") && !entry.name.endsWith("-index.md")) {
+      fileBasenames.push(path.basename(entry.name, ".md"));
+    }
+  }
+
+  const title = vaultName
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+  const lines = [`# ${title}`, "", "## Contents", ""];
+  for (const sub of [...subdirNames].sort()) lines.push(`- [[${sub}/${sub}-index]]`);
+  for (const base of [...fileBasenames].sort()) lines.push(`- [[${base}]]`);
+  lines.push("", "---", "", `*Index generated ${generatedAt}. Regenerate with \`generate-vault-indexes\`.*`, "");
+
+  const indexRel = `${vaultName}-index.md`;
+  await writeFile(path.join(vaultRoot, indexRel), lines.join("\n"), "utf8");
+  return [{ path: indexRel }];
 }
 
 export function extractBlurb(markdown) {
@@ -149,12 +233,28 @@ export async function generateVaultIndexes(vaultRoot, { generatedAt, folders: to
     results.push({ path: indexRel.replace(/\\/g, "/") });
   }
 
+  const ts = generatedAt ?? new Date().toISOString();
+
   if (!touchedFolders?.length) {
     const masterRel = "wiki/index.md";
-    const masterBody = await buildMasterIndexBody(pages, vaultRoot, generatedAt ?? new Date().toISOString());
+    const masterBody = await buildMasterIndexBody(pages, vaultRoot, ts);
     await mkdir(path.dirname(path.join(vaultRoot, masterRel)), { recursive: true });
     await writeFile(path.join(vaultRoot, masterRel), masterBody, "utf8");
     results.push({ path: masterRel });
+
+    // Generate indexes for non-wiki vault directories and the vault root
+    let topEntries;
+    try {
+      topEntries = await readdir(vaultRoot, { withFileTypes: true });
+    } catch {
+      topEntries = [];
+    }
+    for (const entry of topEntries) {
+      if (entry.isDirectory() && !shouldSkipNonWikiDir(entry.name)) {
+        results.push(...(await generateNonWikiDirIndexes(vaultRoot, entry.name, ts)));
+      }
+    }
+    results.push(...(await generateVaultRootIndex(vaultRoot, ts)));
   }
 
   return results;

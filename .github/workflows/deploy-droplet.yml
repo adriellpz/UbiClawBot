@@ -182,6 +182,16 @@ jobs:
           source: "deploy/host-config/qmd/index.yml"
           target: "/home/deploy/openclaw/.deploy-tmp-qmd-host-config"
 
+      - name: Copy vault reindex cron to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          source: "deploy/host-cron/vault-reindex.sh,deploy/host-cron/openclaw-vault-reindex"
+          target: "/home/deploy/openclaw/.deploy-tmp-vault-reindex-cron"
+
       - name: Apply files, rebuild, restart, and smoke-test
         uses: appleboy/ssh-action@v1.0.3
         with:

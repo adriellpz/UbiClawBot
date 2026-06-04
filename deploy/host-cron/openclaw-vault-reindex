@@ -1,0 +1,8 @@
+# Vault index regeneration (host cron). Times are UTC.
+# Every 4h: 02:15, 06:15, 10:15, 14:15, 18:15, 22:15 UTC.
+# Staggered 15 min past the hour to avoid overlap with qmd-reindex ticks.
+# Install to /etc/cron.d/openclaw-vault-reindex (root:root, mode 644).
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+15 2,6,10,14,18,22 * * *  root /root/openclaw/bin/vault-reindex.sh >> /var/log/openclaw-vault-reindex.log 2>&1
